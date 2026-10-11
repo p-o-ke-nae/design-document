@@ -21,8 +21,21 @@ export interface ExecOptions {
 }
 
 export const HIGHLIGHT_ATTR = 'data-ddv-highlight';
+/** Outline of the element under the pointer in the tune mode (same look as the step highlight). */
+export const TUNE_HOVER_ATTR = 'data-ddv-tune-hover';
+/** Marks elements the runtime adds to the page (not counted in element paths). */
+export const DDV_UI_ATTR = 'data-ddv-ui';
 const HIGHLIGHT_STYLE_ID = 'ddv-highlight-style';
-const HIGHLIGHT_CSS = `[${HIGHLIGHT_ATTR}]{outline:3px solid #f59e0b !important;outline-offset:2px;box-shadow:0 0 0 6px rgba(245,158,11,.25) !important;transition:outline-color .1s}`;
+const HIGHLIGHT_CSS = `[${HIGHLIGHT_ATTR}],[${TUNE_HOVER_ATTR}]{outline:3px solid #f59e0b !important;outline-offset:2px;box-shadow:0 0 0 6px rgba(245,158,11,.25) !important;transition:outline-color .1s}`;
+
+export function ensureHighlightStyle(doc: Document): void {
+  if (doc.getElementById(HIGHLIGHT_STYLE_ID)) return;
+  const s = doc.createElement('style');
+  s.id = HIGHLIGHT_STYLE_ID;
+  s.setAttribute(DDV_UI_ATTR, '');
+  s.textContent = HIGHLIGHT_CSS;
+  (doc.head ?? doc.documentElement).appendChild(s);
+}
 
 const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -42,7 +55,7 @@ export class DomDriver implements Driver {
   private async withHighlight<T>(el: HTMLElement, act: () => T | Promise<T>): Promise<T> {
     const h = this.highlight;
     if (!h) return act();
-    this.ensureHighlightStyle(el.ownerDocument);
+    ensureHighlightStyle(el.ownerDocument);
     el.setAttribute(HIGHLIGHT_ATTR, '');
     try {
       el.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
@@ -53,13 +66,6 @@ export class DomDriver implements Driver {
     }
   }
 
-  private ensureHighlightStyle(doc: Document) {
-    if (doc.getElementById(HIGHLIGHT_STYLE_ID)) return;
-    const s = doc.createElement('style');
-    s.id = HIGHLIGHT_STYLE_ID;
-    s.textContent = HIGHLIGHT_CSS;
-    (doc.head ?? doc.documentElement).appendChild(s);
-  }
 
   find(key: string): HTMLElement | null {
     const sel = `[data-testid="${esc(key)}"]`;

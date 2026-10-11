@@ -181,6 +181,18 @@ describe('ワークスペースの API とルーティング', () => {
     expect(env.bodies.join('\n')).not.toContain(env.state.token);
   });
 
+  it('[DD-TUNE-LOCATE-T001] /api/w/:ws/mock-source は head の worktree のモックを読む', async () => {
+    const env = await setup({ local: true });
+    const id = (await env.json('/api/workspaces', post({ repo: 'acme/order-app', pr: 12 }))).body.id as string;
+    await env.manager.settled(id);
+    const wsRoot = env.manager.get(id)!.ctx!.repoRoot;
+    await fs.mkdir(path.join(wsRoot, 'docs/mocks/t'), { recursive: true });
+    await fs.writeFile(path.join(wsRoot, 'docs/mocks/t/index.html'), '<html>\n<head></head>\n<body>\n  <button data-testid="go">行く</button>\n</body>\n</html>\n');
+    const r = await env.json(`/api/w/${id}/mock-source`, post({ mock: 't/index.html', path: [1, 0], expect: { tag: 'button', testid: 'go' }, patch: { text: '進む', set: {}, remove: [] } }));
+    expect(r).toMatchObject({ status: 200, body: { file: 'docs/mocks/t/index.html', suggestion: { startLine: 4, line: 4, lines: ['  <button data-testid="go">進む</button>'] } } });
+    expect((await env.json('/api/mock-source', post({ mock: 't/index.html', path: [1, 0], expect: { tag: 'button' } }))).status).toBe(404);
+  });
+
   it('実行系 API は信頼されるまで 403 untrusted、信頼後は既存の API に渡る', async () => {
     const env = await setup();
     const id = (await env.json('/api/workspaces', post({ repo: 'acme/order-app', pr: 12 }))).body.id;

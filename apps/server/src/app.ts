@@ -8,6 +8,8 @@ import { lintDocs, loadConfig, loadDoc, loadDocs, safeJoin, toPosix, traceIndex,
 import { diffGraphs, parseMermaidGraph } from '@ddv/graph';
 import { activeIds, docMatrices, generateAll, readLock, scanTestLinks, LOCK_PATH, type TestLink } from '@ddv/testid';
 import { checkMocks, scaffoldMock } from '@ddv/mock';
+import { build as buildSuggestion, locate as locateMockElement, NO_SOURCE_MESSAGE, TuneError } from '@ddv/mock/tune';
+import { validatePatch } from '@ddv/mock/tune-patch';
 import { RunManager, RUNS_DIR, type RunEvent } from './runs.ts';
 import { checkDeps, installDeps } from './deps.ts';
 import { listScenarios, recordPlay, scenarioDetail } from './scenarios.ts';
@@ -332,6 +334,47 @@ export function createApp(ctx: ServerContext): Hono {
   });
 
   app.get('/api/mocks', async (c) => c.json(await walk(root, ctx.config.mocksRoot, (rel) => rel.endsWith('.html'))));
+
+  // Tune mode (DD-TUNE): source lines of a picked mock element, and the suggestion for a patch.
+  app.post('/api/mock-source', async (c) => {
+    const body = (await c.req.json().catch(() => null)) as { mock?: unknown; path?: unknown; expect?: { tag?: unknown; testid?: unknown }; patch?: unknown } | null;
+    const elPath = body?.path;
+    const want = body?.expect;
+    if (
+      !body ||
+      typeof body.mock !== 'string' ||
+      !body.mock.endsWith('.html') ||
+      !Array.isArray(elPath) ||
+      !elPath.every((i) => Number.isInteger(i) && i >= 0) ||
+      !want ||
+      typeof want.tag !== 'string' ||
+      !want.tag ||
+      (want.testid !== undefined && typeof want.testid !== 'string')
+    )
+      return c.json({ error: 'mock（.html）・path（0 以上の整数の配列）・expect.tag が必要です' }, 400);
+    let abs: string;
+    try {
+      abs = safeJoin(safeJoin(root, ctx.config.mocksRoot), body.mock);
+    } catch {
+      return c.json({ error: `モックの外は指定できません: ${body.mock}` }, 400);
+    }
+    const html = await fs.readFile(abs, 'utf8').catch(() => null);
+    if (html === null) return c.json({ error: `モックが見つかりません: ${body.mock}` }, 404);
+    const el = locateMockElement(html, elPath as number[], { tag: want.tag, testid: want.testid as string | undefined });
+    if ('reason' in el) return c.json({ code: 'no-source', error: NO_SOURCE_MESSAGE[el.reason] }, 422);
+    const file = toPosix(path.relative(root, abs));
+    const element = { path: el.path, tag: el.tag, startLine: el.startLine, endLine: el.endLine, textCount: el.textCount, source: el.source, sourceStartLine: el.sourceStartLine };
+    if (body.patch === undefined) return c.json({ file, element });
+    const current = Object.fromEntries(el.startTag.attrs.map((a) => [a.name, a.value ? html.slice(a.value.start, a.value.end) : '']));
+    const { patch, issues } = validatePatch(body.patch, el.tag, current);
+    if (issues.length) return c.json({ code: 'invalid-patch', error: issues.map((i) => i.message).join('／'), issues }, 400);
+    try {
+      return c.json({ file, element, suggestion: buildSuggestion(html, el, patch) });
+    } catch (e) {
+      if (e instanceof TuneError) return c.json({ code: e.code, error: e.message }, 400);
+      throw e;
+    }
+  });
 
   app.get('/api/mocks/scenarios', async (c) => c.json({ scenarios: await listScenarios(root, ctx.config, ctx.runs) }));
 

@@ -1,5 +1,6 @@
 import type { Graph, GraphDiff, StateEventTable, TestCase } from '@ddv/graph';
 import type { DdvConfig, DiagramBlock, DirectiveRef, DocElement, Heading, SourceBlock, TocEntry } from '@ddv/core';
+import type { ElementPatch } from '@ddv/mock/tune-patch';
 
 export type { Graph, GraphDiff, StateEventTable, TestCase, DdvConfig, DiagramBlock, DocElement, Heading, SourceBlock, TocEntry };
 
@@ -274,6 +275,8 @@ export function createApi(ws: string) {
     scenario: (id: string) => get<ScenarioDetail>(`/api/mocks/scenario?id=${encodeURIComponent(id)}`),
     played: (body: { id: string; ok: boolean; failures?: StepFailure[] }) => post(A('/api/mocks/played'), body).then((r) => json<unknown>(r)),
     scaffold: (body: { mock?: string } = {}) => post(A('/api/mocks/scaffold'), body).then((r) => json<Record<string, unknown>>(r)),
+    mockSource: (body: { mock: string; path: number[]; expect: { tag: string; testid?: string }; patch?: ElementPatch }) =>
+      post(A('/api/mock-source'), body).then((r) => json<MockSourceResult>(r)),
     runSnapshots: (body: { ids?: string[] }) => post(A('/api/snapshots/run'), body).then((r) => json<{ runId: string }>(r)),
     snapshots: (id: string) =>
       get<SnapshotInfo>(`/api/snapshots?id=${encodeURIComponent(id)}`).then((s) => ({
@@ -460,6 +463,32 @@ export interface CommentInput {
   element: ElementRef;
   body: string;
   suggestion?: string;
+  /** Line anchor (required for `mockElement`). */
+  anchor?: { path: string; side: 'RIGHT'; startLine: number; line: number; element: Required<ElementRef> };
+}
+
+export interface MockSourceElement {
+  path: number[];
+  tag: string;
+  startLine: number;
+  endLine: number;
+  textCount: number;
+  source: string[];
+  sourceStartLine: number;
+}
+
+export interface MockSuggestion {
+  startLine: number;
+  line: number;
+  lines: string[];
+  changed: boolean;
+}
+
+export interface MockSourceResult {
+  /** Repo-relative path of the mock HTML. */
+  file: string;
+  element: MockSourceElement;
+  suggestion?: MockSuggestion;
 }
 
 export interface SubmitResult {

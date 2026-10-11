@@ -17,6 +17,27 @@ const WS = 'gh~acme~order-app~pr-12';
 const ORDER = 'docs/design/basic/order.md';
 const ORDER_V2 = '---\nid: SAMPLE\nkind: basic\nstatus: review\ntitle: 注文 基本設計\n---\n\n# 注文 基本設計\n\n## 概要\n\n注文を受け付け、内容を確認する。\n\n## 確認\n\n確認画面を表示する。\n';
 const TARGET = '確認画面を表示する。';
+const SCREEN = 'docs/design/basic/screen.md';
+const TUNE_MOCK = 'docs/mocks/tune/index.html';
+const TUNE_HTML = [
+  '<!doctype html>',
+  '<html lang="ja">',
+  '<head>',
+  '  <meta charset="utf-8" />',
+  '  <script type="module" src="../_ddv/mock-runtime.js"></script>',
+  '</head>',
+  '<body>',
+  '  <section data-screen="Input">',
+  '    <h2>注文入力</h2>',
+  '    <input data-testid="customer"',
+  '           required',
+  '           maxlength="50" />',
+  '    <button data-testid="next" data-event="次へ" data-goto="Input">次へ</button>',
+  '  </section>',
+  '</body>',
+  '</html>',
+  '',
+].join('\n');
 
 let tmp = '';
 let upstream: Upstream;
@@ -45,7 +66,16 @@ test.describe.configure({ mode: 'serial' });
 test.beforeAll(async () => {
   tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'ddv-e2e-rev-'));
   upstream = await createUpstream(path.join(tmp, 'remote'));
-  const head = upstream.commit('feature/review', { 'docs/design/basic/order.md': ORDER_V2 }, 'edit order');
+  const head = upstream.commit(
+    'feature/review',
+    {
+      'docs/design/basic/order.md': ORDER_V2,
+      [SCREEN]: '---\nid: SCREEN\nkind: basic\nstatus: review\ntitle: 画面\n---\n\n# 画面\n\n::mock[tune/index.html]\n',
+      [TUNE_MOCK]: TUNE_HTML,
+      'docs/mocks/_ddv/mock-runtime.js': await fs.readFile('examples/sample-app/docs/mocks/_ddv/mock-runtime.js', 'utf8'),
+    },
+    'edit order',
+  );
   upstream.setPull(12, head);
   state = fakeGitHubState({
     token: TOKEN,
@@ -242,4 +272,67 @@ test('[BD-GHREV-CMT-T004][BD-GHREV-SUBMIT-T002] 最新化で行が変わると�
 
   await item.getByTestId('pending-delete').click();
   await expect(page.getByTestId('pending-item')).toHaveCount(0);
+});
+
+test('[BD-GHREV-TUNE-P001][BD-GHREV-TUNE-P003][BD-GHREV-TUNE-T006] モックの文言と maxlength を調整 → 保留 2 件 → 送信すると suggestion 付きの行コメントになる', async ({ page }) => {
+  await page.goto(`http://127.0.0.1:${PORT}/#/w/${WS}/doc?path=${SCREEN}`);
+  const mock = page.getByTestId('mock');
+  const frame = mock.frameLocator('iframe');
+  await expect(frame.getByTestId('next')).toBeVisible();
+  await expect(page.getByTestId('pending-count')).toHaveText('0');
+
+  await mock.getByTestId('tune-start').click();
+  await expect(mock.getByTestId('tune-pending')).toContainText('保留中の調整（0）');
+  await frame.getByTestId('next').click();
+  await mock.getByTestId('t-text').fill('確認へ');
+  await expect(frame.getByTestId('next')).toHaveText('確認へ');
+  await expect(mock.getByTestId('suggestion')).toContainText('data-goto="Input">確認へ</button>');
+  await expect(mock.getByTestId('t-body')).toHaveValue('モック調整：next（button） の 文言');
+  await expect(mock.getByTestId('t-add')).toHaveText('保留に追加');
+  await mock.getByTestId('t-add').click();
+  await expect(mock.getByTestId('tune-mode')).toHaveAttribute('data-state', 'Picking');
+  await expect(page.getByTestId('pending-count')).toHaveText('1');
+
+  await frame.getByTestId('customer').click();
+  await expect(mock.getByTestId('t-maxlength')).toHaveValue('50');
+  await mock.getByTestId('t-maxlength').fill('20');
+  await expect(frame.getByTestId('customer')).toHaveAttribute('maxlength', '20');
+  await expect(mock.getByTestId('suggestion')).toContainText('+            maxlength="20" />');
+  await mock.getByTestId('t-add').click();
+  await expect(page.getByTestId('pending-count')).toHaveText('2');
+  await expect(mock.getByTestId('tune-pending-item')).toHaveCount(2);
+  expect(reviewPosts().filter((p) => JSON.stringify(p.body).includes('suggestion'))).toEqual([]); // 送信するまで GitHub に出さない
+
+  // 調整終了で DOM は戻るが保留は残る → 一覧から選ぶと変更を再適用 → そのまま保留を更新（重複しない）
+  await mock.getByTestId('tune-end').click();
+  await expect(frame.getByTestId('customer')).toHaveAttribute('maxlength', '50');
+  await mock.getByTestId('tune-start').click();
+  await mock.getByTestId('tune-pending-item').filter({ hasText: 'customer' }).click();
+  await expect(mock.getByTestId('tune-mode')).toHaveAttribute('data-state', 'Editing');
+  await expect(frame.getByTestId('customer')).toHaveAttribute('maxlength', '20');
+  await expect(mock.getByTestId('t-maxlength')).toHaveValue('20');
+  await expect(mock.getByTestId('t-add')).toHaveText('保留を更新');
+  await mock.getByTestId('t-add').click();
+  await expect(mock.getByTestId('tune-mode')).toHaveAttribute('data-state', 'Picking');
+  await expect(page.getByTestId('pending-count')).toHaveText('2');
+  await mock.getByTestId('tune-end').click();
+
+  await page.getByTestId('to-review').click();
+  const items = page.getByTestId('pending').getByTestId('pending-item');
+  await expect(items).toHaveCount(2);
+  await expect(items.first()).toHaveAttribute('data-placement', 'line');
+  const before = reviewPosts().length;
+  await page.getByTestId('event').selectOption('COMMENT');
+  await page.getByTestId('body').fill('モックの調整です');
+  await page.getByTestId('review-submit').click();
+  await expect(page).toHaveURL(/\/review\/done$/);
+  await expect(page.getByTestId('done-message')).toContainText('行コメント 2 件');
+  const comments = (reviewPosts().slice(before).at(-1)?.body.comments ?? []) as Array<{ path: string; line: number; start_line?: number; body: string }>;
+  expect(comments).toHaveLength(2);
+  const byLine = Object.fromEntries(comments.map((c) => [c.line, c]));
+  expect(byLine[13]).toMatchObject({ path: TUNE_MOCK });
+  expect(byLine[13].body).toContain('```suggestion\n    <button data-testid="next" data-event="次へ" data-goto="Input">確認へ</button>\n```');
+  expect(byLine[12]).toMatchObject({ path: TUNE_MOCK });
+  expect(byLine[12].body).toContain('```suggestion\n           maxlength="20" />\n```');
+  expect(byLine[12].body).toContain('モック調整：customer（input） の maxlength');
 });

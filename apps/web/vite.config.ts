@@ -12,6 +12,7 @@ export default defineConfig({
     alias: {
       '@ddv/core': path.join(root, 'packages/core/src/index.ts'),
       '@ddv/graph': path.join(root, 'packages/graph/src/index.ts'),
+      '@ddv/mock/tune-patch': path.join(root, 'packages/mock/src/tune-patch.ts'),
     },
   },
   server: {

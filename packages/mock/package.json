@@ -7,7 +7,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./step": "./src/step.ts",
-    "./playwright": "./src/playwright.ts"
+    "./playwright": "./src/playwright.ts",
+    "./tune": "./src/tune.ts",
+    "./tune-patch": "./src/tune-patch.ts"
   },
   "dependencies": {
     "@ddv/core": "*",

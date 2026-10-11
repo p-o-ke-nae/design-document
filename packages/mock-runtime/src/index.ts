@@ -9,3 +9,4 @@ export { Validator, type ValidationResult, type FieldError } from './validator.t
 export { HostBridge, bridgeTransition, SupersededError, type BridgeState, type BridgeEvent, type BridgeEngine, type InMessage, type OutMessage } from './bridge.ts';
 export { DomDriver, type DomDriverOptions } from './driver.ts';
 export { RUNTIME_VERSION, runtimeBanner } from './version.ts';
+export { Tuner } from './tuner.ts';

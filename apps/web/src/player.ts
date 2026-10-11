@@ -1,4 +1,5 @@
 import type { Step, StepFailure } from './api.ts';
+import type { ElementPatch, PickedElement } from '@ddv/mock/tune-patch';
 
 /** BD-MOCK-PLAYER (docs/design/basic/mock-player.md#プレイヤー). */
 export type PlayerState = 'Idle' | 'Playing' | 'Paused' | 'Done' | 'Failed';
@@ -397,9 +398,14 @@ export type MockMessage =
   | { type: 'ddv:ready'; screen: string; version: string }
   | { type: 'ddv:result'; index: number; ok: boolean; screen: string | null; failures: StepFailure[]; message?: string }
   | { type: 'ddv:screen'; screen: string }
-  | { type: 'ddv:error'; message: string };
+  | { type: 'ddv:error'; message: string }
+  | ({ type: 'ddv:picked' } & PickedElement);
+
+/** Tune mode messages to the mock (DD-TUNE). */
+export type TuneMessage = { type: 'ddv:tune'; on: boolean } | { type: 'ddv:patch'; path: number[]; patch: ElementPatch | null };
 
 export interface FrameTransport extends PlayerTransport {
+  send(msg: TuneMessage): void;
   dispose(): void;
 }
 
@@ -470,6 +476,9 @@ export function createFrameTransport(
         stepWaiters.set(index, { resolve, reject });
         post({ type: 'ddv:step', index, step, ...(highlight ? { highlight } : {}) });
       });
+    },
+    send(msg) {
+      post(msg);
     },
     dispose() {
       win.removeEventListener('message', onMessage);

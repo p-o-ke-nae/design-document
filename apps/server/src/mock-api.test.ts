@@ -367,3 +367,39 @@ describe('スナップショット（BD-MOCK-SNAP）', () => {
     expect(existsSync(path.join(repo, `.ddv/snapshots/baseline/${P1}/002.png`))).toBe(false);
   });
 });
+
+describe('モックの調整（mock-source）', () => {
+  it('[DD-TUNE-LOCATE-P004] 要素の行範囲を返し、patch があれば suggestion を返す', async () => {
+    const repo = await makeRepo();
+    const req = await api(await createContext(repo, { watch: false }));
+    const at = { mock: 'demo/index.html', path: [1, 0, 0], expect: { tag: 'button', testid: 'new' } };
+    const r = await req('/api/mock-source', at);
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ file: 'docs/mocks/demo/index.html', element: { tag: 'button', startLine: 5, endLine: 5, textCount: 1 } });
+    expect(r.body.suggestion).toBeUndefined();
+    const s = await req('/api/mock-source', { ...at, patch: { text: '作成', set: { title: '作る' }, remove: [] } });
+    expect(s.body.suggestion).toMatchObject({ startLine: 5, line: 5, changed: true });
+    expect(s.body.suggestion.lines[0]).toContain('<button data-testid="new" data-event="新規" title="作る">作成</button>');
+    const m = await req('/api/mock-source', { mock: 'demo/index.html', path: [1, 1, 0], expect: { tag: 'input', testid: 'customer' }, patch: { set: { maxlength: '20' }, remove: ['required'] } });
+    expect(m.body.suggestion.lines[0]).toContain('<input data-testid="customer" data-sample="山田" maxlength="20">');
+  });
+
+  it('[DD-TUNE-LOCATE-P001] [DD-TUNE-LOCATE-P003] 対応する行がなければ 422 no-source', async () => {
+    const repo = await makeRepo();
+    const req = await api(await createContext(repo, { watch: false }));
+    expect(await req('/api/mock-source', { mock: 'demo/index.html', path: [1, 9], expect: { tag: 'p' } })).toMatchObject({ status: 422, body: { code: 'no-source', error: expect.stringContaining('要素が見つかりません') } });
+    expect(await req('/api/mock-source', { mock: 'demo/index.html', path: [1, 0, 0], expect: { tag: 'button', testid: 'other' } })).toMatchObject({ status: 422, body: { code: 'no-source', error: expect.stringContaining('mock.js') } });
+  });
+
+  it('不正な指定・patch は 400、無いモックは 404、mocksRoot の外は読まない', async () => {
+    const repo = await makeRepo();
+    const req = await api(await createContext(repo, { watch: false }));
+    const at = { mock: 'demo/index.html', path: [1, 0, 0], expect: { tag: 'button', testid: 'new' } };
+    expect((await req('/api/mock-source', { ...at, path: [-1] })).status).toBe(400);
+    expect((await req('/api/mock-source', { ...at, mock: 'demo/index.md' })).status).toBe(400);
+    expect((await req('/api/mock-source', { ...at, mock: '../basic/x.html' })).status).toBe(400);
+    expect((await req('/api/mock-source', { ...at, mock: 'nope/index.html' })).status).toBe(404);
+    expect(await req('/api/mock-source', { ...at, patch: { set: { class: 'x' }, remove: [] } })).toMatchObject({ status: 400, body: { code: 'invalid-patch', issues: [{ field: 'class' }] } });
+    expect(await req('/api/mock-source', { mock: 'demo/index.html', path: [1, 0], expect: { tag: 'section' }, patch: { text: 'x', set: {}, remove: [] } })).toMatchObject({ status: 400, body: { code: 'text-not-editable' } });
+  });
+});
