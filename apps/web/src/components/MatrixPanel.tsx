@@ -3,6 +3,7 @@ import { api, type Matrix, type MatrixCase } from '../api.ts';
 import { useApp } from '../state.tsx';
 import { useMockHub } from '../mockHub.tsx';
 import { StatusBadge } from './StatusBadge.tsx';
+import { CommentGutter } from './Review.tsx';
 
 type Tab = 'all' | 'P' | 'T' | 'S' | 'X' | 'table';
 
@@ -102,6 +103,7 @@ export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; se
                 <MatrixRow
                   key={c.id}
                   c={c}
+                  doc={matrix.doc}
                   selected={selected === c.id}
                   checked={checked.has(c.id)}
                   onCheck={() => toggle(c.id)}
@@ -149,8 +151,10 @@ function MatrixRow({
   running,
   onRun,
   onPlayMock,
+  doc,
 }: {
   c: MatrixCase;
+  doc: string;
   selected: boolean;
   checked: boolean;
   onCheck(): void;
@@ -199,6 +203,7 @@ function MatrixRow({
             ▶ モック
           </button>
         )}
+        <CommentGutter inline path={doc} element={{ kind: 'matrixRow', key: c.id, label: c.title }} />
       </td>
     </tr>
   );

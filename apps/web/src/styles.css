@@ -1474,3 +1474,130 @@ button.link {
   padding: 8px 12px;
   border-radius: 4px;
 }
+
+/* --- レビューコメント・保留中のレビュー（REVCMT） --- */
+.cmt-host {
+  position: relative;
+}
+.cmt-btn {
+  position: absolute;
+  left: -28px;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.25;
+  line-height: 1;
+}
+.cmt-btn::before {
+  content: '💬';
+  font-size: 15px;
+}
+.cmt-host:hover > .cmt-btn,
+.cmt-btn:hover,
+.cmt-btn:focus-visible {
+  opacity: 1;
+}
+li.cmt-host > .cmt-btn {
+  left: -52px;
+}
+.cmt-btn.inline {
+  position: static;
+  display: inline-block;
+  opacity: 0.6;
+  vertical-align: middle;
+}
+.composer {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 420px;
+  max-height: 80vh;
+  overflow: auto;
+  z-index: 50;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.2);
+  padding: 10px 14px;
+}
+.composer h4 {
+  margin: 0 0 6px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 8px 0;
+  font-size: 13px;
+}
+.field textarea,
+.field select,
+.pending-edit textarea,
+.pending-edit select {
+  font: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+.row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0;
+}
+.review-page {
+  padding: 18px 32px 80px;
+  max-width: 900px;
+  overflow: auto;
+}
+.pending-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+}
+.pending-item {
+  margin: 6px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  font-size: 13px;
+}
+.pending-item.drifted {
+  border-color: var(--warn);
+  background: var(--warn-bg);
+}
+.pending-item .comment-body {
+  white-space: pre-wrap;
+}
+.pending-item .suggestion {
+  background: var(--bg);
+  padding: 4px 8px;
+  margin: 4px 0;
+  white-space: pre-wrap;
+}
+.pending-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.approve-docs {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin: 8px 0;
+}
+.approve-docs .toggle {
+  display: flex;
+}
+.thread-actions {
+  margin-top: 6px;
+}
+.thread-actions textarea {
+  font: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}

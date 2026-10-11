@@ -1,7 +1,13 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, gh, type ChangedFile, type ChangedFiles, type DocDiff, type PrInfo, type Thread } from '../api.ts';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { api, gh, type ChangedFile, type ChangedFiles, type DocDiff, type ElementRef, type PendingReview, type PrInfo, type ReviewEvent, type ReviewerState, type SubmitResult, type Thread } from '../api.ts';
 import { useApp } from '../state.tsx';
 import { useWorkspaces } from './Workspace.tsx';
+
+/** Where a new review comment is being written (the 💬 that opened it). */
+export interface Composer {
+  path: string;
+  element: ElementRef;
+}
 
 interface PrCtx {
   info: PrInfo | null;
@@ -15,6 +21,15 @@ interface PrCtx {
   diff: DocDiff | null;
   /** Review threads of the shown document (unresolved first). */
   threads: Thread[];
+  reloadThreads: () => void;
+  /** Pending review of this workspace (null until loaded). */
+  review: PendingReview | null;
+  reloadReview: () => Promise<void>;
+  /** Latest review state per reviewer (GET /reviews). */
+  reviews: ReviewerState[] | null;
+  reloadReviews: () => void;
+  composer: Composer | null;
+  openComposer: (c: Composer | null) => void;
   error: string;
 }
 
@@ -22,6 +37,13 @@ const Ctx = createContext<PrCtx | null>(null);
 
 /** PR review state of a GitHub PR workspace; null outside one. */
 export const usePr = () => useContext(Ctx);
+
+/** Result of the last submit, kept outside React so that it survives the remount after a status commit moved head. */
+let lastSubmit: { ws: string; event: ReviewEvent; result: SubmitResult } | null = null;
+export const rememberSubmit = (ws: string, event: ReviewEvent, result: SubmitResult) => {
+  lastSubmit = { ws, event, result };
+};
+export const recalledSubmit = (ws: string) => (lastSubmit?.ws === ws ? lastSubmit : null);
 
 export function PrProvider({ children }: { children: ReactNode }) {
   const { route, version } = useApp();
@@ -32,6 +54,10 @@ export function PrProvider({ children }: { children: ReactNode }) {
   const [diffOn, setDiffOn] = useState(false);
   const [diff, setDiff] = useState<DocDiff | null>(null);
   const [threads, setThreads] = useState<Thread[]>([]);
+  const [threadsTick, setThreadsTick] = useState(0);
+  const [review, setReview] = useState<PendingReview | null>(null);
+  const [reviews, setReviews] = useState<ReviewerState[] | null>(null);
+  const [composer, openComposer] = useState<Composer | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -46,6 +72,24 @@ export function PrProvider({ children }: { children: ReactNode }) {
       alive = false;
     };
   }, [id, version]);
+
+  const reloadReview = useCallback(async () => {
+    const r = await api.review().catch(() => null);
+    setReview(r && Array.isArray(r.comments) ? r : null);
+  }, []);
+  useEffect(() => {
+    void reloadReview();
+  }, [reloadReview, version]);
+
+  const reloadReviews = useCallback(() => {
+    api
+      .reviews()
+      .then((r) => setReviews(Array.isArray(r) ? r : null))
+      .catch(() => {});
+  }, []);
+  useEffect(reloadReviews, [reloadReviews, version]);
+
+  const reloadThreads = useCallback(() => setThreadsTick((n) => n + 1), []);
 
   const changeOf = useMemo(() => {
     const m = new Map((files?.docs ?? []).map((f) => [f.path, f]));
@@ -69,18 +113,23 @@ export function PrProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setThreads([]);
+  }, [path]);
+  useEffect(() => {
     if (!path) return;
     let alive = true;
     api
       .prThreads(path)
-      .then((t) => alive && setThreads(t))
+      .then((t) => alive && setThreads(Array.isArray(t) ? t : []))
       .catch((e: Error) => alive && setError(e.message));
     return () => {
       alive = false;
     };
-  }, [path, version]);
+  }, [path, version, threadsTick]);
 
-  const value = useMemo(() => ({ info, files, changeOf, diffOn, setDiffOn, diff, threads, error }), [info, files, changeOf, diffOn, diff, threads, error]);
+  const value = useMemo(
+    () => ({ info, files, changeOf, diffOn, setDiffOn, diff, threads, reloadThreads, review, reloadReview, reviews, reloadReviews, composer, openComposer, error }),
+    [info, files, changeOf, diffOn, diff, threads, reloadThreads, review, reloadReview, reviews, reloadReviews, composer, error],
+  );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
@@ -88,7 +137,8 @@ const REVIEW_LABEL: Record<string, string> = { APPROVED: 'Approved', CHANGES_REQ
 
 /** Latest review state per reviewer (PR bar). */
 export function ReviewStates({ info }: { info: PrInfo | null }) {
-  const reviews = info?.reviews ?? [];
+  const pr = usePr();
+  const reviews = Array.isArray(pr?.reviews) ? pr.reviews : Array.isArray(info?.reviews) ? info.reviews : [];
   if (!reviews.length) return null;
   return (
     <span className="review-states">
@@ -117,10 +167,31 @@ function when(iso: string): string {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('ja-JP', { dateStyle: 'short', timeStyle: 'short' });
 }
 
-/** One review thread (display only in Phase 2A). */
+/** One review thread: comments, reply and 解決 / 未解決に戻す. */
 export function ThreadView({ thread, showPlace }: { thread: Thread; showPlace?: boolean }) {
+  const pr = usePr();
+  const [reply, setReply] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
   const [first, ...replies] = thread.comments;
   const place = thread.placement;
+  const run = async (fn: () => Promise<unknown>, after?: () => void) => {
+    setError('');
+    setBusy(true);
+    try {
+      await fn();
+      after?.();
+      pr?.reloadThreads();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const send = () => {
+    if (!reply.trim()) return setError('返信を入力してください');
+    void run(() => api.replyThread(thread.id, reply), () => setReply(''));
+  };
   return (
     <details className={`thread${thread.resolved ? ' resolved' : ''}`} data-testid="thread" data-thread-id={thread.id} open={!thread.resolved}>
       <summary>
@@ -148,6 +219,24 @@ export function ThreadView({ thread, showPlace }: { thread: Thread; showPlace?: 
       <a href={thread.url} target="_blank" rel="noreferrer" className="muted">
         GitHub で開く
       </a>
+      {pr && (
+        <div className="thread-actions">
+          <textarea value={reply} onChange={(e) => setReply(e.target.value)} placeholder="返信を書く" rows={2} maxLength={2000} data-testid="thread-reply" />
+          <div className="row">
+            <button type="button" disabled={busy} onClick={send} data-testid="thread-reply-send">
+              返信
+            </button>
+            <button type="button" disabled={busy} onClick={() => void run(() => api.resolveThread(thread.id, !thread.resolved))} data-testid="thread-resolve">
+              {thread.resolved ? '未解決に戻す' : '解決済みにする'}
+            </button>
+            {error && (
+              <span className="error" data-testid="thread-error">
+                {error}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </details>
   );
 }

@@ -22,6 +22,16 @@ function find(n: any, pred: (x: any) => boolean, out: any[] = []): any[] {
 }
 
 describe('remarkReview（PR 差分・スレッドの重ね合わせ）', () => {
+  it('コメントできるブロック（最上位・リスト項目・表の行）に data-cmt を付ける', () => {
+    const { hast } = run({ commentLines: [5, 7, 9, 10, 12, 13, 14, 15] });
+    const lines = (tag: string) => find(hast, (x) => x.tagName === tag && x.properties?.dataCmt).map((x) => x.properties.dataCmt);
+    expect(lines('h1')).toEqual(['5']);
+    expect(lines('p')).toEqual(['7']);
+    expect(lines('li')).toEqual(['9', '10']);
+    expect(lines('tr')).toEqual(['12', '14', '15']);
+    expect(find(hast, (x) => (x.tagName === 'ul' || x.tagName === 'table') && x.properties?.dataCmt)).toHaveLength(0);
+  });
+
   it('追加・変更のブロック（最上位・リスト項目・表の行）に class を付ける', () => {
     const { hast } = run({ blocks: [{ line: 7, endLine: 7, change: 'added' }, { line: 10, endLine: 10, change: 'changed' }, { line: 15, endLine: 15, change: 'added' }] });
     const p = find(hast, (x) => x.tagName === 'p' && x.properties?.className?.includes('added'));

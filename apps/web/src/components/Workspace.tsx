@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api, apiUrl, ApiError, BAD_RESPONSE, gh, type AuthStatus, type DepsMissingDetail, type DepsStatus, type FetchStep, type PrInfo, type PullSummary, type WorkspaceInfo } from '../api.ts';
 import { parseHash, type Route } from '../state.tsx';
-import { ReviewStates } from './Pr.tsx';
+import { ReviewStates, usePr } from './Pr.tsx';
 
 export const LOGIN_MESSAGE = 'GitHub にログインしてください（`gh auth login` または `GITHUB_TOKEN`）';
 
@@ -415,6 +415,9 @@ export function LoadingPage() {
 /** PR bar: number, title, base ← head, head, 更新あり, 最新化, review states. */
 export function PrBar() {
   const { current, update, reload } = useWorkspaces();
+  const prCtx = usePr();
+  const pr$ = !!prCtx && current?.kind === 'pr';
+  const pendingCount = Array.isArray(prCtx?.review?.comments) ? prCtx.review.comments.length : 0;
   const [info, setInfo] = useState<PrInfo | null>(null);
   const [error, setError] = useState('');
   const id = current?.id ?? '';
@@ -491,6 +494,11 @@ export function PrBar() {
       {error && <span className="error">{error}</span>}
       <span className="spacer" />
       <ReviewStates info={info} />
+      {pr$ && (
+        <button type="button" className="primary" onClick={() => (location.hash = `#/w/${encodeURIComponent(id)}/review`)} data-testid="to-review" title="保留中のレビューを開く">
+          レビュー（<span data-testid="pending-count">{pendingCount}</span>）
+        </button>
+      )}
       {pr && (
         <a href={pr.htmlUrl} target="_blank" rel="noreferrer">
           GitHub で開く

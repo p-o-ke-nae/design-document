@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { createContext, Children, cloneElement, isValidElement, useContext, useMemo, type ReactElement, type ReactNode } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkFrontmatter from 'remark-frontmatter';
@@ -13,6 +13,7 @@ import { MermaidView } from './MermaidView.tsx';
 import { Embed, RefLink } from './Ref.tsx';
 import { MockFrame } from './MockFrame.tsx';
 import { ThreadList, usePr } from './Pr.tsx';
+import { CommentGutter, elementAtLine } from './Review.tsx';
 
 interface MdCtx {
   basePath: string;
@@ -43,12 +44,39 @@ const components: Record<string, (p: any) => ReactNode> = {
   'ddv-removed': (p: any) => <RemovedBlock index={Number(p['data-index'])} />,
   'ddv-threads': (p: any) => <ThreadList ids={String(p['data-ids'] ?? '').split(' ')} />,
   a: ({ node: _n, href, children, ...rest }: any) => <MdLink href={href} {...rest}>{children}</MdLink>,
+  ...Object.fromEntries(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'tr', 'blockquote', 'pre'].map((t) => [t, (p: any) => <Hosted tag={t} {...p} />])),
   table: ({ node: _n, ...rest }: any) => (
     <div className="table-wrap">
       <table {...rest} />
     </div>
   ),
 };
+
+/** An element with a 💬 gutter in a PR workspace (marked `data-cmt` by remarkReview); a plain element otherwise. */
+function Hosted({ tag: Tag, node: _n, children, ...rest }: any) {
+  const { doc, depth } = useMd();
+  const pr = usePr();
+  const line = Number(rest['data-cmt']);
+  const el = pr && doc && depth === 0 && line ? elementAtLine(doc, line) : undefined;
+  if (!el || !doc) return <Tag {...rest}>{children}</Tag>;
+  const gutter = <CommentGutter key="cmt" path={doc.path} element={el} />;
+  const cls = (c?: string) => `${c ? `${c} ` : ''}cmt-host`;
+  if (Tag === 'tr') {
+    // A table row cannot hold a button itself: it goes into the first cell.
+    const kids = Children.toArray(children);
+    const i = kids.findIndex((k) => isValidElement(k));
+    if (i < 0) return <Tag {...rest}>{children}</Tag>;
+    const cell = kids[i] as ReactElement<any>;
+    kids[i] = cloneElement(cell, { className: cls(cell.props.className) }, gutter, cell.props.children);
+    return <Tag {...rest}>{kids}</Tag>;
+  }
+  return (
+    <Tag {...rest} className={cls(rest.className)}>
+      {gutter}
+      {children}
+    </Tag>
+  );
+}
 
 function MermaidNode({ code, line }: { code: string; line: number }) {
   const { doc, depth } = useMd();

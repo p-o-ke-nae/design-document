@@ -7,6 +7,7 @@ import { TestsPage } from './components/TestsPage.tsx';
 import { StatusBadge } from './components/StatusBadge.tsx';
 import { DepsDialog, LoadingPage, OpenPage, PrBar, TopBar, TrustDialog, WorkspaceBar, WorkspaceProvider, useWorkspaces } from './components/Workspace.tsx';
 import { PrProvider } from './components/Pr.tsx';
+import { CommentComposer, DonePage, ReviewPage } from './components/Review.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 
 function Shell() {
@@ -60,8 +61,9 @@ function ShellBody() {
           <aside className="left">
             <DocTree />
           </aside>
-          <main className="main">{route.view === 'tests' ? <TestsPage /> : <DocPage />}</main>
+          <main className="main">{route.view === 'tests' ? <TestsPage /> : route.view === 'review' ? <ReviewPage lastDoc={lastDoc.current} /> : route.view === 'done' ? <DonePage lastDoc={lastDoc.current} /> : <DocPage />}</main>
         </div>
+        <CommentComposer />
       </ErrorBoundary>
     </div>
   );

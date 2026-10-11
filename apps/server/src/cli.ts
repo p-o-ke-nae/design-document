@@ -11,6 +11,7 @@ import { createContext } from './app.ts';
 import { GitCache } from './git.ts';
 import { devOriginsFromEnv } from './guard.ts';
 import { createServerApp } from './host.ts';
+import { formatReviewText, parseReviewArgs, ReviewCliError, reviewComments } from './review-cli.ts';
 import { SnapshotService } from './snapshots.ts';
 import { cleanWorkspaces, OpenRequestError, parseOpenRequest, WorkspaceManager } from './workspaces.ts';
 
@@ -26,6 +27,9 @@ const HELP = `ddv - Design Doc Viewer
       認証: gh auth token → 環境変数 GITHUB_TOKEN
   ddv gh clean [--repo <owner/repo>]
       閉じたワークスペースの worktree を削除します（--repo 指定時は使われていない clone も削除）
+  ddv review comments --github <owner/repo> --pr <n> [--json] [--all]
+      PR のレビュースレッドを、文書・見出し・図の要素・テストID・suggestion 付きで出力します（既定は未解決のみ、--all で全て）
+      ワークスペースが無ければ取得してから行います
   ddv mock scaffold [--repo <path>] [--mock <name>]
       画面遷移図の経路（P）ごとにシナリオの骨組みを生成・マージします（ddv-testid generate の後に実行）
   ddv mock init [--repo <path>]
@@ -130,6 +134,37 @@ async function ghCommand(argv: string[]) {
   if (!r.worktrees.length && !r.clones.length) console.log('削除するものはありません');
 }
 
+async function reviewCommand(argv: string[]) {
+  if (argv[0] !== 'comments') {
+    console.error(`不明なサブコマンド: review ${argv[0] ?? ''}\n\n${HELP}`);
+    process.exitCode = 2;
+    return;
+  }
+  let args;
+  try {
+    args = parseReviewArgs(argv.slice(1));
+  } catch (e) {
+    if (!(e instanceof ReviewCliError) && !(e instanceof OpenRequestError)) throw e;
+    console.error(`${e.message}\n\n${HELP}`);
+    process.exitCode = 2;
+    return;
+  }
+  const home = ddvHome();
+  const { github, git } = githubDeps(home);
+  const manager = new WorkspaceManager({ home, github, git, createContext: (dir) => createContext(dir, { watch: false }), pollSeconds: 0 });
+  await manager.init();
+  try {
+    const out = await reviewComments(manager, args);
+    console.log(args.json ? JSON.stringify(out, null, 2) : formatReviewText(out));
+  } catch (e) {
+    if (!(e instanceof ReviewCliError)) throw e;
+    console.error(e.message);
+    process.exitCode = 1;
+  } finally {
+    manager.dispose();
+  }
+}
+
 async function main(argv: string[]) {
   const cmd = argv[0];
   if (!cmd || cmd === '-h' || cmd === '--help') {
@@ -142,6 +177,10 @@ async function main(argv: string[]) {
   }
   if (cmd === 'gh') {
     await ghCommand(argv.slice(1));
+    return;
+  }
+  if (cmd === 'review') {
+    await reviewCommand(argv.slice(1));
     return;
   }
   if (cmd !== 'serve') {

@@ -220,6 +220,8 @@ export interface DepsMissingDetail {
 
 const post = (url: string, body?: unknown) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
 
+const send = (method: string, url: string, body?: unknown) => fetch(url, { method, headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+
 export const BAD_RESPONSE = 'サーバの応答を解釈できません（サーバが古い可能性があります。再起動してください）';
 
 export async function json<T>(res: Response): Promise<T> {
@@ -282,6 +284,14 @@ export function createApi(ws: string) {
     prFiles: () => get<ChangedFiles>('/api/pr/files'),
     prDiff: (path: string) => get<DocDiff>(`/api/pr/diff?path=${encodeURIComponent(path)}`),
     prThreads: (path?: string) => get<Thread[]>(path ? `/api/pr/threads?path=${encodeURIComponent(path)}` : '/api/pr/threads'),
+    review: () => get<PendingReview>('/api/review'),
+    addComment: (body: CommentInput) => post(A('/api/review/comments'), body).then((r) => json<PendingComment>(r)),
+    updateComment: (id: string, body: Partial<CommentInput>) => send('PATCH', A(`/api/review/comments/${encodeURIComponent(id)}`), body).then((r) => json<PendingComment>(r)),
+    deleteComment: (id: string) => send('DELETE', A(`/api/review/comments/${encodeURIComponent(id)}`)).then((r) => json<{ ok: boolean }>(r)),
+    submitReview: (body: { event: ReviewEvent; body?: string; approveDocs?: string[] }) => post(A('/api/review/submit'), body).then((r) => json<SubmitResult>(r)),
+    reviews: () => get<ReviewerState[]>('/api/reviews'),
+    replyThread: (id: string, body: string) => post(A(`/api/pr/threads/${encodeURIComponent(id)}/replies`), { body }).then((r) => json<ThreadComment>(r)),
+    resolveThread: (id: string, resolved: boolean) => post(A(`/api/pr/threads/${encodeURIComponent(id)}/resolve`), { resolved }).then((r) => json<{ id: string; resolved: boolean }>(r)),
   };
 }
 
@@ -415,6 +425,50 @@ export interface Thread {
   side: 'LEFT' | 'RIGHT';
   comments: ThreadComment[];
   placement?: ThreadPlacement;
+}
+
+// --- pending review (REVCMT) ---
+
+export type ReviewEvent = 'COMMENT' | 'APPROVE' | 'REQUEST_CHANGES';
+
+export interface ElementRef {
+  kind: 'block' | 'tableRow' | 'node' | 'edge' | 'diagram' | 'matrixRow' | 'mockElement';
+  key: string;
+  label?: string;
+}
+
+export interface PendingComment {
+  id: string;
+  anchor: { path: string; side: 'LEFT' | 'RIGHT'; startLine: number; line: number; lineText: string[]; element: Required<ElementRef> };
+  body: string;
+  suggestion?: string;
+  state: 'Pending' | 'Drifted';
+  placement: 'line' | 'file';
+  shrunk?: boolean;
+  commitId: string;
+  reason?: string;
+}
+
+export interface PendingReview {
+  headSha: string;
+  mergeBase?: string;
+  comments: PendingComment[];
+}
+
+export interface CommentInput {
+  path: string;
+  element: ElementRef;
+  body: string;
+  suggestion?: string;
+}
+
+export interface SubmitResult {
+  reviewId: number;
+  reviewUrl: string;
+  posted: { line: number; file: number };
+  failed: { id: string; message: string }[];
+  statusCommit?: { mode: 'commit'; sha: string; paths: string[] } | { mode: 'suggestion'; paths: string[] };
+  warnings?: string[];
 }
 
 export const gh = {

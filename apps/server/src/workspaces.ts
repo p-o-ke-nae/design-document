@@ -318,6 +318,10 @@ export class WorkspaceManager {
     return this.opts.github;
   }
 
+  get home(): string {
+    return this.opts.home;
+  }
+
   /** Restores saved workspaces whose worktree still exists (as Ready, with the saved head) and starts polling. */
   async init(): Promise<void> {
     for (const s of await this.store.load()) {

@@ -8,6 +8,8 @@ export interface ReviewMarks {
   removed?: { beforeLine: number | null }[];
   /** Review threads anchored to an element (head lines). */
   threads?: { id: string; line: number }[];
+  /** Start lines of the commentable source blocks; matching nodes get `data-cmt` (the 💬 gutter). */
+  commentLines?: number[];
 }
 
 const startOf = (n: any): number | undefined => n.position?.start?.line;
@@ -30,6 +32,18 @@ export const remarkReview: Plugin<[ReviewMarks?], Root> = (opts = {}) => (tree) 
   const changes = new Map((opts.blocks ?? []).map((b) => [b.line, b.change]));
   const top = tree.children.filter((n) => n.type !== 'yaml' && startOf(n) !== undefined);
 
+  if (opts.commentLines?.length) {
+    const lines = new Set(opts.commentLines);
+    const walk = (node: any, isTop: boolean) => {
+      const s = startOf(node);
+      if (s !== undefined && lines.has(s) && (isTop || node.type === 'listItem' || node.type === 'tableRow') && node.type !== 'list' && node.type !== 'table') {
+        node.data ??= {};
+        node.data.hProperties = { ...(node.data.hProperties ?? {}), dataCmt: `${s}` };
+      }
+      for (const ch of node.children ?? []) walk(ch, false);
+    };
+    for (const n of top) walk(n, true);
+  }
   if (changes.size) {
     const walk = (node: any, isTop: boolean) => {
       const s = startOf(node);

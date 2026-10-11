@@ -13,6 +13,7 @@ plugin/
     ddv-requirements/         目的→As-Is→課題→To-Be→スコープ→受入基準 の順にヒアリング
     ddv-basic-design/         画面遷移/状態図/シーケンス/ER/全画面モック、テストID採番、シナリオ骨組み生成、lint
     ddv-detailed-design/      クラス図/シーケンス/単体レベル状態図、モックの疑似API・fixtures、テストID採番、lint
+    ddv-review-response/      PR のレビューコメントを ddv review comments で取り込み、設計書・モックを直して返信（解決はレビュアー）
   templates/                  対象リポジトリと同じ配置のひな形（そのまま ddv lint が通る）
     ddv.config.yaml
     docs/design/{requirements,basic,detailed}/sample.md
@@ -63,6 +64,7 @@ claude --plugin-dir ./plugin        # 開発中の読み込み
 | 要件定義 | 人間＋AI（plan モード） | `ddv-requirements` | 人間が ddv で確認し `status: approved` |
 | 基本設計 | AI | `ddv-basic-design` | 図・マトリクスとモックのプレイヤーで全経路をレビューし承認（＝テストケース承認） |
 | 詳細設計 | AI | `ddv-detailed-design` | 同上 |
+| レビュー対応 | AI | `ddv-review-response`（`ddv review comments --github <o/r> --pr <n> --json` でスレッドを取得し、修正・push・返信） | 解決はレビュアー。承認済み文書への指摘は人間に確認 |
 | 実装 | AI（TDD） | テストIDをテスト名/Trait に書いて全グリーンまで。画面経路の E2E はシナリオ YAML を `_map.yaml` で実アプリに向けて実行 | ddv のテストタブで結果確認 |
 | 受入 | 人間 | 要件の受入基準を ddv で確認 | 完了 |
 
@@ -71,4 +73,4 @@ claude --plugin-dir ./plugin        # 開発中の読み込み
 ## 今後の拡張（ロードマップ）
 
 - `ddv-tdd-implement`（承認済みIDからテスト先行で実装、`ddv-testid check --strict` で網羅確認）
-- `ddv-review-response`（PR コメントの取り込み）、`ddv-change-request`（実装中の設計差し戻し）
+- `ddv-change-request`（実装中の設計差し戻し）
