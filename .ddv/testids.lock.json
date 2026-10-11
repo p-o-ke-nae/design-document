@@ -2855,7 +2855,7 @@
         "P:A||B>B|いいえ|F1": {
           "id": "DD-REVCMT-PLACE-P001",
           "status": "active",
-          "title": "placement → ファイルが PR で変更されている → [いいえ] file: 本文に L行と内容を引用"
+          "title": "placement → ファイルが PR で変更されている → [いいえ] body: レビュー本文に path・L行・内容を引用して含める"
         },
         "P:A||B>B|はい|C>C|はい|L": {
           "id": "DD-REVCMT-PLACE-P002",
@@ -2880,7 +2880,7 @@
         "T:B|いいえ|F1": {
           "id": "DD-REVCMT-PLACE-T002",
           "status": "active",
-          "title": "ファイルが PR で変更されている --[いいえ]--> file: 本文に L行と内容を引用"
+          "title": "ファイルが PR で変更されている --[いいえ]--> body: レビュー本文に path・L行・内容を引用して含める"
         },
         "T:B|はい|C": {
           "id": "DD-REVCMT-PLACE-T003",
