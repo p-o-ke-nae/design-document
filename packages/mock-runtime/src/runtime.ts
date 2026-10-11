@@ -7,6 +7,8 @@ import { DomDriver, type ExecOptions } from './driver.ts';
 import { FetchInterceptor } from './fetch.ts';
 import { ApiRouter, parseApiSpec, type ApiSpec, type RouteHandler } from './router.ts';
 import { ScreenController } from './screen.ts';
+import { Tuner } from './tuner.ts';
+import type { ElementPatch, PatchIssue } from '@ddv/mock/tune-patch';
 import { Validator } from './validator.ts';
 import { RUNTIME_VERSION } from './version.ts';
 
@@ -43,6 +45,7 @@ export class MockRuntime implements BridgeEngine {
   readonly binder: DeclarativeBinder;
   readonly driver: DomDriver;
   readonly bridge: HostBridge;
+  readonly tuner: Tuner;
   private spec: ApiSpec = { base: '/api', tables: [], routes: [] };
   private readonly hooks = new Map<string, Set<ScreenHandler>>();
   private readonly ops = new Map<string, OpHandler>();
@@ -67,6 +70,7 @@ export class MockRuntime implements BridgeEngine {
     });
     this.driver = new DomDriver({ screens: this.screens, binder: this.binder, root: this.doc, invoke: (n) => this.invoke(n), sleep: opts.sleep });
     this.bridge = new HostBridge(this.win, this);
+    this.tuner = new Tuner(this.doc, (picked) => this.bridge.notify({ type: 'ddv:picked', ...picked }));
     this.load = opts.load ?? ((rel) => this.fetchFile(rel));
   }
 
@@ -92,6 +96,7 @@ export class MockRuntime implements BridgeEngine {
 
   /** Removes listeners and restores `fetch` (for tests / re-mounting). */
   dispose(): void {
+    this.tuner.stop();
     this.binder.cancel();
     this.binder.unbind();
     this.bridge.unlisten();
@@ -185,6 +190,19 @@ export class MockRuntime implements BridgeEngine {
 
   screen(): string | null {
     return this.screens.current;
+  }
+
+  get tuning(): boolean {
+    return this.tuner.active;
+  }
+
+  tune(on: boolean): void {
+    if (on) this.tuner.start();
+    else this.tuner.stop();
+  }
+
+  patch(path: number[], patch: ElementPatch | null): PatchIssue[] {
+    return this.tuner.apply(path, patch);
   }
 
   // ---- internals ----

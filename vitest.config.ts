@@ -13,6 +13,8 @@ export default defineConfig({
       '@ddv/testid': r('./packages/testid/src/index.ts'),
       '@ddv/mock/step': r('./packages/mock/src/step.ts'),
       '@ddv/mock/playwright': r('./packages/mock/src/playwright.ts'),
+      '@ddv/mock/tune': r('./packages/mock/src/tune.ts'),
+      '@ddv/mock/tune-patch': r('./packages/mock/src/tune-patch.ts'),
       '@ddv/mock-runtime': r('./packages/mock-runtime/src/index.ts'),
       '@ddv/mock': r('./packages/mock/src/index.ts'),
     },

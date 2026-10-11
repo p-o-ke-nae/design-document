@@ -18,6 +18,7 @@ export default defineConfig({
   publicDir: false,
   resolve: {
     alias: {
+      '@ddv/mock/tune-patch': r('../mock/src/tune-patch.ts'),
       '@ddv/mock/step': r('../mock/src/step.ts'),
     },
   },

@@ -1,4 +1,5 @@
 import type { Step, StepResult } from '@ddv/mock/step';
+import type { ElementPatch, PatchIssue, PickedElement } from '@ddv/mock/tune-patch';
 
 export type BridgeState = 'Booting' | 'Ready' | 'Running' | 'Broken';
 export type BridgeEvent = 'loaded' | 'failed' | 'step' | 'done' | 'reset';
@@ -21,9 +22,16 @@ export type OutMessage =
   | { type: 'ddv:ready'; screen: string | null; version: string }
   | { type: 'ddv:result'; index: number; ok: boolean; screen: string | null; failures: StepResult['failures']; message?: string }
   | { type: 'ddv:screen'; screen: string }
-  | { type: 'ddv:error'; message: string };
+  | { type: 'ddv:error'; message: string }
+  | ({ type: 'ddv:picked' } & PickedElement);
 
-export type InMessage = { type: 'ddv:reset'; fixtures?: string[]; start?: string } | { type: 'ddv:step'; index: number; step: Step; highlight?: { holdMs: number } };
+export type InMessage =
+  | { type: 'ddv:reset'; fixtures?: string[]; start?: string }
+  | { type: 'ddv:step'; index: number; step: Step; highlight?: { holdMs: number } }
+  | { type: 'ddv:tune'; on: boolean }
+  | { type: 'ddv:patch'; path: number[]; patch: ElementPatch | null };
+
+export const TUNING_MESSAGE = 'モックの調整中のため実行できません（調整を終了してください）';
 
 /** What the bridge drives (implemented by MockRuntime). */
 export interface BridgeEngine {
@@ -34,6 +42,11 @@ export interface BridgeEngine {
   /** Discards in-flight declarative work of a running step. */
   cancel(): void;
   screen(): string | null;
+  /** Tune mode (DD-TUNE): steps are refused while it is on. */
+  readonly tuning?: boolean;
+  tune?(on: boolean): void;
+  /** Applies (null = reverts) the element's patch; returns the validation issues. */
+  patch?(path: number[], patch: ElementPatch | null): PatchIssue[];
 }
 
 interface QueueItem {
@@ -114,6 +127,11 @@ export class HostBridge {
     if (!m || typeof m !== 'object') return;
     if (m.type === 'ddv:reset') this.reset(Array.isArray(m.fixtures) ? m.fixtures : [], m.start).catch(() => {});
     else if (m.type === 'ddv:step' && typeof m.index === 'number' && m.step && typeof m.step === 'object') void this.step(m.step, m.index, validHighlight(m.highlight));
+    else if (m.type === 'ddv:tune' && typeof m.on === 'boolean') this.engine.tune?.(m.on);
+    else if (m.type === 'ddv:patch' && Array.isArray(m.path) && m.path.every((i) => Number.isInteger(i) && i >= 0)) {
+      const issues = this.engine.patch?.(m.path, m.patch && typeof m.patch === 'object' ? m.patch : null) ?? [];
+      if (issues.length) this.error(issues.map((i) => i.message).join('／'));
+    }
   }
 
   /** Initial boot (state is already Booting). */
@@ -163,8 +181,8 @@ export class HostBridge {
 
   /** Runs a step (queued while another runs). `index` given = came from postMessage, so the result is posted back. */
   step(step: Step, index?: number, highlight?: { holdMs: number } | null): Promise<StepResult> {
-    if (this.state === 'Booting' || this.state === 'Broken') {
-      const message = this.state === 'Booting' ? 'モックを起動中のため実行できません' : 'モックの読込に失敗しているため実行できません（リセットしてください）';
+    if (this.state === 'Booting' || this.state === 'Broken' || this.engine.tuning) {
+      const message = this.engine.tuning ? TUNING_MESSAGE : this.state === 'Booting' ? 'モックを起動中のため実行できません' : 'モックの読込に失敗しているため実行できません（リセットしてください）';
       const r: StepResult = { ok: false, screen: this.engine.screen(), failures: [], error: { kind: 'error', message } };
       this.post(index, r);
       return Promise.resolve(r);

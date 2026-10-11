@@ -6123,6 +6123,7 @@ function bridgeTransition(state, ev) {
 		case "Broken": return ev === "reset" ? "Booting" : null;
 	}
 }
+var TUNING_MESSAGE = "モックの調整中のため実行できません（調整を終了してください）";
 /** Accepts { holdMs } with a finite, non-negative holdMs (capped at 10s); anything else = no highlight. */
 function validHighlight(h) {
 	if (!h || typeof h !== "object") return null;
@@ -6186,6 +6187,11 @@ var HostBridge = class {
 		if (!m || typeof m !== "object") return;
 		if (m.type === "ddv:reset") this.reset(Array.isArray(m.fixtures) ? m.fixtures : [], m.start).catch(() => {});
 		else if (m.type === "ddv:step" && typeof m.index === "number" && m.step && typeof m.step === "object") this.step(m.step, m.index, validHighlight(m.highlight));
+		else if (m.type === "ddv:tune" && typeof m.on === "boolean") this.engine.tune?.(m.on);
+		else if (m.type === "ddv:patch" && Array.isArray(m.path) && m.path.every((i) => Number.isInteger(i) && i >= 0)) {
+			const issues = this.engine.patch?.(m.path, m.patch && typeof m.patch === "object" ? m.patch : null) ?? [];
+			if (issues.length) this.error(issues.map((i) => i.message).join("／"));
+		}
 	}
 	/** Initial boot (state is already Booting). */
 	start() {
@@ -6244,8 +6250,8 @@ var HostBridge = class {
 	}
 	/** Runs a step (queued while another runs). `index` given = came from postMessage, so the result is posted back. */
 	step(step, index, highlight) {
-		if (this.state === "Booting" || this.state === "Broken") {
-			const message = this.state === "Booting" ? "モックを起動中のため実行できません" : "モックの読込に失敗しているため実行できません（リセットしてください）";
+		if (this.state === "Booting" || this.state === "Broken" || this.engine.tuning) {
+			const message = this.engine.tuning ? TUNING_MESSAGE : this.state === "Booting" ? "モックを起動中のため実行できません" : "モックの読込に失敗しているため実行できません（リセットしてください）";
 			const r = {
 				ok: false,
 				screen: this.engine.screen(),
@@ -6416,8 +6422,20 @@ var MemoryDb = class {
 //#endregion
 //#region src/driver.ts
 var HIGHLIGHT_ATTR = "data-ddv-highlight";
+/** Outline of the element under the pointer in the tune mode (same look as the step highlight). */
+var TUNE_HOVER_ATTR = "data-ddv-tune-hover";
+/** Marks elements the runtime adds to the page (not counted in element paths). */
+var DDV_UI_ATTR = "data-ddv-ui";
 var HIGHLIGHT_STYLE_ID = "ddv-highlight-style";
-var HIGHLIGHT_CSS = `[${HIGHLIGHT_ATTR}]{outline:3px solid #f59e0b !important;outline-offset:2px;box-shadow:0 0 0 6px rgba(245,158,11,.25) !important;transition:outline-color .1s}`;
+var HIGHLIGHT_CSS = `[${HIGHLIGHT_ATTR}],[${TUNE_HOVER_ATTR}]{outline:3px solid #f59e0b !important;outline-offset:2px;box-shadow:0 0 0 6px rgba(245,158,11,.25) !important;transition:outline-color .1s}`;
+function ensureHighlightStyle(doc) {
+	if (doc.getElementById(HIGHLIGHT_STYLE_ID)) return;
+	const s = doc.createElement("style");
+	s.id = HIGHLIGHT_STYLE_ID;
+	s.setAttribute(DDV_UI_ATTR, "");
+	s.textContent = HIGHLIGHT_CSS;
+	(doc.head ?? doc.documentElement).appendChild(s);
+}
 var defaultSleep = (ms) => new Promise((r) => setTimeout(r, ms));
 var esc = (s) => s.replace(/["\\]/g, "\\$&");
 /**
@@ -6435,7 +6453,7 @@ var DomDriver = class {
 	async withHighlight(el, act) {
 		const h = this.highlight;
 		if (!h) return act();
-		this.ensureHighlightStyle(el.ownerDocument);
+		ensureHighlightStyle(el.ownerDocument);
 		el.setAttribute(HIGHLIGHT_ATTR, "");
 		try {
 			el.scrollIntoView?.({
@@ -6447,13 +6465,6 @@ var DomDriver = class {
 		} finally {
 			el.removeAttribute(HIGHLIGHT_ATTR);
 		}
-	}
-	ensureHighlightStyle(doc) {
-		if (doc.getElementById(HIGHLIGHT_STYLE_ID)) return;
-		const s = doc.createElement("style");
-		s.id = HIGHLIGHT_STYLE_ID;
-		s.textContent = HIGHLIGHT_CSS;
-		(doc.head ?? doc.documentElement).appendChild(s);
 	}
 	find(key) {
 		const sel = `[data-testid="${esc(key)}"]`;
@@ -6808,7 +6819,7 @@ var OPS = [
 	"update",
 	"delete"
 ];
-var isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+var isObj$1 = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 /** Validates parsed api.yaml. Invalid entries are skipped and reported in `errors`. */
 function parseApiSpec(raw) {
 	const errors = [];
@@ -6821,7 +6832,7 @@ function parseApiSpec(raw) {
 		spec,
 		errors
 	};
-	if (!isObj(raw)) return {
+	if (!isObj$1(raw)) return {
 		spec,
 		errors: ["api.yaml の形式が正しくありません（オブジェクトではありません）"]
 	};
@@ -6836,7 +6847,7 @@ function parseApiSpec(raw) {
 			name: t,
 			key: "id"
 		});
-		else if (isObj(t) && typeof t.name === "string" && t.name) spec.tables.push({
+		else if (isObj$1(t) && typeof t.name === "string" && t.name) spec.tables.push({
 			name: t.name,
 			key: typeof t.key === "string" && t.key ? t.key : "id"
 		});
@@ -6846,15 +6857,15 @@ function parseApiSpec(raw) {
 	if (!Array.isArray(routes)) errors.push("api.yaml: routes は配列にしてください");
 	else routes.forEach((r, i) => {
 		const at = `api.yaml: routes[${i}]`;
-		if (!isObj(r)) return errors.push(`${at} はオブジェクトにしてください`);
+		if (!isObj$1(r)) return errors.push(`${at} はオブジェクトにしてください`);
 		if (typeof r.method !== "string" || typeof r.path !== "string" || !r.path.startsWith("/")) return errors.push(`${at} には method と「/」で始まる path が必要です`);
 		if (r.op !== void 0 && !OPS.includes(r.op)) return errors.push(`${at}: op は ${OPS.join(" / ")} のいずれかにしてください`);
 		if (r.op !== void 0 && typeof r.table !== "string") return errors.push(`${at}: op には table が必要です`);
-		if (r.set !== void 0 && !isObj(r.set)) return errors.push(`${at}: set はオブジェクトにしてください`);
+		if (r.set !== void 0 && !isObj$1(r.set)) return errors.push(`${at}: set はオブジェクトにしてください`);
 		if (r.status !== void 0 && typeof r.status !== "number") return errors.push(`${at}: status は数値にしてください`);
 		const when = [];
 		for (const [j, w] of (Array.isArray(r.when) ? r.when : r.when === void 0 ? [] : [null]).entries()) {
-			if (!isObj(w) || typeof w.if !== "string") {
+			if (!isObj$1(w) || typeof w.if !== "string") {
 				errors.push(`${at}.when[${j}] には if（文字列）が必要です`);
 				continue;
 			}
@@ -6947,7 +6958,7 @@ var ApiRouter = class {
 		return notFound(`ルートがありません: ${method} ${req.path}`);
 	}
 	fromHandler(v) {
-		if (isObj(v) && typeof v.status === "number") return {
+		if (isObj$1(v) && typeof v.status === "number") return {
 			status: v.status,
 			..."body" in v ? { body: v.body } : {}
 		};
@@ -6980,7 +6991,7 @@ var ApiRouter = class {
 		const t = this.db.ensure(table);
 		const key = req.params[t.key] ?? req.params.id ?? Object.values(req.params)[0];
 		const input = {
-			...isObj(req.body) ? req.body : {},
+			...isObj$1(req.body) ? req.body : {},
 			...r.set ?? {}
 		};
 		const missing = () => notFound(`データが見つかりません: ${table} ${key ?? ""}`.trim());
@@ -7052,6 +7063,416 @@ var ScreenController = class {
 	}
 };
 //#endregion
+//#region ../mock/src/tune-patch.ts
+var TEXT_ATTRS = [
+	"placeholder",
+	"title",
+	"aria-label",
+	"value",
+	"pattern"
+];
+var NUMBER_ATTRS = [
+	"maxlength",
+	"minlength",
+	"min",
+	"max",
+	"step"
+];
+var BOOLEAN_ATTRS = ["required"];
+var EDITABLE_ATTRS = [
+	...TEXT_ATTRS,
+	...NUMBER_ATTRS,
+	...BOOLEAN_ATTRS,
+	"type"
+];
+var INPUT_TYPES = [
+	"text",
+	"number",
+	"email",
+	"tel",
+	"date",
+	"password",
+	"checkbox"
+];
+var INTEGER_ATTRS = /* @__PURE__ */ new Set(["maxlength", "minlength"]);
+var FORM_TAGS = /* @__PURE__ */ new Set([
+	"input",
+	"textarea",
+	"select"
+]);
+/** Attributes the viewer offers for an element (input fields are shown in this order). */
+function editableAttrsFor(tag) {
+	const t = tag.toLowerCase();
+	if (t === "input") return [...EDITABLE_ATTRS];
+	if (t === "textarea") return [
+		"placeholder",
+		"title",
+		"aria-label",
+		"maxlength",
+		"minlength",
+		"required"
+	];
+	if (t === "select") return [
+		"title",
+		"aria-label",
+		"required"
+	];
+	return ["title", "aria-label"];
+}
+var isObj = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
+var DATE = /^\d{4}-\d{2}-\d{2}$/;
+function numberOf(name, v) {
+	if (v.trim() === "") return null;
+	if (name === "step" && v === "any") return null;
+	if ((name === "min" || name === "max") && DATE.test(v)) return null;
+	const n = Number(v);
+	return Number.isFinite(n) ? n : NaN;
+}
+function validRegExp(p) {
+	for (const flags of ["v", "u"]) try {
+		new RegExp(p, flags);
+		return true;
+	} catch {}
+	return false;
+}
+/**
+* Checks an ElementPatch from the network / the viewer. `tag` is the element's tag and `current` its current
+* attribute values (used for the range checks across the patch and the unchanged attributes).
+*/
+function validatePatch(input, tag, current = {}) {
+	const issues = [];
+	const patch = {
+		set: {},
+		remove: []
+	};
+	if (!isObj(input)) return {
+		patch,
+		issues: [{
+			field: "patch",
+			message: "patch は { text?, set, remove, options? } で指定してください"
+		}]
+	};
+	const t = tag.toLowerCase();
+	const allowed = new Set(editableAttrsFor(t));
+	if (input.text !== void 0) {
+		if (typeof input.text !== "string") issues.push({
+			field: "text",
+			message: "文言は文字列で指定してください"
+		});
+		else if (input.text.length > 200) issues.push({
+			field: "text",
+			message: `文言は 200 文字以内で入力してください`
+		});
+		else if (FORM_TAGS.has(t) && t !== "textarea") issues.push({
+			field: "text",
+			message: "この要素の文言は変えられません"
+		});
+		else patch.text = input.text;
+	}
+	const set = input.set === void 0 ? {} : input.set;
+	if (!isObj(set)) issues.push({
+		field: "patch",
+		message: "set は { 属性名: 値 } で指定してください"
+	});
+	else for (const [name, v] of Object.entries(set)) {
+		if (!allowed.has(name)) {
+			issues.push({
+				field: name,
+				message: `この属性は変更できません: ${name}`
+			});
+			continue;
+		}
+		if (typeof v !== "string") {
+			issues.push({
+				field: name,
+				message: `${name} の値は文字列で指定してください`
+			});
+			continue;
+		}
+		if (v.length > 200) {
+			issues.push({
+				field: name,
+				message: `${name} は 200 文字以内で入力してください`
+			});
+			continue;
+		}
+		patch.set[name] = v;
+	}
+	const remove = input.remove === void 0 ? [] : input.remove;
+	if (!Array.isArray(remove)) issues.push({
+		field: "patch",
+		message: "remove は属性名の配列で指定してください"
+	});
+	else for (const name of remove) if (typeof name !== "string" || !allowed.has(name)) issues.push({
+		field: String(name),
+		message: `この属性は変更できません: ${String(name)}`
+	});
+	else if (name in patch.set) issues.push({
+		field: name,
+		message: `${name} の変更と削除が重なっています`
+	});
+	else if (!patch.remove.includes(name)) patch.remove.push(name);
+	for (const [name, v] of Object.entries(patch.set)) {
+		if (NUMBER_ATTRS.includes(name)) {
+			const n = numberOf(name, v);
+			if (Number.isNaN(n) || n !== null && INTEGER_ATTRS.has(name) && (!Number.isInteger(n) || n < 0)) issues.push({
+				field: name,
+				message: INTEGER_ATTRS.has(name) ? `${name} は 0 以上の整数で入力してください` : `${name} は数値で入力してください`
+			});
+		}
+		if (name === "required" && v !== "") issues.push({
+			field: name,
+			message: "required は値なしの属性です"
+		});
+		if (name === "type" && !INPUT_TYPES.includes(v)) issues.push({
+			field: name,
+			message: `type は ${INPUT_TYPES.join(" / ")} のいずれかです`
+		});
+		if (name === "pattern" && !validRegExp(v)) issues.push({
+			field: name,
+			message: "正規表現を確認してください"
+		});
+	}
+	const after = {
+		...current,
+		...patch.set
+	};
+	for (const name of patch.remove) delete after[name];
+	for (const [lo, hi] of [["minlength", "maxlength"], ["min", "max"]]) {
+		if (!(lo in patch.set || hi in patch.set)) continue;
+		const a = after[lo] !== void 0 ? numberOf(lo, after[lo]) : null;
+		const b = after[hi] !== void 0 ? numberOf(hi, after[hi]) : null;
+		if (a !== null && b !== null && !Number.isNaN(a) && !Number.isNaN(b) && a > b) issues.push({
+			field: lo in patch.set ? lo : hi,
+			message: "範囲を確認してください"
+		});
+	}
+	if (input.options !== void 0) {
+		if (t !== "select") issues.push({
+			field: "options",
+			message: "選択肢は select だけで変更できます"
+		});
+		else if (!Array.isArray(input.options) || !input.options.every((o) => isObj(o) && typeof o.value === "string" && typeof o.label === "string")) issues.push({
+			field: "options",
+			message: "選択肢は { value, label } の配列で指定してください"
+		});
+		else {
+			const options = input.options.map((o) => ({
+				value: o.value,
+				label: o.label
+			}));
+			const values = options.map((o) => o.value);
+			if (new Set(values).size !== values.length) issues.push({
+				field: "options",
+				message: "選択肢の値が重複しています"
+			});
+			else if (options.some((o) => o.value.length > 200 || o.label.length > 200)) issues.push({
+				field: "options",
+				message: `選択肢は 200 文字以内で入力してください`
+			});
+			else patch.options = options;
+		}
+	}
+	return {
+		patch,
+		issues
+	};
+}
+//#endregion
+//#region src/tuner.ts
+var ITEM_ATTR = "data-item";
+/** Attributes the tune mode itself sets; kept out of snapshots. */
+var OWN_ATTRS = /* @__PURE__ */ new Set([TUNE_HOVER_ATTR, HIGHLIGHT_ATTR]);
+var isCounted = (el) => !el.hasAttribute(ITEM_ATTR) && !el.hasAttribute("data-ddv-ui");
+var countedChildren = (el) => Array.from(el.children).filter(isCounted);
+var directTexts = (el) => Array.from(el.childNodes).filter((n) => n.nodeType === 3 && (n.textContent ?? "").trim() !== "");
+function optionsOf(el) {
+	return Array.from(el.children).filter((c) => c.tagName.toLowerCase() === "option").map((o) => {
+		const label = (o.textContent ?? "").trim();
+		return {
+			value: o.getAttribute("value") ?? label,
+			label
+		};
+	});
+}
+var Tuner = class {
+	doc;
+	onPick;
+	active = false;
+	patches = /* @__PURE__ */ new Map();
+	hovered = null;
+	abort = null;
+	constructor(doc, onPick) {
+		this.doc = doc;
+		this.onPick = onPick;
+	}
+	start() {
+		if (this.active) return;
+		this.active = true;
+		ensureHighlightStyle(this.doc);
+		this.abort = new AbortController();
+		const opts = {
+			capture: true,
+			signal: this.abort.signal
+		};
+		const block = (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+		};
+		this.doc.addEventListener("click", (e) => {
+			block(e);
+			const t = e.target;
+			if (t && t.nodeType === 1) this.onPick(this.pick(t));
+		}, opts);
+		for (const type of [
+			"mousedown",
+			"mouseup",
+			"dblclick",
+			"submit",
+			"pointerdown",
+			"pointerup"
+		]) this.doc.addEventListener(type, block, opts);
+		this.doc.addEventListener("mouseover", (e) => this.hover(e.target), opts);
+		this.doc.addEventListener("mouseout", (e) => {
+			if (!e.relatedTarget) this.hover(null);
+		}, opts);
+	}
+	/** Ends the mode and reverts every change. */
+	stop() {
+		if (!this.active) return;
+		this.active = false;
+		this.abort?.abort();
+		this.abort = null;
+		this.hover(null);
+		for (const key of [...this.patches.keys()]) this.revertKey(key);
+	}
+	hover(el) {
+		const target = el && el.nodeType === 1 ? this.selectable(el) : null;
+		if (target === this.hovered) return;
+		this.hovered?.removeAttribute(TUNE_HOVER_ATTR);
+		this.hovered = target;
+		target?.setAttribute(TUNE_HOVER_ATTR, "");
+	}
+	/** ddv UI / runtime elements are not picked: their parent is (PICK: 親の要素を選び直す). */
+	selectable(el) {
+		let cur = el;
+		while (cur.hasAttribute("data-ddv-ui") && cur.parentElement) cur = cur.parentElement;
+		return cur;
+	}
+	/** Element-child indexes from the root, counting only source elements. */
+	pathOf(el) {
+		const path = [];
+		let cur = el;
+		while (cur !== this.doc.documentElement) {
+			const parent = cur.parentElement;
+			if (!parent) break;
+			path.unshift(countedChildren(parent).indexOf(cur));
+			cur = parent;
+		}
+		return path;
+	}
+	elementAt(path) {
+		let cur = this.doc.documentElement;
+		for (const i of path) {
+			cur = countedChildren(cur).at(i);
+			if (!cur || i < 0) return null;
+		}
+		return cur;
+	}
+	pick(target) {
+		const item = target.closest(`[${ITEM_ATTR}]`);
+		const el = item ? target : this.selectable(target);
+		const tag = el.tagName.toLowerCase();
+		const texts = directTexts(el);
+		const text = Array.from(el.childNodes).filter((n) => n.nodeType === 3).map((n) => n.textContent ?? "").join("").trim();
+		const attrs = {};
+		for (const name of editableAttrsFor(tag)) {
+			const v = el.getAttribute(name);
+			if (v !== null) attrs[name] = v;
+		}
+		const testid = el.getAttribute("data-testid");
+		return {
+			path: this.pathOf(item ? item.parentElement ?? item : el),
+			tag,
+			...testid !== null ? { testid } : {},
+			...texts.length ? { text } : {},
+			textCount: texts.length,
+			attrs,
+			...tag === "select" ? { options: optionsOf(el) } : {},
+			generated: item !== null
+		};
+	}
+	/** Replaces the element's changes with `patch` (null = revert). Returns the validation issues (nothing applied when any). */
+	apply(path, patch) {
+		const key = path.join(".");
+		if (patch === null) {
+			this.revertKey(key);
+			return [];
+		}
+		this.revertKey(key);
+		const el = this.elementAt(path);
+		if (!el) return [{
+			field: "path",
+			message: "要素が見つかりません（モックを再読込してください）"
+		}];
+		const tag = el.tagName.toLowerCase();
+		const current = {};
+		for (const a of Array.from(el.attributes)) current[a.name] = a.value;
+		const { patch: p, issues } = validatePatch(patch, tag, current);
+		if (issues.length) return issues;
+		const texts = directTexts(el);
+		if (p.text !== void 0 && texts.length !== 1) return [{
+			field: "text",
+			message: "文言を変えられない要素です（直下のテキストが 1 つではありません）"
+		}];
+		const snap = {
+			el,
+			attrs: Array.from(el.attributes).filter((a) => !OWN_ATTRS.has(a.name)).map((a) => [a.name, a.value])
+		};
+		if (p.text !== void 0) {
+			const node = texts[0];
+			const data = node.data;
+			snap.text = {
+				node,
+				data
+			};
+			const lead = /^\s*/.exec(data)[0];
+			const trail = /\s*$/.exec(data)[0];
+			node.data = lead + p.text + trail;
+		}
+		for (const [name, v] of Object.entries(p.set)) el.setAttribute(name, v);
+		for (const name of p.remove) el.removeAttribute(name);
+		if (p.options) {
+			snap.children = Array.from(el.childNodes);
+			el.replaceChildren(...p.options.map((o) => {
+				const opt = this.doc.createElement("option");
+				opt.setAttribute("value", o.value);
+				opt.textContent = o.label;
+				return opt;
+			}));
+		}
+		this.patches.set(key, snap);
+		return [];
+	}
+	revert(path) {
+		this.revertKey(path.join("."));
+	}
+	revertKey(key) {
+		const snap = this.patches.get(key);
+		if (!snap) return;
+		this.patches.delete(key);
+		const { el } = snap;
+		for (const a of Array.from(el.attributes)) if (!OWN_ATTRS.has(a.name)) el.removeAttribute(a.name);
+		for (const [name, v] of snap.attrs) el.setAttribute(name, v);
+		if (snap.text) snap.text.node.data = snap.text.data;
+		if (snap.children) el.replaceChildren(...snap.children);
+	}
+	/** Paths currently changed (for tests / diagnostics). */
+	get changed() {
+		return [...this.patches.keys()];
+	}
+};
+//#endregion
 //#region src/validator.ts
 var isInput = (el) => el.tagName === "INPUT";
 var keyOf = (el) => el.getAttribute("data-testid") ?? el.getAttribute("name") ?? el.id ?? "";
@@ -7115,7 +7536,9 @@ var RUNTIME_VERSION = {
 	exports: {
 		".": "./src/index.ts",
 		"./step": "./src/step.ts",
-		"./playwright": "./src/playwright.ts"
+		"./playwright": "./src/playwright.ts",
+		"./tune": "./src/tune.ts",
+		"./tune-patch": "./src/tune-patch.ts"
 	},
 	dependencies: {
 		"@ddv/core": "*",
@@ -7144,6 +7567,7 @@ var MockRuntime = class {
 	binder;
 	driver;
 	bridge;
+	tuner;
 	spec = {
 		base: "/api",
 		tables: [],
@@ -7177,6 +7601,10 @@ var MockRuntime = class {
 			sleep: opts.sleep
 		});
 		this.bridge = new HostBridge(this.win, this);
+		this.tuner = new Tuner(this.doc, (picked) => this.bridge.notify({
+			type: "ddv:picked",
+			...picked
+		}));
 		this.load = opts.load ?? ((rel) => this.fetchFile(rel));
 	}
 	/** Resolves on the first successful boot (rejects when it fails). */
@@ -7197,6 +7625,7 @@ var MockRuntime = class {
 	}
 	/** Removes listeners and restores `fetch` (for tests / re-mounting). */
 	dispose() {
+		this.tuner.stop();
 		this.binder.cancel();
 		this.binder.unbind();
 		this.bridge.unlisten();
@@ -7280,6 +7709,16 @@ var MockRuntime = class {
 	}
 	screen() {
 		return this.screens.current;
+	}
+	get tuning() {
+		return this.tuner.active;
+	}
+	tune(on) {
+		if (on) this.tuner.start();
+		else this.tuner.stop();
+	}
+	patch(path, patch) {
+		return this.tuner.apply(path, patch);
 	}
 	reportError(message) {
 		this.win.console?.warn?.(`[ddv] ${message}`);
