@@ -1452,3 +1452,13 @@ button.link {
 .thread-place {
   font-size: 12px;
 }
+.render-error {
+  padding: 24px;
+  color: #b42318;
+}
+.render-error-message {
+  white-space: pre-wrap;
+  background: #fef3f2;
+  padding: 8px 12px;
+  border-radius: 4px;
+}

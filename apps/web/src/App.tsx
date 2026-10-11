@@ -7,6 +7,7 @@ import { TestsPage } from './components/TestsPage.tsx';
 import { StatusBadge } from './components/StatusBadge.tsx';
 import { LoadingPage, OpenPage, PrBar, TopBar, TrustDialog, WorkspaceBar, WorkspaceProvider, useWorkspaces } from './components/Workspace.tsx';
 import { PrProvider } from './components/Pr.tsx';
+import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 
 function Shell() {
   const { route } = useApp();
@@ -53,22 +54,27 @@ function ShellBody() {
           マトリクス表示
         </label>
       </header>
-      {route.ws && <PrBar />}
-      <div className="body">
-        <aside className="left">
-          <DocTree />
-        </aside>
-        <main className="main">{route.view === 'tests' ? <TestsPage /> : <DocPage />}</main>
-      </div>
+      <ErrorBoundary resetKey={JSON.stringify(route)}>
+        {route.ws && <PrBar />}
+        <div className="body">
+          <aside className="left">
+            <DocTree />
+          </aside>
+          <main className="main">{route.view === 'tests' ? <TestsPage /> : <DocPage />}</main>
+        </div>
+      </ErrorBoundary>
     </div>
   );
 }
 
 function Screen({ children }: { children: ReactNode }) {
+  const { route } = useWorkspaces();
   return (
     <div className="app">
       <TopBar />
-      <div className="body">{children}</div>
+      <div className="body">
+        <ErrorBoundary resetKey={JSON.stringify(route)}>{children}</ErrorBoundary>
+      </div>
     </div>
   );
 }

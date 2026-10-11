@@ -199,8 +199,20 @@ export class ApiError extends Error {
 
 const post = (url: string, body?: unknown) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
 
-async function json<T>(res: Response): Promise<T> {
-  const body = await res.json().catch(() => ({}));
+export const BAD_RESPONSE = 'サーバの応答を解釈できません（サーバが古い可能性があります。再起動してください）';
+
+export async function json<T>(res: Response): Promise<T> {
+  const text = await res.text().catch(() => '');
+  let body: unknown = {};
+  let parsed = true;
+  if (text.trim()) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      parsed = false;
+    }
+  }
+  if (res.ok && !parsed) throw new ApiError(BAD_RESPONSE, res.status, 'bad-response');
   if (!res.ok && !(body && typeof body === 'object' && 'ok' in body)) {
     const b = body as { error?: string; message?: string; code?: string };
     if (res.status === 403 && b.code === 'untrusted') window.dispatchEvent(new CustomEvent('ddv-untrusted'));

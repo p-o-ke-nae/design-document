@@ -261,6 +261,23 @@ test('[BD-GHREV-SCREEN-X001][BD-GHREV-SCREEN-X002][BD-GHREV-SCREEN-X003][BD-GHRE
   await absent('open-github', 'open-cancel', 'open-submit', 'progress', 'loading-page');
 });
 
+test('PR 一覧の応答が JSON でなくても白画面にせず理由を表示する（古いサーバ）', async ({ page }) => {
+  await page.route('**/api/github/pulls?*', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><div id="root"></div>' }));
+  await page.goto(`${BASE}/#/open`);
+  await page.getByTestId('repo').fill(REPO);
+  await page.getByTestId('target').focus();
+  await expect(page.getByTestId('pulls-error')).toContainText('サーバの応答を解釈できません');
+  await expect(page.getByTestId('pulls').locator('li')).toHaveCount(0);
+  await expect(page.getByTestId('open-page')).toBeVisible();
+});
+test('描画中のエラーでも白画面にせずヘッダを残して「再読み込み」を表示する', async ({ page }) => {
+  await page.route('**/api/tree', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"unexpected":true}' }));
+  await page.goto(`${BASE}/#/doc?path=docs/design/basic/order.md`);
+  await expect(page.getByTestId('render-error')).toBeVisible();
+  await expect(page.getByTestId('render-error-reload')).toHaveText('再読み込み');
+  await expect(page.getByTestId('nav-docs')).toBeVisible();
+  await expect(page.getByTestId('ws-switch')).toBeVisible();
+});
 test('branch・tag を開く', async ({ page }) => {
   await page.goto(`${BASE}/#/open`);
   await submit(page, REPO, 'main', 'ref');

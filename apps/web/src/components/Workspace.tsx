@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ApiError, gh, type AuthStatus, type FetchStep, type PrInfo, type PullSummary, type WorkspaceInfo } from '../api.ts';
+import { ApiError, BAD_RESPONSE, gh, type AuthStatus, type FetchStep, type PrInfo, type PullSummary, type WorkspaceInfo } from '../api.ts';
 import { parseHash, type Route } from '../state.tsx';
 import { ReviewStates } from './Pr.tsx';
 
@@ -236,7 +236,11 @@ export function OpenPage() {
     let stale = false;
     const t = setTimeout(() => {
       gh.pulls(r)
-        .then((p) => !stale && setPulls(p))
+        .then((p) => {
+          if (stale) return;
+          if (Array.isArray(p)) setPulls(p);
+          else setPullsError(BAD_RESPONSE);
+        })
         .catch((e: Error) => !stale && setPullsError(e.message));
     }, 300);
     return () => {

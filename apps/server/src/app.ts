@@ -107,6 +107,8 @@ export function createApp(ctx: ServerContext): Hono {
     return c.json({ error: err.message }, status);
   });
 
+  app.notFound((c) => c.json({ error: `API がありません: ${c.req.method} ${c.req.path}`, code: 'not-found' }, 404));
+
   app.get('/api/config', (c) => c.json({ repoRoot: root, repoName: path.basename(root), config: ctx.config }));
 
   app.get('/api/tree', async (c) => {

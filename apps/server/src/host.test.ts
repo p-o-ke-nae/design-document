@@ -25,7 +25,7 @@ interface Env {
 
 const envs: Env[] = [];
 
-async function setup(opts: { local?: boolean; gh?: string | null; envToken?: string } = {}): Promise<Env> {
+async function setup(opts: { local?: boolean; gh?: string | null; envToken?: string; dist?: boolean } = {}): Promise<Env> {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'ddv-host-'));
   const up = await createUpstream(path.join(tmp, 'up'));
   const mainSha = up.git('rev-parse', 'main');
@@ -47,7 +47,13 @@ async function setup(opts: { local?: boolean; gh?: string | null; envToken?: str
   const manager = new WorkspaceManager({ home, github: new GitHubClient(tokens, { fetch: f }), git, createContext: (d) => createContext(d, { watch: false }), pollSeconds: 0 });
   await manager.init();
   const local = opts.local ? await createContext(path.join(tmp, 'up', 'acme', 'order-app'), { watch: false }) : undefined;
-  const app = createServerApp({ local, manager, tokens, port: PORT });
+  let dist: string | undefined;
+  if (opts.dist) {
+    dist = path.join(tmp, 'dist');
+    await fs.mkdir(dist, { recursive: true });
+    await fs.writeFile(path.join(dist, 'index.html'), '<!doctype html><div id="root"></div>');
+  }
+  const app = createServerApp({ local, manager, tokens, port: PORT, dist });
   const bodies: string[] = [];
   const req = async (p: string, init: RequestInit = {}) => {
     const headers = new Headers(init.headers);
@@ -210,6 +216,16 @@ describe('ワークスペースの API とルーティング', () => {
     expect(await env.json('/api/config')).toMatchObject({ status: 404, body: { code: 'no-local' } });
   });
 
+  it('未知の /api/* は画面の HTML でなく JSON の 404 を返す（エラー表示（共通））', async () => {
+    for (const local of [true, false]) {
+      const env = await setup({ local, dist: true });
+      const res = await env.req('/api/no-such-api');
+      expect(res.status).toBe(404);
+      expect(res.headers.get('content-type')).toMatch(/json/);
+      expect(await res.json()).toHaveProperty('error');
+      expect(await (await env.req('/some/page')).text()).toContain('<div id="root">');
+    }
+  });
   it('手元の既存 API にも Host / Origin の検査をかける', async () => {
     const env = await setup({ local: true });
     expect((await env.req('/api/config')).status).toBe(200);
