@@ -1,0 +1,26 @@
+# ddv mock scaffold が生成。event / click / expect.screen は再生成で更新、それ以外は保持
+
+id: BD-ORDER-SCREEN-P003
+title: 開始 → 注文一覧 → [新規] 注文入力 → [次へ [入力OK]] 入力確認 → [確定] 完了 → 終了
+fixtures: [default]
+start: List
+steps:
+  - event: 新規
+    click: new
+    expect: { screen: Input }
+  - event: 次へ [入力OK]
+    input: { customer: 山田 太郎, sku: A-100, quantity: 1 }
+    click: next
+    expect:
+      {
+        screen: Confirm,
+        text:
+          {
+            confirm-customer: 山田 太郎,
+            confirm-sku: A-100,
+            confirm-quantity: "1",
+          },
+      }
+  - event: 確定
+    click: submit
+    expect: { screen: Done, text: { done-message: 注文を受け付けました } }

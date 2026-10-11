@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>GitHub 連携・PR レビュー（モック）</title>
+  <link rel="stylesheet" href="../../../apps/web/src/styles.css" />
+  <style>
+    .prbar { display: flex; gap: 8px; align-items: center; padding: 6px 12px; border-bottom: 1px solid #d0d7de; background: #f6f8fa; flex-wrap: wrap; }
+    .prbar .title { font-weight: 600; }
+    .stale { background: #fff8c5; border: 1px solid #d4a72c; padding: 2px 8px; border-radius: 4px; }
+    .mark { display: inline-block; width: 1.4em; font-weight: 600; }
+    .mark.a { color: #1a7f37; }
+    .mark.m { color: #9a6700; }
+    .block { position: relative; padding: 2px 40px 2px 6px; border-left: 3px solid transparent; }
+    .block.added { background: #e6ffec; border-left-color: #1a7f37; }
+    .block.removed { background: #ffebe9; border-left-color: #cf222e; text-decoration: line-through; }
+    .block .cbtn { position: absolute; right: 4px; top: 2px; font-size: 12px; padding: 0 4px; }
+    .thread { margin: 4px 0 8px 12px; padding: 6px 8px; border: 1px solid #d0d7de; border-radius: 6px; background: #fff; font-size: 13px; }
+    .thread .who { font-weight: 600; }
+    .form { display: grid; gap: 6px; max-width: 520px; }
+    .form label { font-size: 13px; color: #57606a; }
+    .pending li { margin: 4px 0; }
+    .kind { font-size: 12px; padding: 0 6px; border-radius: 10px; background: #ddf4ff; }
+    .kind.file { background: #fff8c5; }
+    .progress li.done::before { content: "✔ "; color: #1a7f37; }
+    .progress li.now::before { content: "… "; }
+    .mockonly { border-style: dashed; }
+    .ids .added { color: #1a7f37; }
+    .ids .removed { color: #cf222e; }
+  </style>
+  <script type="module" src="../_ddv/mock-runtime.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <span class="brand">ddv</span>
+      <label class="muted" for="ws">ワークスペース</label>
+      <select id="ws">
+        <option>手元: design-document</option>
+        <option>GitHub: acme/order-app #12</option>
+      </select>
+      <span class="spacer"></span>
+      <span class="muted" data-testid="auth-status">GitHub: gh（octocat）</span>
+    </header>
+
+    <!-- 手元の文書 -->
+    <section data-screen="Local">
+      <div class="body">
+        <nav class="left tree">
+          <h3>docs/design</h3>
+          <ul>
+            <li><a>requirements/ddv.md</a></li>
+            <li><a class="is-active">basic/viewer.md</a></li>
+          </ul>
+        </nav>
+        <main class="main doc">
+          <h1>ddv ビューア 基本設計</h1>
+          <p>手元のリポジトリの文書を表示しています（Phase 2 までと同じ）。</p>
+          <button class="primary" data-testid="open-github" data-event="GitHubを開く" data-goto="Open">GitHub を開く</button>
+        </main>
+      </div>
+    </section>
+
+    <!-- GitHub を開く -->
+    <section data-screen="Open" hidden>
+      <main class="main doc">
+        <h2>GitHub を開く</h2>
+        <div class="form">
+          <label for="repo">リポジトリ（owner/repo）</label>
+          <input id="repo" data-testid="repo" required maxlength="100" placeholder="owner/repo" data-sample="acme/order-app" />
+          <label for="kind">種類</label>
+          <select id="kind" data-testid="kind">
+            <option value="pr">PR</option>
+            <option value="ref">branch・tag</option>
+          </select>
+          <label for="target">PR 番号 または branch・tag 名</label>
+          <input id="target" data-testid="target" required maxlength="100" placeholder="12 / main / v1.0" data-sample="12" />
+          <p class="error" data-testid="open-error" data-error hidden>入力内容を確認してください</p>
+          <div>
+            <button data-testid="open-cancel" data-event="キャンセル" data-goto="Local">キャンセル</button>
+            <button class="primary" data-testid="open-submit" data-event="開く" data-validate data-goto="Loading">開く</button>
+          </div>
+        </div>
+        <h3>オープンな PR</h3>
+        <ul data-testid="pulls" data-bind="/pulls">
+          <template><li>#{{number}} {{title}} <span class="muted">{{head}} → {{base}}</span></li></template>
+        </ul>
+        <p class="muted">認証：gh（ログイン名 octocat）。トークンは表示しません。</p>
+      </main>
+    </section>
+
+    <!-- 取得中 -->
+    <section data-screen="Loading" hidden>
+      <main class="main doc">
+        <h2>acme/order-app #12 を取得中</h2>
+        <ul class="progress" data-testid="progress">
+          <li class="done">PR 情報の取得</li>
+          <li class="done">clone（初回のみ）</li>
+          <li class="now">fetch pull/12/head・main</li>
+          <li>worktree 作成</li>
+        </ul>
+        <p class="muted">モックでは取得の結果を下のボタンで選びます。</p>
+        <button class="mockonly" data-testid="loading-done" data-event="取得完了" data-goto="Pr">（モック）取得完了にする</button>
+        <button class="mockonly" data-testid="loading-fail" data-event="取得失敗" data-goto="Open">（モック）取得失敗にする</button>
+      </main>
+    </section>
+
+    <!-- PR の文書 -->
+    <section data-screen="Pr" hidden>
+      <div class="prbar" data-testid="prbar">
+        <span class="title">#12 注文確認画面に戻るボタンを追加</span>
+        <code>main ← feature/confirm-back</code>
+        <code data-testid="head-sha">a1b2c3d</code>
+        <span class="stale" data-testid="stale">更新あり</span>
+        <button data-testid="refresh" data-event="最新化" data-goto="Loading">最新化</button>
+        <span class="spacer"></span>
+        <span class="badge" data-testid="review-state">alice: Changes requested</span>
+        <button class="primary" data-testid="to-review" data-event="レビュー" data-goto="Review">レビュー（保留 <span data-testid="pending-count">1</span>）</button>
+      </div>
+      <div class="body">
+        <nav class="left tree">
+          <h3>docs/design</h3>
+          <ul data-testid="changed-docs">
+            <li><span class="mark"></span><a>requirements/order.md</a></li>
+            <li><span class="mark m">M</span><a class="is-active">basic/order.md</a> <span class="status st-doc-review">review</span></li>
+            <li><span class="mark a">A</span><a>detailed/order-api.md</a></li>
+          </ul>
+        </nav>
+        <main class="main doc">
+          <details data-testid="diff-view">
+            <summary>差分を表示（main...feature/confirm-back：設計書 2 件、文書以外 5 件）</summary>
+            <h2>basic/order.md</h2>
+            <div class="block removed">確認画面から入力画面へは戻れない。</div>
+            <div class="block added">確認画面の「戻る」で入力画面に戻る（入力値は保持）。</div>
+            <h3>図 screen-flow</h3>
+            <div class="legend"><span class="lg added">追加</span> <span class="lg removed">削除</span> <span class="lg changed">変更</span></div>
+            <div class="block added"><code>確認 --&gt; 入力 : 戻る</code></div>
+            <h3>テストIDの増減</h3>
+            <ul class="ids" data-testid="id-changes">
+              <li class="added">＋ BD-ORDER-SCREEN-P007 開始 → 入力 → 確認 → [戻る] 入力 → …</li>
+              <li class="added">＋ BD-ORDER-SCREEN-T009 確認 → 入力 : 戻る</li>
+            </ul>
+          </details>
+          <h1>注文 基本設計</h1>
+          <h2>画面遷移</h2>
+          <div class="block">
+            <code>確認 --&gt; 入力 : 戻る</code>
+            <button class="cbtn" title="コメントを追加">💬</button>
+          </div>
+          <div class="thread" data-testid="thread">
+            <span class="who">alice</span>：戻ったときに入力値が残るかを図に書いてください <span class="muted">（未解決・返信 1）</span>
+          </div>
+          <div class="block">
+            <code>確認 --&gt; 完了 : 確定</code>
+            <button class="cbtn" title="コメントを追加">💬 1</button>
+          </div>
+          <h3>コメントを追加</h3>
+          <div class="form">
+            <label for="anchor">場所</label>
+            <select id="anchor" data-testid="anchor">
+              <option value="L42">図 screen-flow の遷移「確認 → 入力 : 戻る」（L42）</option>
+              <option value="L18">表の行 REQ-012（L18・差分外）</option>
+            </select>
+            <label for="comment">コメント</label>
+            <textarea id="comment" data-testid="comment" maxlength="2000" data-sample="ガード条件を明記してください"></textarea>
+            <p class="error" data-testid="comment-error" data-error hidden></p>
+            <button data-testid="add-comment" data-submit="POST /comments">保留に追加</button>
+          </div>
+        </main>
+      </div>
+    </section>
+
+    <!-- 保留中レビュー -->
+    <section data-screen="Review" hidden>
+      <main class="main doc">
+        <h2>保留中レビュー（#12）</h2>
+        <ul class="pending" data-testid="pending" data-bind="/comments">
+          <template><li><span class="kind {{kind}}">{{kindLabel}}</span> <code>{{path}} {{anchor}}</code> {{comment}}</li></template>
+        </ul>
+        <div class="form">
+          <label for="event">種類</label>
+          <select id="event" data-testid="event">
+            <option value="COMMENT">Comment</option>
+            <option value="APPROVE">Approve</option>
+            <option value="REQUEST_CHANGES">Request changes</option>
+          </select>
+          <label for="review-body">本文（Comment / Request changes では必須）</label>
+          <textarea id="review-body" data-testid="body" maxlength="5000" data-sample="指摘を確認してください"></textarea>
+          <label><input type="checkbox" data-testid="approve-status" /> Approve 時に basic/order.md を status: approved にする</label>
+          <p class="error" data-testid="submit-error" data-error hidden></p>
+          <div>
+            <button data-testid="review-close" data-event="閉じる" data-goto="Pr">閉じる</button>
+            <button class="primary" data-testid="review-submit" data-event="送信" data-submit="POST /reviews" data-ok="Done">送信</button>
+          </div>
+        </div>
+      </main>
+    </section>
+
+    <!-- 送信済 -->
+    <section data-screen="Done" hidden>
+      <main class="main doc">
+        <h2>レビューを送信しました</h2>
+        <p data-testid="done-message">acme/order-app #12 にレビューを作成しました（行コメント 1・ファイルコメント 1）。</p>
+        <p><a data-testid="review-url">https://github.com/acme/order-app/pull/12#pullrequestreview-1</a></p>
+        <button class="primary" data-testid="back-to-pr" data-event="PRに戻る" data-goto="Pr">PR に戻る</button>
+      </main>
+    </section>
+  </div>
+</body>
+</html>

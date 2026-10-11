@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "types": ["node"],
+    "paths": {
+      "@ddv/core": ["./packages/core/src/index.ts"],
+      "@ddv/core/node": ["./packages/core/src/node-index.ts"],
+      "@ddv/graph": ["./packages/graph/src/index.ts"],
+      "@ddv/testid": ["./packages/testid/src/index.ts"],
+      "@ddv/mock/step": ["./packages/mock/src/step.ts"],
+      "@ddv/mock/playwright": ["./packages/mock/src/playwright.ts"],
+      "@ddv/mock-runtime": ["./packages/mock-runtime/src/index.ts"],
+      "@ddv/mock": ["./packages/mock/src/index.ts"]
+    }
+  },
+  "include": ["./packages/*/src", "apps/*/src", "e2e", "vitest.config.ts", "playwright.config.ts"]
+}
+

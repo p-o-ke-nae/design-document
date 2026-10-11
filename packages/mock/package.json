@@ -1,0 +1,25 @@
+{
+  "name": "@ddv/mock",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./step": "./src/step.ts",
+    "./playwright": "./src/playwright.ts"
+  },
+  "dependencies": {
+    "@ddv/core": "*",
+    "@ddv/graph": "*",
+    "@ddv/testid": "*",
+    "node-html-parser": "^9.0.4",
+    "pixelmatch": "^8.0.0",
+    "pngjs": "^7.0.0",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/pngjs": "^6.0.5"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "ddv",
+  "description": "ddv (Design Doc Viewer) workflow skills: Mermaid-first requirements, basic and detailed design with generated test matrices and test IDs.",
+  "version": "0.1.0",
+  "author": { "name": "p-o-ke-nae" },
+  "license": "MIT",
+  "keywords": ["design", "mermaid", "uml", "requirements", "testing"]
+}

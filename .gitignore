@@ -1,0 +1,14 @@
+node_modules/
+dist/
+apps/web/dist/
+test-results/
+playwright-report/
+**/.ddv/runs/
+**/.ddv/snapshots/current/
+**/.ddv/snapshots/diff/
+**/.ddv/mock-plays.json
+**/bin/
+**/obj/
+*.log
+references/explainer-main.zip
+references/explainer-main/

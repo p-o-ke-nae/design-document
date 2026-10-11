@@ -1,0 +1,214 @@
+import type { Step, StepResult } from '@ddv/mock/step';
+
+export type BridgeState = 'Booting' | 'Ready' | 'Running' | 'Broken';
+export type BridgeEvent = 'loaded' | 'failed' | 'step' | 'done' | 'reset';
+
+/** Transitions of the bridge (detailed design: BRIDGE). Returns null when the event does not change the state. */
+export function bridgeTransition(state: BridgeState, ev: BridgeEvent): BridgeState | null {
+  switch (state) {
+    case 'Booting':
+      return ev === 'loaded' ? 'Ready' : ev === 'failed' ? 'Broken' : null;
+    case 'Ready':
+      return ev === 'step' ? 'Running' : ev === 'reset' ? 'Booting' : null;
+    case 'Running':
+      return ev === 'done' ? 'Ready' : ev === 'reset' ? 'Booting' : null;
+    case 'Broken':
+      return ev === 'reset' ? 'Booting' : null;
+  }
+}
+
+export type OutMessage =
+  | { type: 'ddv:ready'; screen: string | null; version: string }
+  | { type: 'ddv:result'; index: number; ok: boolean; screen: string | null; failures: StepResult['failures']; message?: string }
+  | { type: 'ddv:screen'; screen: string }
+  | { type: 'ddv:error'; message: string };
+
+export type InMessage = { type: 'ddv:reset'; fixtures?: string[]; start?: string } | { type: 'ddv:step'; index: number; step: Step; highlight?: { holdMs: number } };
+
+/** What the bridge drives (implemented by MockRuntime). */
+export interface BridgeEngine {
+  readonly version: string;
+  /** Loads api.yaml / fixtures and shows the start screen. `fixtures` null = initial boot (default fixture when present). */
+  boot(fixtures: string[] | null, start?: string): Promise<{ screen: string | null }>;
+  exec(step: Step, opts?: { highlight?: { holdMs: number } | null }): Promise<StepResult>;
+  /** Discards in-flight declarative work of a running step. */
+  cancel(): void;
+  screen(): string | null;
+}
+
+interface QueueItem {
+  step: Step;
+  index?: number;
+  highlight?: { holdMs: number } | null;
+  resolve: (r: StepResult) => void;
+}
+
+/** Accepts { holdMs } with a finite, non-negative holdMs (capped at 10s); anything else = no highlight. */
+export function validHighlight(h: unknown): { holdMs: number } | null {
+  if (!h || typeof h !== 'object') return null;
+  const ms = (h as { holdMs?: unknown }).holdMs;
+  return typeof ms === 'number' && Number.isFinite(ms) && ms >= 0 ? { holdMs: Math.min(ms, 10_000) } : null;
+}
+
+export class SupersededError extends Error {
+  constructor() {
+    super('後続のリセットにより中断しました');
+    this.name = 'SupersededError';
+  }
+}
+
+/** postMessage endpoint toward the viewer (parent window) and the state machine shared with `window.__ddv`. */
+export class HostBridge {
+  state: BridgeState = 'Booting';
+  private gen = 0;
+  private queue: QueueItem[] = [];
+  private current: QueueItem | null = null;
+  private abort: AbortController | null = null;
+  private readyResolve!: () => void;
+  private readyReject!: (e: unknown) => void;
+  private firstBootDone = false;
+  /** Resolves on the first successful boot; rejects when the first boot fails. */
+  readonly ready: Promise<void>;
+
+  constructor(
+    private readonly win: Window,
+    private readonly engine: BridgeEngine,
+  ) {
+    this.ready = new Promise<void>((res, rej) => {
+      this.readyResolve = res;
+      this.readyReject = rej;
+    });
+    this.ready.catch(() => {});
+  }
+
+  private fire(ev: BridgeEvent): boolean {
+    const next = bridgeTransition(this.state, ev);
+    if (next) this.state = next;
+    return next !== null;
+  }
+
+  listen(): void {
+    if (this.abort) return;
+    this.abort = new AbortController();
+    this.win.addEventListener('message', (e) => this.onMessage(e as MessageEvent), { signal: this.abort.signal });
+  }
+
+  unlisten(): void {
+    this.abort?.abort();
+    this.abort = null;
+  }
+
+  private get embedded(): boolean {
+    return this.win.parent !== this.win;
+  }
+
+  notify(msg: OutMessage): void {
+    if (!this.embedded) return;
+    const origin = this.win.location.origin;
+    this.win.parent.postMessage(msg, origin && origin !== 'null' ? origin : '*');
+  }
+
+  onMessage(e: MessageEvent): void {
+    if (!this.embedded || e.origin !== this.win.location.origin || e.source !== this.win.parent) return;
+    const m = e.data as InMessage | null;
+    if (!m || typeof m !== 'object') return;
+    if (m.type === 'ddv:reset') this.reset(Array.isArray(m.fixtures) ? m.fixtures : [], m.start).catch(() => {});
+    else if (m.type === 'ddv:step' && typeof m.index === 'number' && m.step && typeof m.step === 'object') void this.step(m.step, m.index, validHighlight(m.highlight));
+  }
+
+  /** Initial boot (state is already Booting). */
+  start(): Promise<{ screen: string | null }> {
+    return this.boot(null);
+  }
+
+  reset(fixtures: string[], start?: string): Promise<{ screen: string | null }> {
+    this.engine.cancel();
+    this.discard();
+    // Booting has no reset transition: a reset while booting supersedes the boot in progress and stays Booting.
+    this.fire('reset');
+    return this.boot(fixtures, start);
+  }
+
+  private discard() {
+    const items = [...(this.current ? [this.current] : []), ...this.queue];
+    this.current = null;
+    this.queue = [];
+    for (const it of items) it.resolve({ ok: false, screen: this.engine.screen(), failures: [], error: { kind: 'error', message: 'リセットにより破棄しました' } });
+  }
+
+  private async boot(fixtures: string[] | null, start?: string): Promise<{ screen: string | null }> {
+    const g = ++this.gen;
+    try {
+      const r = await this.engine.boot(fixtures, start);
+      if (g !== this.gen) throw new SupersededError();
+      this.fire('loaded');
+      this.notify({ type: 'ddv:ready', screen: r.screen, version: this.engine.version });
+      if (!this.firstBootDone) {
+        this.firstBootDone = true;
+        this.readyResolve();
+      }
+      return r;
+    } catch (e) {
+      if (e instanceof SupersededError || g !== this.gen) throw e instanceof SupersededError ? e : new SupersededError();
+      this.fire('failed');
+      const message = e instanceof Error ? e.message : String(e);
+      this.notify({ type: 'ddv:error', message });
+      if (!this.firstBootDone) {
+        this.firstBootDone = true;
+        this.readyReject(e);
+      }
+      throw e;
+    }
+  }
+
+  /** Runs a step (queued while another runs). `index` given = came from postMessage, so the result is posted back. */
+  step(step: Step, index?: number, highlight?: { holdMs: number } | null): Promise<StepResult> {
+    if (this.state === 'Booting' || this.state === 'Broken') {
+      const message = this.state === 'Booting' ? 'モックを起動中のため実行できません' : 'モックの読込に失敗しているため実行できません（リセットしてください）';
+      const r: StepResult = { ok: false, screen: this.engine.screen(), failures: [], error: { kind: 'error', message } };
+      this.post(index, r);
+      return Promise.resolve(r);
+    }
+    return new Promise<StepResult>((resolve) => {
+      this.queue.push({ step, index, highlight, resolve });
+      if (this.state === 'Ready') {
+        this.fire('step');
+        void this.pump();
+      }
+    });
+  }
+
+  private post(index: number | undefined, r: StepResult) {
+    if (index === undefined) return;
+    this.notify({ type: 'ddv:result', index, ok: r.ok, screen: r.screen, failures: r.failures, ...(r.error ? { message: r.error.message } : {}) });
+  }
+
+  private async pump(): Promise<void> {
+    const g = this.gen;
+    while (this.queue.length) {
+      const item = this.queue.shift()!;
+      this.current = item;
+      let r: StepResult;
+      try {
+        r = await this.engine.exec(item.step, item.highlight ? { highlight: item.highlight } : undefined);
+      } catch (e) {
+        r = { ok: false, screen: this.engine.screen(), failures: [], error: { kind: 'error', message: e instanceof Error ? e.message : String(e) } };
+      }
+      // Completion of a step discarded by reset: ignored (no result is posted).
+      if (g !== this.gen) return;
+      this.current = null;
+      this.post(item.index, r);
+      item.resolve(r);
+    }
+    this.fire('done');
+  }
+
+  /** Screen changed by the user (not by a step or boot). */
+  screenChanged(screen: string): void {
+    if (this.state === 'Ready') this.notify({ type: 'ddv:screen', screen });
+  }
+
+  error(message: string): void {
+    this.notify({ type: 'ddv:error', message });
+  }
+}

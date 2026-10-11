@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>注文受付（モック）</title>
+  <!-- 実プロジェクトのスタイルをそのまま参照する -->
+  <link rel="stylesheet" href="../../../web/src/styles/app.css" />
+  <style>
+    .list { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+    .list th, .list td { border-bottom: 1px solid var(--color-border); padding: 6px 8px; text-align: left; }
+    .summary { display: grid; grid-template-columns: 8em 1fr; gap: 6px 12px; margin: 0 0 16px; }
+    .summary dt { color: #475569; }
+    .summary dd { margin: 0; }
+  </style>
+  <script type="module" src="../_ddv/mock-runtime.js"></script>
+</head>
+<body>
+  <header class="app-header">注文受付</header>
+  <main class="app-main">
+    <!-- 画面ごとに section[data-screen]（画面遷移図の状態ID）。表示中は 1 つだけ -->
+    <section data-screen="List">
+      <h2>注文一覧</h2>
+      <table class="list">
+        <thead><tr><th>番号</th><th>顧客名</th><th>商品</th><th>数量</th><th>状態</th></tr></thead>
+        <!-- 表示のたびに GET /orders を取り直し、template を件数分描画する -->
+        <tbody data-testid="orders" data-bind="/orders">
+          <template><tr><td>{{id}}</td><td>{{customer}}</td><td>{{sku}}</td><td>{{quantity}}</td><td>{{status}}</td></tr></template>
+        </tbody>
+      </table>
+      <button class="btn btn-primary" data-testid="new" data-event="新規" data-goto="Input">新規</button>
+    </section>
+
+    <section data-screen="Input" hidden>
+      <h2>注文入力</h2>
+      <div class="field">
+        <label for="customer">顧客名</label>
+        <input id="customer" data-testid="customer" required maxlength="50" data-sample="山田 太郎" />
+      </div>
+      <div class="field">
+        <label for="sku">商品</label>
+        <select id="sku" data-testid="sku" required>
+          <option value="">選択してください</option>
+          <option value="A-100">A-100 ボールペン</option>
+          <option value="B-200">B-200 ノート</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="qty">数量</label>
+        <input id="qty" type="number" min="1" max="99" value="1" required data-testid="quantity" />
+      </div>
+      <p class="error" data-testid="error" data-error hidden>入力内容を確認してください</p>
+      <button class="btn" data-testid="cancel" data-event="キャンセル" data-goto="List">キャンセル</button>
+      <!-- 入力を検査し（NG なら data-error を表示して留まる）、入力中の注文を下書き（drafts/current）に保存して確認へ -->
+      <button class="btn btn-primary" data-testid="next" data-event="次へ" data-validate data-submit="POST /drafts" data-ok="Confirm">次へ</button>
+    </section>
+
+    <section data-screen="Confirm" hidden>
+      <h2>入力確認</h2>
+      <!-- 下書きを表示する。hidden の入力（name）が「確定」で送信される内容になる -->
+      <div data-bind="/drafts/current">
+        <template>
+          <dl class="summary">
+            <dt>顧客名</dt><dd data-testid="confirm-customer">{{customer}}</dd>
+            <dt>商品</dt><dd data-testid="confirm-sku">{{sku}}</dd>
+            <dt>数量</dt><dd data-testid="confirm-quantity">{{quantity}}</dd>
+          </dl>
+          <input type="hidden" name="customer" value="{{customer}}" />
+          <input type="hidden" name="sku" value="{{sku}}" />
+          <input type="hidden" name="quantity" value="{{quantity}}" />
+        </template>
+      </div>
+      <!-- 在庫不足（409）は画面に留まり、応答の message を表示する -->
+      <p class="error" data-testid="submit-error" data-error hidden></p>
+      <button class="btn" data-testid="back" data-event="戻る" data-goto="Input">戻る</button>
+      <button class="btn btn-primary" data-testid="submit" data-event="確定" data-submit="POST /orders" data-ok="Done">確定</button>
+    </section>
+
+    <section data-screen="Done" hidden>
+      <h2>完了</h2>
+      <p data-testid="done-message">注文を受け付けました</p>
+      <button class="btn btn-primary" data-testid="to-list" data-event="一覧へ" data-goto="List">一覧へ</button>
+    </section>
+  </main>
+</body>
+</html>

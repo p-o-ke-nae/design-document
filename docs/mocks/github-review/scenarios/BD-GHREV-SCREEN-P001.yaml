@@ -1,0 +1,36 @@
+# ddv mock scaffold が生成。event / click / expect.screen は再生成で更新、それ以外は保持
+
+id: BD-GHREV-SCREEN-P001
+title: 開始 → 手元の文書 → [GitHubを開く] GitHub を開く → [キャンセル] 手元の文書 → [GitHubを開く] GitHub を開く → [開く [入力OK]] 取得中 → [取得完了] PR の文書 → [レビュー] 保留中レビュー → [閉じる] PR の文書 → [レビュー] 保留中レビュー → [送信 [成功]] 送信済 → [PRに戻る] 終了
+fixtures: [ default ]
+start: Local
+steps:
+  - event: GitHubを開く
+    click: open-github
+    expect: { screen: Open }
+  - event: キャンセル
+    click: open-cancel
+    expect: { screen: Local }
+  - event: GitHubを開く
+    click: open-github
+    expect: { screen: Open }
+  - event: 開く [入力OK]
+    input: { repo: acme/order-app, kind: pr, target: "12" }
+    click: open-submit
+    expect: { screen: Loading }
+  - event: 取得完了
+    click: loading-done
+    expect: { screen: Pr }
+  - event: レビュー
+    click: to-review
+    expect: { screen: Review }
+  - event: 閉じる
+    click: review-close
+    expect: { screen: Pr }
+  - event: レビュー
+    click: to-review
+    expect: { screen: Review }
+  - event: 送信 [成功]
+    input: { event: COMMENT, body: 指摘を確認してください, approve-status: false }
+    click: review-submit
+    expect: { screen: Done }

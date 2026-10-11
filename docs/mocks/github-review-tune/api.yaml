@@ -1,0 +1,19 @@
+# 疑似 API（モックの調整モード用）
+tables:
+  - suggestions
+routes:
+  - { method: GET, path: /suggestions, op: list, table: suggestions }
+  - method: POST
+    path: /mock-source
+    when:                       # data-bind や mock.js で作られた要素は HTML ソースに無い
+      - if: "body.picked == 'generated'"
+        status: 422
+        body: { message: 対応する行なし：data-bind で作られた要素です。別の要素を選んでください }
+    status: 200
+    body: { path: order/index.html, line: 23 }
+  - method: POST
+    path: /suggestions
+    op: insert
+    table: suggestions
+    set: { line: order/index.html L23, summary: 顧客名の入力欄の placeholder・required・maxlength }
+    status: 201

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>SAMPLE（モック）</title>
+  <!-- 実プロジェクトの CSS をそのまま参照する（パスは対象リポジトリに合わせる） -->
+  <!-- <link rel="stylesheet" href="../../../src/styles/app.css" /> -->
+  <!-- ddv mock init で配置される runtime。疑似API・画面切替・プレイヤー連携を担う -->
+  <script type="module" src="../_ddv/mock-runtime.js"></script>
+</head>
+<body>
+  <main>
+    <!-- 画面遷移図の状態ごとに section[data-screen="<状態ID>"]。表示中は 1 つだけ（最初の画面以外は hidden） -->
+    <!-- 操作要素は data-event="<図のイベント名（ガード除く）>"、入力・確認する要素は data-testid（実装・E2E と同じ値） -->
+    <section data-screen="一覧">
+      <h2>一覧</h2>
+      <!-- 表示のたびに GET /items を取り直し、template を件数分描画する -->
+      <ul data-testid="items" data-bind="/items">
+        <template><li>{{id}}: {{name}}</li></template>
+      </ul>
+      <button data-testid="new" data-event="新規" data-goto="入力">新規</button>
+    </section>
+
+    <section data-screen="入力" hidden>
+      <h2>入力</h2>
+      <label for="name">名前</label>
+      <!-- HTML 標準の制約（required/maxlength 等）が検査とシナリオ候補値の根拠。data-sample は自然な候補値 -->
+      <input id="name" data-testid="name" required maxlength="50" data-sample="山田 太郎" />
+      <p data-testid="error" data-error hidden>入力内容を確認してください</p>
+      <button data-testid="cancel" data-event="キャンセル" data-goto="一覧">キャンセル</button>
+      <!-- 検査 NG なら data-error を表示して留まる。OK なら下書きに保存して確認へ -->
+      <button data-testid="next" data-event="次へ" data-validate data-submit="POST /drafts" data-ok="確認">次へ</button>
+    </section>
+
+    <section data-screen="確認" hidden>
+      <h2>確認</h2>
+      <div data-bind="/drafts/current">
+        <template>
+          <p data-testid="confirm-name">{{name}}</p>
+          <input type="hidden" name="name" value="{{name}}" />
+        </template>
+      </div>
+      <p data-testid="submit-error" data-error hidden></p>
+      <button data-testid="back" data-event="戻る" data-goto="入力">戻る</button>
+      <button data-testid="submit" data-event="確定" data-submit="POST /items" data-ok="完了">確定</button>
+    </section>
+
+    <section data-screen="完了" hidden>
+      <h2>完了</h2>
+      <p data-testid="done-message">登録しました</p>
+    </section>
+  </main>
+</body>
+</html>

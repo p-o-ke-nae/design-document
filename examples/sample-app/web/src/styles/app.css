@@ -1,0 +1,16 @@
+:root {
+  --color-primary: #2563eb;
+  --color-bg: #f8fafc;
+  --color-text: #0f172a;
+  --color-border: #cbd5e1;
+  --radius: 6px;
+  font-family: 'Segoe UI', 'Yu Gothic UI', sans-serif;
+}
+body { margin: 0; background: var(--color-bg); color: var(--color-text); }
+.app-header { background: var(--color-primary); color: #fff; padding: 12px 20px; font-weight: 600; }
+.app-main { padding: 20px; max-width: 640px; }
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.field input, .field select { padding: 8px; border: 1px solid var(--color-border); border-radius: var(--radius); font: inherit; }
+.btn { padding: 8px 16px; border-radius: var(--radius); border: 1px solid var(--color-border); background: #fff; cursor: pointer; font: inherit; }
+.btn-primary { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+.error { color: #b91c1c; font-size: 0.9em; }

@@ -1,0 +1,27 @@
+# ddv 自身の設計書を ddv で閲覧する（ドッグフーディング）
+docsRoot: docs/design
+mocksRoot: docs/mocks
+idPrefix:
+  requirements: REQ
+  basic: BD
+  detailed: DD
+toc:
+  minLevel: 2
+  maxLevel: 3
+matrix:
+  nSwitch: 1
+  loopLimit: 1
+  maxPaths: 200
+styles:
+  - apps/web/src/styles.css
+runners:
+  - name: unit
+    type: vitest
+    cwd: .
+    level: unit
+    include: ['packages/**/*.test.ts', 'apps/**/*.test.ts']
+  - name: e2e
+    type: playwright
+    cwd: .
+    level: integration
+    include: ['e2e/**/*.spec.ts']

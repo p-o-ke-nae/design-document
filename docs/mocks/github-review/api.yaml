@@ -1,0 +1,27 @@
+# 疑似 API（GitHub 連携画面のモック用）
+tables:
+  - pulls
+  - comments
+  - reviews
+routes:
+  - { method: GET, path: /pulls, op: list, table: pulls }
+  - { method: GET, path: /comments, op: list, table: comments }
+  - method: POST
+    path: /comments
+    when:
+      - if: "body.comment == ''"
+        status: 422
+        body: { message: コメントを入力してください }
+    op: insert
+    table: comments
+    set: { path: basic/order.md, kind: line, kindLabel: 行 }
+    status: 201
+  - method: POST
+    path: /reviews
+    when:                       # GitHub は Comment / Request changes の本文なしを拒否する
+      - if: "body.event != 'APPROVE' && body.body == ''"
+        status: 422
+        body: { message: Comment / Request changes には本文が必要です }
+    op: insert
+    table: reviews
+    status: 201

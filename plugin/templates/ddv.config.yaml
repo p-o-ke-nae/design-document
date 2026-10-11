@@ -1,0 +1,21 @@
+# ddv の設定（対象リポジトリのルートに置く）
+docsRoot: docs/design
+mocksRoot: docs/mocks
+idPrefix:
+  requirements: REQ
+  basic: BD
+  detailed: DD
+toc:
+  minLevel: 2
+  maxLevel: 3
+matrix:
+  nSwitch: 1      # Nスイッチの N（0 で無効）
+  loopLimit: 1    # 単純経路で同じ遷移を通ってよい回数
+  maxPaths: 200   # 経路数の上限（超えたら警告）
+# モックが参照する実プロジェクトの CSS
+styles: []
+# テストの実行方法。テスト名/Trait にテストIDを書くと自動で紐づく
+runners: []
+#  - { name: web,    type: vitest,     cwd: web,    level: integration }
+#  - { name: e2e,    type: playwright, cwd: web,    level: integration }
+#  - { name: dotnet, type: dotnet,     cwd: tests,  level: unit }

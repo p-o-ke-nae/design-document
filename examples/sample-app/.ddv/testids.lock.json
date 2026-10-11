@@ -1,0 +1,428 @@
+{
+  "version": 1,
+  "diagrams": {
+    "BD-ORDER-SCREEN": {
+      "doc": "docs/design/basic/order.md",
+      "diagram": "screen-flow",
+      "next": {
+        "P": 6,
+        "T": 10,
+        "S": 17,
+        "X": 19
+      },
+      "cases": {
+        "P:[*]start||List>List|新規|Input>Input|次へ [入力OK]|Confirm>Confirm|戻る|Input>Input|次へ [入力OK]|Confirm>Confirm|確定|Done>Done||[*]end": {
+          "id": "BD-ORDER-SCREEN-P001",
+          "status": "active",
+          "title": "開始 → 注文一覧 → [新規] 注文入力 → [次へ [入力OK]] 入力確認 → [戻る] 注文入力 → [次へ [入力OK]] 入力確認 → [確定] 完了 → 終了"
+        },
+        "P:[*]start||List>List|新規|Input>Input|次へ [入力OK]|Confirm>Confirm|確定|Done>Done|一覧へ|List>List|新規|Input>Input|次へ [入力OK]|Confirm>Confirm|確定|Done>Done||[*]end": {
+          "id": "BD-ORDER-SCREEN-P002",
+          "status": "active",
+          "title": "開始 → 注文一覧 → [新規] 注文入力 → [次へ [入力OK]] 入力確認 → [確定] 完了 → [一覧へ] 注文一覧 → [新規] 注文入力 → [次へ [入力OK]] 入力確認 → [確定] 完了 → 終了"
+        },
+        "P:[*]start||List>List|新規|Input>Input|次へ [入力OK]|Confirm>Confirm|確定|Done>Done||[*]end": {
+          "id": "BD-ORDER-SCREEN-P003",
+          "status": "active",
+          "title": "開始 → 注文一覧 → [新規] 注文入力 → [次へ [入力OK]] 入力確認 → [確定] 完了 → 終了"
+        },
+        "P:[*]start||List>List|新規|Input>Input|次へ [入力NG]|Input>Input|次へ [入力OK]|Confirm>Confirm|確定|Done>Done||[*]end": {
+          "id": "BD-ORDER-SCREEN-P004",
+          "status": "active",
+          "title": "開始 → 注文一覧 → [新規] 注文入力 → [次へ [入力NG]] 注文入力 → [次へ [入力OK]] 入力確認 → [確定] 完了 → 終了"
+        },
+        "P:[*]start||List>List|新規|Input>Input|キャンセル|List>List|新規|Input>Input|次へ [入力OK]|Confirm>Confirm|確定|Done>Done||[*]end": {
+          "id": "BD-ORDER-SCREEN-P005",
+          "status": "active",
+          "title": "開始 → 注文一覧 → [新規] 注文入力 → [キャンセル] 注文一覧 → [新規] 注文入力 → [次へ [入力OK]] 入力確認 → [確定] 完了 → 終了"
+        },
+        "T:[*]start||List": {
+          "id": "BD-ORDER-SCREEN-T001",
+          "status": "active",
+          "title": "開始 --> 注文一覧"
+        },
+        "T:List|新規|Input": {
+          "id": "BD-ORDER-SCREEN-T002",
+          "status": "active",
+          "title": "注文一覧 --[新規]--> 注文入力"
+        },
+        "T:Input|次へ [入力OK]|Confirm": {
+          "id": "BD-ORDER-SCREEN-T003",
+          "status": "active",
+          "title": "注文入力 --[次へ [入力OK]]--> 入力確認"
+        },
+        "T:Input|次へ [入力NG]|Input": {
+          "id": "BD-ORDER-SCREEN-T004",
+          "status": "active",
+          "title": "注文入力 --[次へ [入力NG]]--> 注文入力"
+        },
+        "T:Input|キャンセル|List": {
+          "id": "BD-ORDER-SCREEN-T005",
+          "status": "active",
+          "title": "注文入力 --[キャンセル]--> 注文一覧"
+        },
+        "T:Confirm|戻る|Input": {
+          "id": "BD-ORDER-SCREEN-T006",
+          "status": "active",
+          "title": "入力確認 --[戻る]--> 注文入力"
+        },
+        "T:Confirm|確定|Done": {
+          "id": "BD-ORDER-SCREEN-T007",
+          "status": "active",
+          "title": "入力確認 --[確定]--> 完了"
+        },
+        "T:Done|一覧へ|List": {
+          "id": "BD-ORDER-SCREEN-T008",
+          "status": "active",
+          "title": "完了 --[一覧へ]--> 注文一覧"
+        },
+        "T:Done||[*]end": {
+          "id": "BD-ORDER-SCREEN-T009",
+          "status": "active",
+          "title": "完了 --> 終了"
+        },
+        "S:[*]start||List>List|新規|Input": {
+          "id": "BD-ORDER-SCREEN-S001",
+          "status": "active",
+          "title": "開始 → 注文一覧 → [新規] 注文入力"
+        },
+        "S:List|新規|Input>Input|次へ [入力OK]|Confirm": {
+          "id": "BD-ORDER-SCREEN-S002",
+          "status": "active",
+          "title": "注文一覧 → [新規] 注文入力 → [次へ [入力OK]] 入力確認"
+        },
+        "S:List|新規|Input>Input|次へ [入力NG]|Input": {
+          "id": "BD-ORDER-SCREEN-S003",
+          "status": "active",
+          "title": "注文一覧 → [新規] 注文入力 → [次へ [入力NG]] 注文入力"
+        },
+        "S:List|新規|Input>Input|キャンセル|List": {
+          "id": "BD-ORDER-SCREEN-S004",
+          "status": "active",
+          "title": "注文一覧 → [新規] 注文入力 → [キャンセル] 注文一覧"
+        },
+        "S:Input|次へ [入力OK]|Confirm>Confirm|戻る|Input": {
+          "id": "BD-ORDER-SCREEN-S005",
+          "status": "active",
+          "title": "注文入力 → [次へ [入力OK]] 入力確認 → [戻る] 注文入力"
+        },
+        "S:Input|次へ [入力OK]|Confirm>Confirm|確定|Done": {
+          "id": "BD-ORDER-SCREEN-S006",
+          "status": "active",
+          "title": "注文入力 → [次へ [入力OK]] 入力確認 → [確定] 完了"
+        },
+        "S:Input|次へ [入力NG]|Input>Input|次へ [入力OK]|Confirm": {
+          "id": "BD-ORDER-SCREEN-S007",
+          "status": "active",
+          "title": "注文入力 → [次へ [入力NG]] 注文入力 → [次へ [入力OK]] 入力確認"
+        },
+        "S:Input|次へ [入力NG]|Input>Input|次へ [入力NG]|Input": {
+          "id": "BD-ORDER-SCREEN-S008",
+          "status": "active",
+          "title": "注文入力 → [次へ [入力NG]] 注文入力 → [次へ [入力NG]] 注文入力"
+        },
+        "S:Input|次へ [入力NG]|Input>Input|キャンセル|List": {
+          "id": "BD-ORDER-SCREEN-S009",
+          "status": "active",
+          "title": "注文入力 → [次へ [入力NG]] 注文入力 → [キャンセル] 注文一覧"
+        },
+        "S:Input|キャンセル|List>List|新規|Input": {
+          "id": "BD-ORDER-SCREEN-S010",
+          "status": "active",
+          "title": "注文入力 → [キャンセル] 注文一覧 → [新規] 注文入力"
+        },
+        "S:Confirm|戻る|Input>Input|次へ [入力OK]|Confirm": {
+          "id": "BD-ORDER-SCREEN-S011",
+          "status": "active",
+          "title": "入力確認 → [戻る] 注文入力 → [次へ [入力OK]] 入力確認"
+        },
+        "S:Confirm|戻る|Input>Input|次へ [入力NG]|Input": {
+          "id": "BD-ORDER-SCREEN-S012",
+          "status": "active",
+          "title": "入力確認 → [戻る] 注文入力 → [次へ [入力NG]] 注文入力"
+        },
+        "S:Confirm|戻る|Input>Input|キャンセル|List": {
+          "id": "BD-ORDER-SCREEN-S013",
+          "status": "active",
+          "title": "入力確認 → [戻る] 注文入力 → [キャンセル] 注文一覧"
+        },
+        "S:Confirm|確定|Done>Done|一覧へ|List": {
+          "id": "BD-ORDER-SCREEN-S014",
+          "status": "active",
+          "title": "入力確認 → [確定] 完了 → [一覧へ] 注文一覧"
+        },
+        "S:Confirm|確定|Done>Done||[*]end": {
+          "id": "BD-ORDER-SCREEN-S015",
+          "status": "active",
+          "title": "入力確認 → [確定] 完了 → 終了"
+        },
+        "S:Done|一覧へ|List>List|新規|Input": {
+          "id": "BD-ORDER-SCREEN-S016",
+          "status": "active",
+          "title": "完了 → [一覧へ] 注文一覧 → [新規] 注文入力"
+        },
+        "X:List|次へ": {
+          "id": "BD-ORDER-SCREEN-X001",
+          "status": "active",
+          "title": "注文一覧 で [次へ]"
+        },
+        "X:List|キャンセル": {
+          "id": "BD-ORDER-SCREEN-X002",
+          "status": "active",
+          "title": "注文一覧 で [キャンセル]"
+        },
+        "X:List|戻る": {
+          "id": "BD-ORDER-SCREEN-X003",
+          "status": "active",
+          "title": "注文一覧 で [戻る]"
+        },
+        "X:List|確定": {
+          "id": "BD-ORDER-SCREEN-X004",
+          "status": "active",
+          "title": "注文一覧 で [確定]"
+        },
+        "X:List|一覧へ": {
+          "id": "BD-ORDER-SCREEN-X005",
+          "status": "active",
+          "title": "注文一覧 で [一覧へ]"
+        },
+        "X:Input|新規": {
+          "id": "BD-ORDER-SCREEN-X006",
+          "status": "active",
+          "title": "注文入力 で [新規]"
+        },
+        "X:Input|戻る": {
+          "id": "BD-ORDER-SCREEN-X007",
+          "status": "active",
+          "title": "注文入力 で [戻る]"
+        },
+        "X:Input|確定": {
+          "id": "BD-ORDER-SCREEN-X008",
+          "status": "active",
+          "title": "注文入力 で [確定]"
+        },
+        "X:Input|一覧へ": {
+          "id": "BD-ORDER-SCREEN-X009",
+          "status": "active",
+          "title": "注文入力 で [一覧へ]"
+        },
+        "X:Confirm|新規": {
+          "id": "BD-ORDER-SCREEN-X010",
+          "status": "active",
+          "title": "入力確認 で [新規]"
+        },
+        "X:Confirm|次へ": {
+          "id": "BD-ORDER-SCREEN-X011",
+          "status": "active",
+          "title": "入力確認 で [次へ]"
+        },
+        "X:Confirm|キャンセル": {
+          "id": "BD-ORDER-SCREEN-X012",
+          "status": "active",
+          "title": "入力確認 で [キャンセル]"
+        },
+        "X:Confirm|一覧へ": {
+          "id": "BD-ORDER-SCREEN-X013",
+          "status": "active",
+          "title": "入力確認 で [一覧へ]"
+        },
+        "X:Done|新規": {
+          "id": "BD-ORDER-SCREEN-X014",
+          "status": "active",
+          "title": "完了 で [新規]"
+        },
+        "X:Done|次へ": {
+          "id": "BD-ORDER-SCREEN-X015",
+          "status": "active",
+          "title": "完了 で [次へ]"
+        },
+        "X:Done|キャンセル": {
+          "id": "BD-ORDER-SCREEN-X016",
+          "status": "active",
+          "title": "完了 で [キャンセル]"
+        },
+        "X:Done|戻る": {
+          "id": "BD-ORDER-SCREEN-X017",
+          "status": "active",
+          "title": "完了 で [戻る]"
+        },
+        "X:Done|確定": {
+          "id": "BD-ORDER-SCREEN-X018",
+          "status": "active",
+          "title": "完了 で [確定]"
+        }
+      }
+    },
+    "DD-ORDER-STATUS": {
+      "doc": "docs/design/detailed/order.md",
+      "diagram": "order-status",
+      "next": {
+        "P": 5,
+        "T": 9,
+        "X": 21
+      },
+      "cases": {
+        "P:[*]start||Draft>Draft|Submit [明細あり]|Submitted>Submitted|Approve|Approved>Approved||[*]end": {
+          "id": "DD-ORDER-STATUS-P001",
+          "status": "active",
+          "title": "開始 → Draft → [Submit [明細あり]] Submitted → [Approve] Approved → 終了"
+        },
+        "P:[*]start||Draft>Draft|Submit [明細あり]|Submitted>Submitted|Reject|Rejected>Rejected|Revise|Draft>Draft|Submit [明細あり]|Submitted>Submitted|Approve|Approved>Approved||[*]end": {
+          "id": "DD-ORDER-STATUS-P002",
+          "status": "active",
+          "title": "開始 → Draft → [Submit [明細あり]] Submitted → [Reject] Rejected → [Revise] Draft → [Submit [明細あり]] Submitted → [Approve] Approved → 終了"
+        },
+        "P:[*]start||Draft>Draft|Submit [明細あり]|Submitted>Submitted|Reject|Rejected>Rejected|Revise|Draft>Draft|Cancel|Cancelled>Cancelled||[*]end": {
+          "id": "DD-ORDER-STATUS-P003",
+          "status": "active",
+          "title": "開始 → Draft → [Submit [明細あり]] Submitted → [Reject] Rejected → [Revise] Draft → [Cancel] Cancelled → 終了"
+        },
+        "P:[*]start||Draft>Draft|Cancel|Cancelled>Cancelled||[*]end": {
+          "id": "DD-ORDER-STATUS-P004",
+          "status": "active",
+          "title": "開始 → Draft → [Cancel] Cancelled → 終了"
+        },
+        "T:[*]start||Draft": {
+          "id": "DD-ORDER-STATUS-T001",
+          "status": "active",
+          "title": "開始 --> Draft"
+        },
+        "T:Draft|Submit [明細あり]|Submitted": {
+          "id": "DD-ORDER-STATUS-T002",
+          "status": "active",
+          "title": "Draft --[Submit [明細あり]]--> Submitted"
+        },
+        "T:Draft|Cancel|Cancelled": {
+          "id": "DD-ORDER-STATUS-T003",
+          "status": "active",
+          "title": "Draft --[Cancel]--> Cancelled"
+        },
+        "T:Submitted|Approve|Approved": {
+          "id": "DD-ORDER-STATUS-T004",
+          "status": "active",
+          "title": "Submitted --[Approve]--> Approved"
+        },
+        "T:Submitted|Reject|Rejected": {
+          "id": "DD-ORDER-STATUS-T005",
+          "status": "active",
+          "title": "Submitted --[Reject]--> Rejected"
+        },
+        "T:Rejected|Revise|Draft": {
+          "id": "DD-ORDER-STATUS-T006",
+          "status": "active",
+          "title": "Rejected --[Revise]--> Draft"
+        },
+        "T:Approved||[*]end": {
+          "id": "DD-ORDER-STATUS-T007",
+          "status": "active",
+          "title": "Approved --> 終了"
+        },
+        "T:Cancelled||[*]end": {
+          "id": "DD-ORDER-STATUS-T008",
+          "status": "active",
+          "title": "Cancelled --> 終了"
+        },
+        "X:Draft|Approve": {
+          "id": "DD-ORDER-STATUS-X001",
+          "status": "active",
+          "title": "Draft で [Approve]"
+        },
+        "X:Draft|Reject": {
+          "id": "DD-ORDER-STATUS-X002",
+          "status": "active",
+          "title": "Draft で [Reject]"
+        },
+        "X:Draft|Revise": {
+          "id": "DD-ORDER-STATUS-X003",
+          "status": "active",
+          "title": "Draft で [Revise]"
+        },
+        "X:Submitted|Submit": {
+          "id": "DD-ORDER-STATUS-X004",
+          "status": "active",
+          "title": "Submitted で [Submit]"
+        },
+        "X:Submitted|Cancel": {
+          "id": "DD-ORDER-STATUS-X005",
+          "status": "active",
+          "title": "Submitted で [Cancel]"
+        },
+        "X:Submitted|Revise": {
+          "id": "DD-ORDER-STATUS-X006",
+          "status": "active",
+          "title": "Submitted で [Revise]"
+        },
+        "X:Cancelled|Submit": {
+          "id": "DD-ORDER-STATUS-X007",
+          "status": "active",
+          "title": "Cancelled で [Submit]"
+        },
+        "X:Cancelled|Cancel": {
+          "id": "DD-ORDER-STATUS-X008",
+          "status": "active",
+          "title": "Cancelled で [Cancel]"
+        },
+        "X:Cancelled|Approve": {
+          "id": "DD-ORDER-STATUS-X009",
+          "status": "active",
+          "title": "Cancelled で [Approve]"
+        },
+        "X:Cancelled|Reject": {
+          "id": "DD-ORDER-STATUS-X010",
+          "status": "active",
+          "title": "Cancelled で [Reject]"
+        },
+        "X:Cancelled|Revise": {
+          "id": "DD-ORDER-STATUS-X011",
+          "status": "active",
+          "title": "Cancelled で [Revise]"
+        },
+        "X:Approved|Submit": {
+          "id": "DD-ORDER-STATUS-X012",
+          "status": "active",
+          "title": "Approved で [Submit]"
+        },
+        "X:Approved|Cancel": {
+          "id": "DD-ORDER-STATUS-X013",
+          "status": "active",
+          "title": "Approved で [Cancel]"
+        },
+        "X:Approved|Approve": {
+          "id": "DD-ORDER-STATUS-X014",
+          "status": "active",
+          "title": "Approved で [Approve]"
+        },
+        "X:Approved|Reject": {
+          "id": "DD-ORDER-STATUS-X015",
+          "status": "active",
+          "title": "Approved で [Reject]"
+        },
+        "X:Approved|Revise": {
+          "id": "DD-ORDER-STATUS-X016",
+          "status": "active",
+          "title": "Approved で [Revise]"
+        },
+        "X:Rejected|Submit": {
+          "id": "DD-ORDER-STATUS-X017",
+          "status": "active",
+          "title": "Rejected で [Submit]"
+        },
+        "X:Rejected|Cancel": {
+          "id": "DD-ORDER-STATUS-X018",
+          "status": "active",
+          "title": "Rejected で [Cancel]"
+        },
+        "X:Rejected|Approve": {
+          "id": "DD-ORDER-STATUS-X019",
+          "status": "active",
+          "title": "Rejected で [Approve]"
+        },
+        "X:Rejected|Reject": {
+          "id": "DD-ORDER-STATUS-X020",
+          "status": "active",
+          "title": "Rejected で [Reject]"
+        }
+      }
+    }
+  }
+}

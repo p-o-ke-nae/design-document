@@ -1,0 +1,6 @@
+orders:
+  - { id: 1, customer: 佐藤 花子, sku: A-100, quantity: 2, status: Submitted }
+  - { id: 2, customer: 鈴木 一郎, sku: B-200, quantity: 1, status: Submitted }
+stock:
+  - { sku: A-100, qty: 10 }
+  - { sku: B-200, qty: 3 }

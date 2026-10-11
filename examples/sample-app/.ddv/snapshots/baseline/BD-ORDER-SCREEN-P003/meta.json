@@ -1,0 +1,10 @@
+{
+  "browser": "chromium",
+  "browserVersion": "156.0.8078.4",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "takenAt": "2026-10-11T01:25:12.193Z",
+  "steps": 3
+}

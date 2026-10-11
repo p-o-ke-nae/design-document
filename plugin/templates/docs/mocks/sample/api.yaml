@@ -1,0 +1,18 @@
+# 疑似 API（モック用。AI が書く）。条件式（when.if）を書けるのはこのファイルだけ
+tables:
+  - items
+  - drafts
+routes:
+  - { method: GET, path: /items, op: list, table: items }
+  - method: POST
+    path: /items
+    when:                       # 上から評価し、最初に一致した応答を返す
+      - if: "body.name == 'エラー'"
+        status: 409
+        body: { message: 登録できませんでした }
+    op: insert
+    table: items
+    status: 201
+  # 入力中の内容（下書き）はキー current で上書き保存する
+  - { method: POST, path: /drafts, op: insert, table: drafts, set: { id: current }, status: 201 }
+  - { method: GET, path: /drafts/:id, op: get, table: drafts }

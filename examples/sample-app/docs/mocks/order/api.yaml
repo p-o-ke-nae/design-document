@@ -1,0 +1,21 @@
+# 疑似 API（モック用）。base は既定の /api
+tables:
+  - orders
+  - { name: stock, key: sku }
+  - drafts
+routes:
+  - { method: GET, path: /orders, op: list, table: orders }
+  - { method: GET, path: /orders/:id, op: get, table: orders }
+  - method: POST
+    path: /orders
+    when:
+      - if: "stock[body.sku].qty < body.quantity"
+        status: 409
+        body: { message: 在庫が不足しています }
+    op: insert
+    table: orders
+    set: { status: Submitted }
+    status: 201
+  # 入力中の注文（下書き）は 1 件だけ。キー current で上書き保存する
+  - { method: POST, path: /drafts, op: insert, table: drafts, set: { id: current }, status: 201 }
+  - { method: GET, path: /drafts/:id, op: get, table: drafts }

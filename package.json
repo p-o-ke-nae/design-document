@@ -1,0 +1,36 @@
+{
+  "name": "ddv-monorepo",
+  "private": true,
+  "type": "module",
+  "description": "Design Doc Viewer: Mermaid-first requirements/basic/detailed design viewer with test matrix generation and test execution.",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "ddv": "tsx apps/server/src/cli.ts",
+    "ddv-testid": "tsx packages/testid/src/cli.ts",
+    "ddv-lint": "tsx packages/core/src/lint-cli.ts",
+    "dev:server": "tsx watch apps/server/src/cli.ts serve --repo examples/sample-app",
+    "dev:web": "vite apps/web",
+    "build": "npm run build -w @ddv/mock-runtime && vite build apps/web",
+    "serve:sample": "npm run build && tsx apps/server/src/cli.ts serve --repo examples/sample-app",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^4.1.11"
+  }
+}

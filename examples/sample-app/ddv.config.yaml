@@ -1,0 +1,31 @@
+# ddv の設定（このリポジトリを ddv で閲覧する）
+docsRoot: docs/design
+mocksRoot: docs/mocks
+idPrefix:
+  requirements: REQ
+  basic: BD
+  detailed: DD
+toc:
+  minLevel: 2
+  maxLevel: 3
+matrix:
+  nSwitch: 1
+  loopLimit: 1
+  maxPaths: 200
+styles:
+  - web/src/styles/app.css
+runners:
+  - name: web
+    type: vitest
+    cwd: web
+    level: integration
+  - name: dotnet
+    type: dotnet
+    cwd: dotnet
+    level: unit
+  - name: e2e
+    type: playwright
+    cwd: .
+    level: integration
+    include: ['e2e/**/*.spec.ts']
+    scenarios: true

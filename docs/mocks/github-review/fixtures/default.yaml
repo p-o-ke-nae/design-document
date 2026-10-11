@@ -1,0 +1,5 @@
+pulls:
+  - { id: 1, number: 12, title: 注文確認画面に戻るボタンを追加, head: feature/confirm-back, base: main }
+  - { id: 2, number: 15, title: 在庫照会 API の詳細設計, head: feature/stock-api, base: main }
+comments:
+  - { id: 1, kind: file, kindLabel: ファイル（差分外）, path: requirements/order.md, anchor: L18, comment: REQ-012 の受入基準に件数の上限を追記してください }

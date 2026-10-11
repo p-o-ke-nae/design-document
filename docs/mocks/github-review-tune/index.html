@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>モックの調整モード（モック）</title>
+  <link rel="stylesheet" href="../../../apps/web/src/styles.css" />
+  <style>
+    .viewer { padding: 12px; }
+    .mtool { display: flex; gap: 6px; align-items: center; padding: 4px 8px; border: 1px solid #d0d7de; border-bottom: 0; background: #f6f8fa; border-radius: 6px 6px 0 0; }
+    .mtool .on { background: #ddf4ff; border-color: #0969da; }
+    .split { display: grid; grid-template-columns: 1fr 340px; gap: 12px; }
+    .frame { border: 1px solid #d0d7de; padding: 12px; background: #fff; min-height: 220px; }
+    .frame.picking { cursor: crosshair; outline: 2px dashed #0969da; outline-offset: -4px; }
+    .frame .hit { outline: 2px solid #0969da; outline-offset: 2px; }
+    .frame .gen { color: #57606a; }
+    .panel { border: 1px solid #d0d7de; border-radius: 6px; padding: 10px; display: grid; gap: 6px; align-content: start; font-size: 13px; }
+    .panel h3 { margin: 0 0 4px; font-size: 14px; }
+    .panel label { color: #57606a; }
+    .src { font-family: ui-monospace, monospace; font-size: 12px; background: #f6f8fa; padding: 6px; white-space: pre; overflow: auto; }
+    .src .del { background: #ffebe9; }
+    .src .add { background: #e6ffec; }
+    .mockonly { border-style: dashed; }
+    .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  </style>
+  <script type="module" src="../_ddv/mock-runtime.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <span class="brand">ddv</span>
+      <span class="muted">GitHub: acme/order-app #12</span>
+      <span class="spacer"></span>
+      <span class="muted">basic/order.md</span>
+    </header>
+
+    <!-- 通常（モック表示） -->
+    <section data-screen="Off">
+      <div class="viewer">
+        <div class="mtool">
+          <strong>モック</strong> <code>order/index.html</code>
+          <span class="spacer"></span>
+          <button>▶ 再生</button>
+          <button data-testid="tune-start" data-event="調整" data-goto="Picking">調整</button>
+        </div>
+        <div class="frame">
+          <h2>注文入力</h2>
+          <label>顧客名 <input placeholder="山田 太郎" /></label>
+          <p><button class="primary">確認へ</button></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 要素選択 -->
+    <section data-screen="Picking" hidden>
+      <div class="viewer">
+        <div class="mtool">
+          <strong>モック</strong> <code>order/index.html</code>
+          <span class="badge" data-testid="tune-mode">調整中：変更したい要素をクリック（再生は停止中）</span>
+          <span class="spacer"></span>
+          <button class="on" data-testid="tune-end" data-event="調整終了" data-goto="Off">調整終了</button>
+        </div>
+        <div class="split">
+          <div class="frame picking">
+            <h2>注文入力</h2>
+            <label>顧客名 <input class="hit" placeholder="山田 太郎" /></label>
+            <p><button class="primary">確認へ</button></p>
+            <ul class="gen"><li>注文一覧の行（data-bind で表示）</li></ul>
+          </div>
+          <div class="panel">
+            <h3>要素を選んでください</h3>
+            <label for="picked">（モック）クリックした要素</label>
+            <select id="picked" class="mockonly" data-testid="picked">
+              <option value="source">顧客名の入力欄（HTML にある）</option>
+              <option value="generated">注文一覧の行（data-bind で作られた要素）</option>
+            </select>
+            <p class="error" data-testid="pick-error" data-error hidden></p>
+            <button class="mockonly" data-testid="pick" data-event="要素をクリック" data-submit="POST /mock-source" data-ok="Editing">（モック）クリックする</button>
+            <h3>保留中の調整</h3>
+            <ul data-testid="tune-pending" data-bind="/suggestions">
+              <template><li><code>{{line}}</code> {{summary}}</li></template>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 編集中 -->
+    <section data-screen="Editing" hidden>
+      <div class="viewer">
+        <div class="mtool">
+          <strong>モック</strong> <code>order/index.html</code>
+          <span class="badge">調整中</span>
+          <span class="spacer"></span>
+        </div>
+        <div class="split">
+          <div class="frame">
+            <h2>注文入力</h2>
+            <label>顧客名 <input class="hit" placeholder="例：山田 太郎" /></label>
+            <p><button class="primary">確認へ</button></p>
+          </div>
+          <div class="panel">
+            <h3>input <code>customer</code>（order/index.html L23）</h3>
+            <label for="t-placeholder">placeholder</label>
+            <input id="t-placeholder" data-testid="t-placeholder" maxlength="200" value="例：山田 太郎" data-sample="例：山田 太郎" />
+            <label for="t-maxlength">maxlength</label>
+            <input id="t-maxlength" type="number" data-testid="t-maxlength" min="1" max="10000" value="50" data-sample="50" />
+            <label><input type="checkbox" data-testid="t-required" checked /> required</label>
+            <label>変更後のソース（suggestion）</label>
+            <div class="src" data-testid="suggestion"><span class="del">-  &lt;input data-testid="customer" placeholder="山田 太郎" /&gt;</span>
+<span class="add">+  &lt;input data-testid="customer" placeholder="例：山田 太郎" required maxlength="50" /&gt;</span></div>
+            <p class="muted">文言・属性は変更するとすぐにモックに反映されます（ファイルは変わりません）。class・style・data-* は変更できません。</p>
+            <div class="row">
+              <button data-testid="t-apply" data-event="文言・属性を変更" data-goto="Editing">反映</button>
+              <button data-testid="t-cancel" data-event="取消" data-goto="Picking">取消</button>
+              <button class="primary" data-testid="t-add" data-event="保留に追加" data-submit="POST /suggestions" data-ok="Picking">保留に追加</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

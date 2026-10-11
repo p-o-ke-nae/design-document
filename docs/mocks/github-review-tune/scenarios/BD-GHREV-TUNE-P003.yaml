@@ -1,0 +1,21 @@
+# ddv mock scaffold が生成。event / click / expect.screen は再生成で更新、それ以外は保持
+
+id: BD-GHREV-TUNE-P003
+title: 開始 → 通常 → [調整] 要素選択 → [要素をクリック [対応する行あり]] 編集中 → [保留に追加] 要素選択 → [調整終了] 通常 → 終了
+fixtures: [ default ]
+start: Off
+steps:
+  - event: 調整
+    click: tune-start
+    expect: { screen: Picking }
+  - event: 要素をクリック [対応する行あり]
+    input: { picked: source }
+    click: pick
+    expect: { screen: Editing }
+  - event: 保留に追加
+    input: { t-placeholder: 例：山田 太郎, t-maxlength: 50, t-required: true }
+    click: t-add
+    expect: { screen: Picking }
+  - event: 調整終了
+    click: tune-end
+    expect: { screen: Off }

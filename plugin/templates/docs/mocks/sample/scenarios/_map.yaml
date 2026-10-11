@@ -1,0 +1,14 @@
+# 実アプリで E2E を実行するときの対応表（実装工程で AI が書く）。モックでは使わない
+# シナリオ本体（<テストID>.yaml）は ddv mock scaffold で生成する
+screens:                          # 画面遷移図の状態ID → 実アプリでの判定
+  一覧: { url: "/items$" }         # url はパス部分に一致する正規表現
+  入力: { selector: "h1:has-text('入力')" }
+  確認: { selector: "h1:has-text('確認')" }
+  完了: { selector: "h1:has-text('完了')" }
+events:                           # イベント名（ガード除く）→ クリックするセレクタ
+  新規: "a[href='/items/new']"
+  次へ: "button[type=submit]"
+  キャンセル: "text=キャンセル"
+  戻る: "text=戻る"
+  確定: "text=確定"
+fields: {}                        # 入力キー → セレクタ。省略時は [data-testid=キー]
