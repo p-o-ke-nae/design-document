@@ -66,8 +66,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const reload = useCallback(async () => {
     const r = await gh.workspaces().catch(() => null);
-    if (!r) return;
-    setLocal(r.local);
+    // Fall back to the local workspace when the list is unavailable (e.g. a server without the GitHub feature).
+    if (!r || typeof r !== 'object' || !Array.isArray(r.workspaces)) {
+      setLocal(true);
+      setList([]);
+      return;
+    }
+    setLocal(r.local !== false);
     setList(r.workspaces);
   }, []);
 
