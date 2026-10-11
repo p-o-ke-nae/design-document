@@ -35,6 +35,7 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
   const [request, setRequest] = useState<{ id: string; play: boolean; seq: number }>({ id: '', play: false, seq: 0 });
   const [detail, setDetail] = useState<ScenarioDetail | null>(null);
   const [loadError, setLoadError] = useState('');
+  const [loadedSeq, setLoadedSeq] = useState(-1);
 
   const scenarios = useMemo(() => playableScenarios(hub?.scenarios ?? [], target), [hub?.scenarios, target]);
   const hasPlayer = scenarios.length > 0;
@@ -100,6 +101,7 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
       .then((d) => {
         if (!alive) return;
         setDetail(d);
+        setLoadedSeq(request.seq);
         ctl.load(d.scenario ? { id: d.id, fixtures: d.scenario.fixtures ?? [], start: d.scenario.start, steps: d.scenario.steps ?? [] } : null);
         if (d.scenario && request.play && autoPlayed.current !== request.seq) {
           autoPlayed.current = request.seq;
@@ -145,8 +147,8 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
   const src = rawUrl(`/raw/${config.mocksRoot.replace(/\/$/, '')}/${target.replace(/^\//, '')}`);
   const steps = detail?.scenario?.steps ?? [];
   const { state, busy, cursor, total, failure } = snap;
-  // Disabled until the selected scenario itself is loaded (not the previous one still shown)
-  const loaded = !!detail && snap.scenarioId === detail.id && detail.id === request.id;
+  // Disabled until the latest selection (even of the same scenario) has been loaded into the controller
+  const loaded = !!detail && snap.scenarioId === detail.id && loadedSeq === request.seq;
   const can = {
     play: loaded && !busy && (state === 'Idle' || state === 'Paused'),
     pause: state === 'Playing',
