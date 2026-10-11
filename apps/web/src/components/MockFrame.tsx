@@ -145,7 +145,8 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
   const src = rawUrl(`/raw/${config.mocksRoot.replace(/\/$/, '')}/${target.replace(/^\//, '')}`);
   const steps = detail?.scenario?.steps ?? [];
   const { state, busy, cursor, total, failure } = snap;
-  const loaded = !!detail && snap.scenarioId === detail.id;
+  // Disabled until the selected scenario itself is loaded (not the previous one still shown)
+  const loaded = !!detail && snap.scenarioId === detail.id && detail.id === request.id;
   const can = {
     play: loaded && !busy && (state === 'Idle' || state === 'Paused'),
     pause: state === 'Playing',

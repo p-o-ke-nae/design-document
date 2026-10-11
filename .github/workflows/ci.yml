@@ -34,7 +34,7 @@ jobs:
       - run: npm run ddv-lint
       - run: npm run ddv-testid -- check
       - run: npm run e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: test-results
