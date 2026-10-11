@@ -854,6 +854,92 @@ button.run:not(:disabled) {
   min-width: 0;
 }
 
+/* mock tune mode (DD-TUNE) */
+.tune {
+  border-bottom: 1px solid var(--border);
+  background: #fffbeb;
+  font-size: 12px;
+  padding: 6px 8px;
+  display: grid;
+  gap: 6px;
+}
+.tune-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tune-bar .spacer {
+  flex: 1;
+}
+.tune-editor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: flex-start;
+}
+.tune-field {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--muted);
+}
+.tune-field input:not([type='checkbox']),
+.tune-field select {
+  font-size: 12px;
+  min-width: 10em;
+}
+.tune-check {
+  flex-direction: row;
+  align-items: center;
+  align-self: flex-end;
+}
+.tune-body {
+  flex-basis: 100%;
+}
+.tune-body textarea {
+  width: 100%;
+  font-size: 12px;
+}
+.tune-issue {
+  color: var(--warn);
+}
+.tune-options table {
+  border-collapse: collapse;
+}
+.tune-options td {
+  padding: 1px 2px;
+}
+.tune-suggestion {
+  flex-basis: 100%;
+}
+.tune-suggestion pre {
+  margin: 2px 0 0;
+  padding: 4px 6px;
+  background: #fff;
+  border: 1px solid var(--border);
+  overflow: auto;
+}
+.tune-suggestion .del {
+  background: #fee2e2;
+}
+.tune-suggestion .add {
+  background: #dcfce7;
+}
+.tune-actions {
+  flex-basis: 100%;
+  display: flex;
+  gap: 6px;
+}
+.tune-pending ul {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+}
+.tune-pending button {
+  font-size: 12px;
+  text-align: left;
+}
+
 /* player */
 .player {
   display: flex;

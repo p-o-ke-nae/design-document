@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { api, rawUrl, type ScenarioDetail } from '../api.ts';
 import { useApp, useLocalStorage } from '../state.tsx';
 import { playableScenarios, useMockHub } from '../mockHub.tsx';
-import { PlayerController, SPEEDS, STATE_LABEL, createFrameTransport, type PlayerSnapshot } from '../player.ts';
+import { PlayerController, SPEEDS, STATE_LABEL, createFrameTransport, type FrameTransport, type PlayerSnapshot, type TuneMessage } from '../player.ts';
+import type { PickedElement } from '@ddv/mock/tune-patch';
 import { SnapshotPanel } from './SnapshotPanel.tsx';
+import { TunePanel } from './TunePanel.tsx';
 
 const SIZES: Array<[string, number | null]> = [
   ['可変', null],
@@ -36,6 +38,10 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
   const [detail, setDetail] = useState<ScenarioDetail | null>(null);
   const [loadError, setLoadError] = useState('');
   const [loadedSeq, setLoadedSeq] = useState(-1);
+  const transport = useRef<FrameTransport | null>(null);
+  const [tuning, setTuning] = useState(false);
+  const [picked, setPicked] = useState<{ el: PickedElement; seq: number } | null>(null);
+  const sendTune = useCallback((m: TuneMessage) => transport.current?.send(m), []);
 
   const scenarios = useMemo(() => playableScenarios(hub?.scenarios ?? [], target), [hub?.scenarios, target]);
   const hasPlayer = scenarios.length > 0;
@@ -46,14 +52,19 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
   useEffect(() => registerMock?.(target), [registerMock, target]);
 
   useEffect(() => {
-    const transport = createFrameTransport(() => frame.current, {
+    const t = createFrameTransport(() => frame.current, {
       onMessage: (m) => {
         if (m.type === 'ddv:ready' || m.type === 'ddv:screen') c.setScreen(m.screen ?? null);
         if (m.type === 'ddv:ready') setMockError('');
         if (m.type === 'ddv:error') setMockError(m.message);
+        if (m.type === 'ddv:picked') {
+          const { type: _type, ...el } = m;
+          setPicked((p) => ({ el, seq: (p?.seq ?? 0) + 1 }));
+        }
       },
     });
-    const c = new PlayerController(transport, {
+    transport.current = t;
+    const c = new PlayerController(t, {
       onFinish: (r) => {
         void api
           .played({ id: r.id, ok: r.ok, ...(r.ok ? {} : { failures: r.failures }) })
@@ -64,7 +75,8 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
     setCtl(c);
     return () => {
       c.dispose();
-      transport.dispose();
+      t.dispose();
+      if (transport.current === t) transport.current = null;
     };
   }, [nonce, refreshScenarios]);
 
@@ -150,10 +162,15 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
   // Disabled until the latest selection (even of the same scenario) has been loaded into the controller
   const loaded = !!detail && snap.scenarioId === detail.id && loadedSeq === request.seq;
   const can = {
-    play: loaded && !busy && (state === 'Idle' || state === 'Paused'),
+    play: !tuning && loaded && !busy && (state === 'Idle' || state === 'Paused'),
     pause: state === 'Playing',
-    step: loaded && !busy && (state === 'Idle' || state === 'Paused'),
-    rewind: loaded && (state === 'Paused' || state === 'Done' || state === 'Failed'),
+    step: !tuning && loaded && !busy && (state === 'Idle' || state === 'Paused'),
+    rewind: !tuning && loaded && (state === 'Paused' || state === 'Done' || state === 'Failed'),
+    tune: !tuning && !busy && state !== 'Playing',
+  };
+  const startTune = () => {
+    sendTune({ type: 'ddv:tune', on: true });
+    setTuning(true);
   };
   const rewindTarget = state === 'Failed' ? cursor : Math.max(0, cursor - 1);
   const stepStatus = (i: number) =>
@@ -171,7 +188,17 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
             {label}
           </button>
         ))}
-        <button type="button" onClick={() => setNonce((n) => n + 1)} title="再読込">
+        <button type="button" data-testid="tune-start" disabled={!can.tune} onClick={startTune} title={state === 'Playing' ? 'シナリオの再生中は調整できません' : '要素を選んで文言・属性を調整する'}>
+          調整
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setTuning(false);
+            setNonce((n) => n + 1);
+          }}
+          title="再読込"
+        >
           ⟳
         </button>
         <a href={src} target="_blank" rel="noreferrer">
@@ -180,7 +207,7 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
       </div>
       {hasPlayer && (
         <div className="player" data-testid="player">
-          <select data-testid="player-scenario" value={request.id} onChange={(e) => select(e.target.value)} title="シナリオ" disabled={state === 'Playing'}>
+          <select data-testid="player-scenario" value={request.id} onChange={(e) => select(e.target.value)} title="シナリオ" disabled={state === 'Playing' || tuning}>
             {scenarios.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.id} [{SCENARIO_STATUS[s.status] ?? s.status}] {s.title}
@@ -232,6 +259,7 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
       )}
       {loadError && <div className="notice warn">⚠ シナリオを読み込めません: {loadError}</div>}
       {mockError && <div className="notice warn">⚠ モック: {mockError}</div>}
+      {tuning && <TunePanel mock={target} picked={picked} send={sendTune} onEnd={() => setTuning(false)} />}
       {detail?.issues?.map((m, i) => (
         <div key={i} className="notice warn">
           ⚠ {m}

@@ -26,13 +26,15 @@ traces: [BD-GHREV]
 | 調整中の表示 | `tune-mode` | 表示 | — | — | — | — | — |
 | 調整終了 | `tune-end` | ボタン | — | — | — | `ddv:tune { on: false }`（DOM の変更をすべて戻す） | — |
 | 選択のエラー | `pick-error` | メッセージ | — | — | 非表示 | `mock-source` の対応なし（:ref[#ソースとの対応]） | 「対応する行なし：data-bind で作られた要素です」「…mock.js などで作られた要素です」 |
-| 保留中の調整 | `tune-pending` | 一覧 | — | — | — | 保留中レビューのうち `anchor.element.kind = mockElement` のもの | — |
+| 保留中の調整 | `tune-pending` | 一覧 | — | — | — | 保留中レビューのうち `anchor.element.kind = mockElement` のもの（各行 `tune-pending-item`。選ぶとその変更を再適用して編集中にする） | 再適用できるのは、この端末で追加した変更だけ（変更内容はワークスペースごとに localStorage に保存） |
+| 通知 | `tune-notice` | メッセージ | — | — | 非表示 | 「保留に追加しました」「変更後の HTML をコピーしました」 | — |
 | 文言 | `t-text` | テキスト | 文字列 200 | — | 要素の直下のテキスト | `ElementPatch.text` | 直下のテキストが 1 つでない要素では出さない |
 | 属性（`placeholder`・`title`・`aria-label`・`value`・`pattern`） | `t-<属性名>` | テキスト | 文字列 200 | — | 今の値 | `ElementPatch.set` | `pattern` は正規表現として不正なら「正規表現を確認してください」 |
 | 属性（`maxlength`・`minlength`・`min`・`max`・`step`） | `t-<属性名>` | 数値 | 整数（`step`・`min`・`max` は小数可） | — | 今の値（空なら属性なし） | `ElementPatch.set` / 空にすると `remove` | `minlength` > `maxlength`、`min` > `max`：「範囲を確認してください」 |
 | `required` | `t-required` | チェック | — | — | 今の値 | `set` / `remove` | — |
 | `type`（input） | `t-type` | 選択 | `text` `number` `email` `tel` `date` `password` `checkbox` | — | 今の値 | `ElementPatch.set` | — |
-| 選択肢（select） | `t-options` | 表（値・文言・追加・削除・並べ替え） | — | — | 今の `option` | `ElementPatch.options` | 値の重複：「選択肢の値が重複しています」 |
+| 選択肢（select） | `t-options` | 表（値・文言・追加・削除・並べ替え） | — | — | 今の `option` | `ElementPatch.options`（行の入力 `t-option-value`・`t-option-label`、`t-option-add`・`t-option-delete`） | 値の重複：「選択肢の値が重複しています」 |
+| コメント | `t-body` | テキスト（複数行） | — | — | `モック調整：…` の既定文 | 保留コメントの本文（GitHub のワークスペースだけ） | — |
 | 変更後のソース | `suggestion` | 表示（差分） | — | — | — | `SuggestionBuilder.build`（:ref[#suggestion-の生成]） | — |
 | 反映 | `t-apply` | ボタン | — | — | — | `ddv:patch`（入力のたびにも反映する） | — |
 | 取消 | `t-cancel` | ボタン | — | — | — | `ddv:patch { patch: null }` | — |
