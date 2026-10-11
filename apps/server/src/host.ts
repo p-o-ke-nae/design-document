@@ -4,7 +4,10 @@ import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { GitHubError, type TokenResolver } from '@ddv/github';
 import { createApp, mimeOf, type ServerContext } from './app.ts';
+import { normalizePath } from '@ddv/core';
 import { guard } from './guard.ts';
+import { DiffService } from './pr-diff.ts';
+import { ThreadService } from './threads.ts';
 import { OpenRequestError, parseRepo, toPullInfo, WorkspaceError, type WorkspaceEvent, type WorkspaceManager } from './workspaces.ts';
 
 export interface ServerAppOptions {
@@ -31,6 +34,35 @@ const GITHUB_STATUS: Record<GitHubError['kind'], 401 | 403 | 404 | 422 | 429 | 5
   network: 502,
 };
 
+interface RawReview {
+  user: { login: string } | null;
+  state: string;
+  submitted_at?: string;
+}
+
+export interface ReviewerState {
+  login: string;
+  state: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED';
+  submittedAt?: string;
+}
+
+/** Latest review state per reviewer; a later COMMENTED keeps an earlier APPROVED / CHANGES_REQUESTED (as on GitHub). */
+export function latestReviews(list: RawReview[]): ReviewerState[] {
+  const out = new Map<string, ReviewerState>();
+  for (const r of list) {
+    const login = r.user?.login;
+    if (!login || !['APPROVED', 'CHANGES_REQUESTED', 'COMMENTED', 'DISMISSED'].includes(r.state)) continue;
+    const prev = out.get(login);
+    if (r.state === 'DISMISSED') {
+      out.set(login, { login, state: 'COMMENTED', submittedAt: r.submitted_at });
+      continue;
+    }
+    if (r.state === 'COMMENTED' && prev && prev.state !== 'COMMENTED') continue;
+    out.set(login, { login, state: r.state as ReviewerState['state'], submittedAt: r.submitted_at });
+  }
+  return [...out.values()];
+}
+
 /** Rewrites the request URL path, keeping the query, method, headers and body. */
 function rewrite(req: Request, pathname: string): Request {
   const url = new URL(req.url);
@@ -47,6 +79,8 @@ export function createServerApp(opts: ServerAppOptions): Hono {
   const app = new Hono();
   const apps = new Map<string, { gen: number; app: Hono }>();
   const local = opts.local ? createApp(opts.local) : null;
+  const diffs = new DiffService(manager.git);
+  const threads = new ThreadService(manager.github);
 
   app.use('*', guard({ port: opts.port, devOrigins: opts.devOrigins }));
 
@@ -138,7 +172,29 @@ export function createServerApp(opts: ServerAppOptions): Hono {
   app.get('/api/w/:ws/pr', async (c) => {
     const { ws } = appFor(c.req.param('ws'));
     const pr = await manager.pull(ws.id).catch(() => ws.pr);
-    return c.json({ ...manager.info(ws), baseRef: ws.baseRef, mergeBase: ws.mergeBase, pr: pr ?? null });
+    const reviews = ws.target.pr
+      ? await manager.github
+          .paginate<RawReview>(`/repos/${ws.target.owner}/${ws.target.repo}/pulls/${ws.target.pr}/reviews?per_page=100`)
+          .then(latestReviews)
+          .catch(() => [])
+      : [];
+    return c.json({ ...manager.info(ws), baseRef: ws.baseRef, mergeBase: ws.mergeBase, pr: pr ?? null, reviews });
+  });
+
+  app.get('/api/w/:ws/pr/files', async (c) => {
+    const { ws, ctx } = manager.context(c.req.param('ws'));
+    return c.json(await diffs.files(ws, ctx.config));
+  });
+
+  app.get('/api/w/:ws/pr/diff', async (c) => {
+    const { ws, ctx } = manager.context(c.req.param('ws'));
+    return c.json(await diffs.docDiff(ws, ctx.config, normalizePath(c.req.query('path') ?? '')));
+  });
+
+  app.get('/api/w/:ws/pr/threads', async (c) => {
+    const { ws } = manager.context(c.req.param('ws'));
+    const p = c.req.query('path');
+    return c.json(await threads.list(ws, p ? normalizePath(p) : undefined));
   });
 
   app.all('/api/w/:ws/*', async (c) => {

@@ -16,6 +16,9 @@ const NO_TOKEN_PORT = 5187;
 const REPO = 'acme/order-app';
 const TOKEN = 'ghp_test_token';
 const DOC = (title: string, body: string) => `---\nid: REVIEW\nkind: basic\nstatus: review\ntitle: ${title}\n---\n\n# ${title}\n\n${body}\n`;
+// order.md of the PR head: L12 rewritten (added + base 「注文を受け付ける。」 removed), L14–16 added.
+const ORDER_V2 = '---\nid: SAMPLE\nkind: basic\nstatus: review\ntitle: 注文 基本設計\n---\n\n# 注文 基本設計\n\n## 概要\n\n注文を受け付け、内容を確認する。\n\n## 確認\n\n確認画面を表示する。\n';
+const ORDER = 'docs/design/basic/order.md';
 
 let tmp = '';
 let upstream: Upstream;
@@ -28,7 +31,10 @@ async function startFakeGitHub(s: FakeGitHubState): Promise<http.Server> {
   const server = http.createServer(async (req, res) => {
     const headers = new Headers();
     for (const [k, v] of Object.entries(req.headers)) if (typeof v === 'string') headers.set(k, v);
-    const r = await handle(new Request(`http://127.0.0.1${req.url}`, { method: req.method, headers }));
+    const chunks: Buffer[] = [];
+    for await (const c of req) chunks.push(c as Buffer);
+    const body = chunks.length ? Buffer.concat(chunks) : undefined;
+    const r = await handle(new Request(`http://127.0.0.1${req.url}`, { method: req.method, headers, body }));
     res.writeHead(r.status, Object.fromEntries(r.headers));
     res.end(Buffer.from(await r.arrayBuffer()));
   });
@@ -61,12 +67,23 @@ test.describe.configure({ mode: 'serial' });
 test.beforeAll(async () => {
   tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'ddv-e2e-gh-'));
   upstream = await createUpstream(path.join(tmp, 'remote'));
-  const head = upstream.commit('feature/review', { 'docs/design/basic/review.md': DOC('レビュー対象 基本設計', '## 変更点\n\n最初の版。') }, 'add review doc');
+  const head = upstream.commit(
+    'feature/review',
+    { 'docs/design/basic/review.md': DOC('レビュー対象 基本設計', '## 変更点\n\n最初の版。'), 'docs/design/basic/order.md': ORDER_V2, 'src/app.ts': 'export {};\n' },
+    'add review doc',
+  );
   upstream.setPull(12, head);
   state = fakeGitHubState({
     token: TOKEN,
     pulls: { [REPO]: [{ number: 12, title: '注文の取消を追加', headSha: head, headRef: 'feature/review', baseRef: 'main' }] },
     refs: { [REPO]: { main: upstream.git('rev-parse', 'main') } },
+    threads: {
+      [`${REPO}#12`]: [
+        { id: 'RT_1', path: ORDER, line: 16, comments: [{ id: 101, author: 'bob', body: '画面の名前を書いてください' }, { id: 102, author: 'alice', body: '追記します' }] },
+        { id: 'RT_2', path: ORDER, line: null, resolved: true, comments: [{ id: 103, author: 'bob', body: '全体として良いと思います' }] },
+      ],
+    },
+    reviews: { [`${REPO}#12`]: [{ user: { login: 'bob' }, state: 'CHANGES_REQUESTED', submitted_at: '2025-01-01T00:00:00Z' }] },
   });
   api = await startFakeGitHub(state);
   const common = {
@@ -138,7 +155,7 @@ test('[BD-GHREV-SCREEN-T004][BD-GHREV-SCREEN-T005][BD-GHREV-SCREEN-T006] 入力N
   await expect(page.getByTestId('head-sha')).toHaveText(state.pulls[REPO][0].headSha.slice(0, 7));
   await expect(page.getByTestId('doc-tree')).toContainText('レビュー対象 基本設計');
   await expect(page.locator('.main')).toContainText('注文 基本設計'); // first document auto-selected
-  await page.getByTestId('doc-tree').getByText('レビュー対象 基本設計').click();
+  await page.getByTestId('changed-docs').getByText('レビュー対象 基本設計').click();
   await expect(page).toHaveURL(/#\/w\/gh~acme~order-app~pr-12\/doc\?path=/);
   await expect(page.locator('.main')).toContainText('最初の版。');
 
@@ -147,6 +164,46 @@ test('[BD-GHREV-SCREEN-T004][BD-GHREV-SCREEN-T005][BD-GHREV-SCREEN-T006] 入力N
   await expect(page.getByTestId('prbar')).toHaveCount(0);
   await page.getByTestId('ws-switch').selectOption('gh~acme~order-app~pr-12');
   await expect(page.getByTestId('doc-tree')).toContainText('レビュー対象 基本設計');
+  expect(await page.content()).not.toContain(TOKEN);
+});
+
+test('PR の文書：変更印・レビュー状態・本文 / 差分の切替・スレッド表示', async ({ page }) => {
+  await page.goto(`${BASE}/#/w/gh~acme~order-app~pr-12/doc?path=${ORDER}`);
+  await expect(page.locator('.main')).toContainText('確認画面を表示する。');
+  await expect(page.getByTestId('review-state')).toHaveText('bob: Changes requested');
+  const changed = page.getByTestId('changed-docs');
+  await expect(changed.locator('li')).toHaveCount(2);
+  await expect(changed).toContainText('M注文 基本設計');
+  await expect(changed).toContainText('Aレビュー対象 基本設計');
+
+  // 本文：差分の重ね合わせは無く、スレッドは要素の後ろ・ファイルへのコメントは先頭
+  const diff = page.getByTestId('diff-view');
+  await expect(diff).not.toHaveAttribute('open', '');
+  await expect(diff.locator('summary')).toHaveText('差分を表示（main...feature/review：設計書 2 件、文書以外 1 件）');
+  await expect(page.getByTestId('removed-block')).toHaveCount(0);
+  const thread = page.getByTestId('threads').getByTestId('thread');
+  await expect(thread).toHaveCount(1);
+  await expect(thread.locator('summary')).toContainText('bob：画面の名前を書いてください');
+  await expect(thread.getByTestId('thread-state')).toHaveText('（未解決・返信 1）');
+  await expect(thread).toContainText('追記します');
+  await expect(page.locator('p:has-text("確認画面を表示する。") + [data-testid=threads]')).toHaveCount(1);
+  await expect(page.getByTestId('file-threads').getByTestId('thread-state')).toHaveText('（解決済み）');
+
+  // 差分：追加・変更・削除を本文に重ねる
+  await diff.locator('summary').click();
+  await expect(page.getByTestId('diff-summary')).toContainText('追加 3');
+  await expect(page.getByTestId('removed-block')).toContainText('注文を受け付ける。');
+  // 1 行の段落の書き換えは「追加＋削除」（ブロックの一部の行だけが変わったときが「変更」）
+  await expect(page.locator('.doc p.block.added')).toHaveText(['注文を受け付け、内容を確認する。', '確認画面を表示する。']);
+  await expect(page.locator('.doc h2.block.added')).toHaveText('確認');
+
+  // 変更の無い文書・PR で追加された文書
+  await changed.getByText('レビュー対象 基本設計').click();
+  await expect(page.locator('.main')).toContainText('最初の版。');
+  await expect(page.getByTestId('diff-summary')).toContainText('A docs/design/basic/review.md');
+  await expect(page.getByTestId('removed-block')).toHaveCount(0);
+  await diff.locator('summary').click();
+  await expect(page.locator('.doc .block.added')).toHaveCount(0);
   expect(await page.content()).not.toContain(TOKEN);
 });
 

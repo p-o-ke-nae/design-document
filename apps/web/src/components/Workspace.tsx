@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ApiError, gh, type AuthStatus, type FetchStep, type PrInfo, type PullSummary, type WorkspaceInfo } from '../api.ts';
 import { parseHash, type Route } from '../state.tsx';
+import { ReviewStates } from './Pr.tsx';
 
 export const LOGIN_MESSAGE = 'GitHub にログインしてください（`gh auth login` または `GITHUB_TOKEN`）';
 
@@ -407,7 +408,7 @@ export function LoadingPage() {
   );
 }
 
-/** PR bar (Phase 1: number, title, base ← head, head, 更新あり, 最新化). */
+/** PR bar: number, title, base ← head, head, 更新あり, 最新化, review states. */
 export function PrBar() {
   const { current, update, reload } = useWorkspaces();
   const [info, setInfo] = useState<PrInfo | null>(null);
@@ -485,6 +486,7 @@ export function PrBar() {
       </button>
       {error && <span className="error">{error}</span>}
       <span className="spacer" />
+      <ReviewStates info={info} />
       {pr && (
         <a href={pr.htmlUrl} target="_blank" rel="noreferrer">
           GitHub で開く

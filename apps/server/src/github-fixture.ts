@@ -67,16 +67,37 @@ export interface FakePull {
   canPush?: boolean;
 }
 
+export interface FakeThread {
+  id: string;
+  path: string;
+  line?: number | null;
+  startLine?: number | null;
+  side?: 'LEFT' | 'RIGHT';
+  resolved?: boolean;
+  outdated?: boolean;
+  comments: { id: number; author: string; body: string; createdAt?: string }[];
+}
+
+export interface FakeReview {
+  user: { login: string };
+  state: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED' | 'DISMISSED' | 'PENDING';
+  submitted_at?: string;
+}
+
 export interface FakeGitHubState {
   login: string;
   token: string;
   pulls: Record<string, FakePull[]>;
   refs: Record<string, Record<string, string>>;
+  /** key: `owner/repo#N` */
+  threads: Record<string, FakeThread[]>;
+  /** key: `owner/repo#N` */
+  reviews: Record<string, FakeReview[]>;
   calls: string[];
 }
 
 export function fakeGitHubState(init: Partial<FakeGitHubState> = {}): FakeGitHubState {
-  return { login: 'alice', token: 'ghp_test_token', pulls: {}, refs: {}, calls: [], ...init };
+  return { login: 'alice', token: 'ghp_test_token', pulls: {}, refs: {}, threads: {}, reviews: {}, calls: [], ...init };
 }
 
 const j = (status: number, body: unknown, headers: Record<string, string> = {}) =>
@@ -116,6 +137,45 @@ export function fakeGitHub(state: FakeGitHubState) {
     if (m) {
       const sha = state.refs[`${m[1]}/${m[2]}`]?.[decodeURIComponent(m[3])];
       return sha ? j(200, { sha }) : j(404, { message: 'No commit found for SHA' });
+    }
+    m = /^\/repos\/([^/]+)\/([^/]+)\/pulls\/(\d+)\/reviews$/.exec(p);
+    if (m && req.method === 'GET') return j(200, state.reviews[`${m[1]}/${m[2]}#${m[3]}`] ?? []);
+    if (p === '/graphql' && req.method === 'POST') {
+      const { query, variables } = (await req.json()) as { query: string; variables: Record<string, any> };
+      if (query.includes('reviewThreads')) {
+        const threads = state.threads[`${variables.owner}/${variables.repo}#${variables.pr}`] ?? [];
+        return j(200, {
+          data: {
+            repository: {
+              pullRequest: {
+                reviewThreads: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: threads.map((t) => ({
+                    id: t.id,
+                    isResolved: t.resolved ?? false,
+                    isOutdated: t.outdated ?? false,
+                    path: t.path,
+                    line: t.line ?? null,
+                    startLine: t.startLine ?? null,
+                    diffSide: t.side ?? 'RIGHT',
+                    comments: {
+                      nodes: t.comments.map((c, i) => ({
+                        id: `PRRC_${t.id}_${i}`,
+                        databaseId: c.id,
+                        author: { login: c.author },
+                        body: c.body,
+                        createdAt: c.createdAt ?? '2024-01-01T00:00:00Z',
+                        url: `https://github.com/${variables.owner}/${variables.repo}/pull/${variables.pr}#discussion_r${c.id}`,
+                      })),
+                    },
+                  })),
+                },
+              },
+            },
+          },
+        });
+      }
+      return j(200, { errors: [{ message: 'unsupported query' }] });
     }
     return j(404, { message: 'Not Found' });
   };

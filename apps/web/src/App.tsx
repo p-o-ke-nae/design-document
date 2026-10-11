@@ -6,8 +6,21 @@ import { DocPage } from './components/DocPage.tsx';
 import { TestsPage } from './components/TestsPage.tsx';
 import { StatusBadge } from './components/StatusBadge.tsx';
 import { LoadingPage, OpenPage, PrBar, TopBar, TrustDialog, WorkspaceBar, WorkspaceProvider, useWorkspaces } from './components/Workspace.tsx';
+import { PrProvider } from './components/Pr.tsx';
 
 function Shell() {
+  const { route } = useApp();
+  const { current } = useWorkspaces();
+  if (route.ws && current?.kind === 'pr')
+    return (
+      <PrProvider>
+        <ShellBody />
+      </PrProvider>
+    );
+  return <ShellBody />;
+}
+
+function ShellBody() {
   const { route, repoName, showMatrix, setShowMatrix, activeRun } = useApp();
   const lastDoc = useRef('');
   if (route.view === 'doc' && route.path) lastDoc.current = route.path;

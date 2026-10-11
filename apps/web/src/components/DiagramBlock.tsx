@@ -6,6 +6,7 @@ import { useApp } from '../state.tsx';
 import { useMockHub } from '../mockHub.tsx';
 import { MermaidView } from './MermaidView.tsx';
 import { MatrixPanel } from './MatrixPanel.tsx';
+import { usePr } from './Pr.tsx';
 
 type Side = 'before' | 'after';
 type Targets = { before: HoverTarget | null; after: HoverTarget | null };
@@ -17,6 +18,9 @@ export function DiagramBlock({ doc, diagram }: { doc: DocResponse; diagram: Diag
   const graph = doc.graphs[diagram.id];
   const matrix: Matrix | undefined = doc.matrices.find((m) => m.diagram === diagram.id);
   const diff = doc.diffs[diagram.id];
+  const pr = usePr();
+  const prd = pr?.diffOn && pr.diff?.path === doc.path ? pr.diff.diagrams[diagram.id] : undefined;
+  const prCompare = prd?.change === 'changed' && prd.before && prd.diff ? { before: prd.before, diff: prd.diff, beforeId: prd.beforeId ?? diagram.id } : null;
   const [selected, setSelected] = useState<string | null>(null);
   const [localMatrix, setLocalMatrix] = useState<boolean | null>(null);
   const [showDiff, setShowDiff] = useState(true);
@@ -105,6 +109,11 @@ export function DiagramBlock({ doc, diagram }: { doc: DocResponse; diagram: Diag
       <span className="chip" title="図ID">
         #{diagram.id}
       </span>
+      {prd && prd.change !== 'unchanged' && (
+        <span className={`badge diff-${prd.change}`} data-testid="pr-diagram-change">
+          PR で{prd.change === 'added' ? '追加' : '変更'}
+        </span>
+      )}
       {matrix && (
         <label className="toggle">
           <input type="checkbox" checked={matrixVisible} onChange={(e) => setLocalMatrix(e.target.checked)} data-testid="matrix-toggle" />
@@ -133,11 +142,11 @@ export function DiagramBlock({ doc, diagram }: { doc: DocResponse; diagram: Diag
       code={diagram.code}
       graph={graph}
       highlight={highlight}
-      diff={diff && showDiff ? diff.after : null}
+      diff={prCompare ? prCompare.diff.after : diff && showDiff ? diff.after : null}
       toolbar={toolbar}
       line={diagram.line}
       diagramId={diagram.id}
-      {...hoverProps('after')}
+      {...(prCompare ? {} : hoverProps('after'))}
       pairTarget={pairTargets.after}
       related={relatedAfter}
       caption={
@@ -155,8 +164,26 @@ export function DiagramBlock({ doc, diagram }: { doc: DocResponse; diagram: Diag
   );
 
   return (
-    <div className="diagram-block" id={`diagram-${diagram.id}`}>
-      {diff && showDiff && before ? (
+    <div className={`diagram-block${prd?.change === 'added' ? ' pr-added' : ''}`} id={`diagram-${diagram.id}`}>
+      {prCompare ? (
+        <>
+          <div className="compare" data-testid="pr-compare">
+            <div>
+              <div className="compare-label">base: #{prCompare.beforeId}</div>
+              <MermaidView code={prCompare.before} diff={prCompare.diff.before} diagramId={`base-${diagram.id}`} />
+            </div>
+            <div>
+              <div className="compare-label">head: #{diagram.id}</div>
+              {main}
+            </div>
+          </div>
+          <div className="legend">
+            <span className="lg added">追加</span>
+            <span className="lg removed">削除</span>
+            <span className="lg changed">変更</span>
+          </div>
+        </>
+      ) : diff && showDiff && before ? (
         <>
           <div className="compare">
             <div>

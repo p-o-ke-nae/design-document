@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, type DocResponse } from '../api.ts';
 import { docHref, useApp } from '../state.tsx';
 import { MockHubProvider } from '../mockHub.tsx';
 import { Markdown } from './Markdown.tsx';
 import { Toc } from './Toc.tsx';
+import { MermaidView } from './MermaidView.tsx';
+import { ChangeMark, ThreadView, usePr } from './Pr.tsx';
+import type { ReviewMarks } from '../remark-review.ts';
 
 const KIND: Record<string, string> = { requirements: '要件定義', basic: '基本設計', detailed: '詳細設計', other: 'ドキュメント' };
 
@@ -14,6 +17,15 @@ export function DocPage() {
   const scroller = useRef<HTMLDivElement>(null);
   const [root, setRoot] = useState<HTMLElement | null>(null);
   const lastScrolled = useRef('');
+  const pr = usePr();
+  const prDiff = pr?.diff && pr.diff.path === route.path ? pr.diff : null;
+  const review = useMemo<ReviewMarks | undefined>(() => {
+    if (!pr) return undefined;
+    const threads = pr.threads.flatMap((t) => (t.placement?.kind === 'element' ? [{ id: t.id, line: t.placement.element.startLine }] : []));
+    const diffOn = pr.diffOn && prDiff;
+    return { threads, blocks: diffOn ? prDiff.blocks : undefined, removed: diffOn ? prDiff.removed : undefined };
+  }, [pr, prDiff]);
+  const looseThreads = pr?.threads.filter((t) => t.placement?.kind !== 'element') ?? [];
 
   useEffect(() => {
     if (!route.path) return;
@@ -91,8 +103,17 @@ export function DocPage() {
               </ul>
             </details>
           )}
+          {pr && <DiffView path={doc.path} />}
+          {looseThreads.length > 0 && (
+            <section className="threads loose" data-testid="file-threads">
+              <h4>ファイル・以前の版へのコメント（{looseThreads.length}）</h4>
+              {looseThreads.map((t) => (
+                <ThreadView key={t.id} thread={t} showPlace />
+              ))}
+            </section>
+          )}
           <MockHubProvider key={doc.path} version={version}>
-            <Markdown text={doc.text} basePath={doc.path} doc={doc} />
+            <Markdown text={doc.text} basePath={doc.path} doc={doc} review={review} />
           </MockHubProvider>
         </article>
       </div>
@@ -100,5 +121,89 @@ export function DocPage() {
         <Toc headings={doc.headings} scrollRoot={root} />
       </aside>
     </div>
+  );
+}
+
+/** 本文 / 差分 の切替（開くと本文に差分を重ねる）と、文書の差分の要約. */
+function DiffView({ path }: { path: string }) {
+  const pr = usePr()!;
+  const { files, info, diff, diffOn, setDiffOn } = pr;
+  const change = pr.changeOf(path);
+  const d = diff && diff.path === path ? diff : null;
+  const base = info?.pr?.baseRef ?? files?.base?.slice(0, 7) ?? 'base';
+  const head = info?.pr?.headRef ?? files?.head.slice(0, 7) ?? 'head';
+  const others = files ? files.others + files.mocks.length : 0;
+  const count = (c: string) => d?.blocks.filter((b) => b.change === c).length ?? 0;
+  const diagrams = d ? Object.entries(d.diagrams).filter(([, g]) => g.change !== 'unchanged') : [];
+  return (
+    <details className="diff-view" data-testid="diff-view" open={diffOn} onToggle={(e) => setDiffOn((e.currentTarget as HTMLDetailsElement).open)}>
+      <summary>
+        差分を表示（{base}...{head}：設計書 {files?.docs.length ?? '…'} 件、文書以外 {files ? others : '…'} 件）
+      </summary>
+      {!files ? (
+        <p className="muted">{pr.error || '読み込み中…'}</p>
+      ) : !change ? (
+        <p className="muted" data-testid="diff-unchanged">
+          この文書は PR で変更されていません。
+        </p>
+      ) : !d ? (
+        <p className="muted">{pr.error || '読み込み中…'}</p>
+      ) : (
+        <div className="diff-summary" data-testid="diff-summary">
+          <h4>
+            <ChangeMark status={change.status} /> {path}
+            {change.oldPath && <span className="muted">（{change.oldPath} から）</span>}
+          </h4>
+          <div className="legend">
+            <span className="lg added">追加 {count('added')}</span>
+            <span className="lg changed">変更 {count('changed')}</span>
+            <span className="lg removed">削除 {d.removed.length}</span>
+            <span className="muted">（本文に重ねて表示しています）</span>
+          </div>
+          {diagrams.length > 0 && (
+            <>
+              <h4>図の差分</h4>
+              <ul className="diagram-changes" data-testid="diagram-changes">
+                {diagrams.map(([id, g]) => (
+                  <li key={id} className={g.change}>
+                    {g.change === 'removed' ? (
+                      <>
+                        削除: <code>#{g.beforeId ?? id}</code>
+                        {g.before && <MermaidView code={g.before} diagramId={`removed-${id}`} />}
+                      </>
+                    ) : (
+                      <a href={`#diagram-${id}`} onClick={(e) => {
+                        e.preventDefault();
+                        document.getElementById(`diagram-${id}`)?.scrollIntoView({ block: 'start' });
+                      }}>
+                        {g.change === 'added' ? '追加' : '変更'}: <code>#{id}</code>
+                        {g.beforeId && g.beforeId !== id ? `（base では #${g.beforeId}）` : ''}
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          <h4>テストIDの増減</h4>
+          {d.ids.added.length + d.ids.retired.length === 0 ? (
+            <p className="muted">ありません</p>
+          ) : (
+            <ul className="ids" data-testid="id-changes">
+              {d.ids.added.map((id) => (
+                <li key={`+${id}`} className="added">
+                  ＋ {id}
+                </li>
+              ))}
+              {d.ids.retired.map((id) => (
+                <li key={`-${id}`} className="removed">
+                  － {id}（欠番）
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </details>
   );
 }

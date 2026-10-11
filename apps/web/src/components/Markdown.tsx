@@ -5,12 +5,14 @@ import remarkFrontmatter from 'remark-frontmatter';
 import remarkDirective from 'remark-directive';
 import { resolveRefPath, splitRef } from '@ddv/core';
 import { remarkDdv } from '../remark-ddv.ts';
+import { remarkReview, type ReviewMarks } from '../remark-review.ts';
 import type { DocResponse } from '../api.ts';
 import { docHref } from '../state.tsx';
 import { DiagramBlock } from './DiagramBlock.tsx';
 import { MermaidView } from './MermaidView.tsx';
 import { Embed, RefLink } from './Ref.tsx';
 import { MockFrame } from './MockFrame.tsx';
+import { ThreadList, usePr } from './Pr.tsx';
 
 interface MdCtx {
   basePath: string;
@@ -38,6 +40,8 @@ const components: Record<string, (p: any) => ReactNode> = {
   'ddv-ref': (p: any) => <RefLink target={p['data-target'] ?? ''}>{p.children}</RefLink>,
   'ddv-embed': (p: any) => <Embed target={p['data-target'] ?? ''} />,
   'ddv-mock': (p: any) => <MockFrame target={p['data-target'] ?? ''} attrs={attrs(p)} />,
+  'ddv-removed': (p: any) => <RemovedBlock index={Number(p['data-index'])} />,
+  'ddv-threads': (p: any) => <ThreadList ids={String(p['data-ids'] ?? '').split(' ')} />,
   a: ({ node: _n, href, children, ...rest }: any) => <MdLink href={href} {...rest}>{children}</MdLink>,
   table: ({ node: _n, ...rest }: any) => (
     <div className="table-wrap">
@@ -53,6 +57,18 @@ function MermaidNode({ code, line }: { code: string; line: number }) {
   return <MermaidView code={code} />;
 }
 
+/** Content removed by the PR (差分 view). */
+function RemovedBlock({ index }: { index: number }) {
+  const { basePath, depth } = useMd();
+  const r = usePr()?.diff?.removed[index];
+  if (!r) return null;
+  return (
+    <div className="block removed" data-testid="removed-block">
+      <Markdown text={r.markdown} basePath={basePath} depth={depth + 1} />
+    </div>
+  );
+}
+
 function MdLink({ href, children, ...rest }: { href?: string; children: ReactNode }) {
   const { basePath } = useMd();
   if (href && !/^[a-z]+:|^#/i.test(href)) {
@@ -66,9 +82,12 @@ function MdLink({ href, children, ...rest }: { href?: string; children: ReactNod
   );
 }
 
-export function Markdown({ text, basePath, doc, depth = 0 }: { text: string; basePath: string; doc?: DocResponse; depth?: number }) {
+export function Markdown({ text, basePath, doc, depth = 0, review }: { text: string; basePath: string; doc?: DocResponse; depth?: number; review?: ReviewMarks }) {
   const slugs = useMemo(() => (depth === 0 && doc ? doc.headings.map((h) => h.slug) : undefined), [doc, depth]);
-  const remarkPlugins = useMemo(() => [remarkGfm, [remarkFrontmatter, ['yaml']], remarkDirective, [remarkDdv, { slugs }]] as any, [slugs]);
+  const remarkPlugins = useMemo(
+    () => [remarkGfm, [remarkFrontmatter, ['yaml']], remarkDirective, [remarkDdv, { slugs }], ...(review ? [[remarkReview, review]] : [])] as any,
+    [slugs, review],
+  );
   const ctx = useMemo(() => ({ basePath, doc, depth }), [basePath, doc, depth]);
   return (
     <Ctx.Provider value={ctx}>

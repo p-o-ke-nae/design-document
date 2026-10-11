@@ -15,16 +15,28 @@ export class GraphBuilder {
   edges: GraphEdge[] = [];
   warnings: string[] = [];
   annotations: Record<string, string[]> = {};
+  /** Current line in the diagram code (1-based); set by the parsers. */
+  line = 0;
   private keyCount = new Map<string, number>();
+  private defined = new Set<string>();
 
   node(id: string, patch: Partial<GraphNode> = {}): GraphNode {
     let n = this.nodes.get(id);
     if (!n) {
       n = { id, label: id, role: 'normal' };
+      if (this.line) n.line = this.line;
       this.nodes.set(id, n);
     }
     Object.assign(n, Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined && v !== '')));
     return n;
+  }
+
+  /** Marks the current line as the node's definition line (the first definition wins). */
+  define(id: string): void {
+    if (this.defined.has(id)) return;
+    this.defined.add(id);
+    const n = this.node(id);
+    if (this.line) n.line = this.line;
   }
 
   edge(from: string, to: string, label: string): GraphEdge {
@@ -42,6 +54,7 @@ export class GraphBuilder {
       action,
       key: count === 1 ? base : `${base}#${count}`,
     };
+    if (this.line) e.line = this.line;
     this.edges.push(e);
     return e;
   }
@@ -86,7 +99,8 @@ export function parseStateDiagram(source: string): Graph {
     return id;
   };
 
-  for (const raw of lines) {
+  for (const [i, raw] of lines.entries()) {
+    b.line = i + 1;
     const line = stripComment(raw, b).trim();
     if (!line) continue;
     if (!headerSeen) {
@@ -116,6 +130,7 @@ export function parseStateDiagram(source: string): Graph {
     let m: RegExpExecArray | null;
     if ((m = /^state\s+"([^"]*)"\s+as\s+(\S+?)(\s*\{)?$/.exec(line))) {
       b.node(m[2], { label: m[1] });
+      b.define(m[2]);
       if (m[3]) {
         depth++;
         b.warnings.push(`複合状態 ${m[2]} は平坦化して扱います（未対応）`);
@@ -124,11 +139,12 @@ export function parseStateDiagram(source: string): Graph {
     }
     if ((m = /^state\s+(\S+?)\s*<<(choice|fork|join)>>$/.exec(line))) {
       b.node(m[1], { role: 'choice' });
+      b.define(m[1]);
       if (m[2] !== 'choice') b.warnings.push(`<<${m[2]}>> は分岐ノードとして近似します`);
       continue;
     }
     if ((m = /^state\s+(\S+?)\s*\{$/.exec(line))) {
-      b.node(m[1]);
+      b.define(m[1]);
       depth++;
       b.warnings.push(`複合状態 ${m[1]} は平坦化して扱います（未対応）`);
       continue;
@@ -140,15 +156,16 @@ export function parseStateDiagram(source: string): Graph {
       continue;
     }
     if ((m = /^state\s+(\S+)$/.exec(line))) {
-      b.node(m[1]);
+      b.define(m[1]);
       continue;
     }
     if ((m = /^([^\s:]+)\s*:\s*(.+)$/.exec(line))) {
       b.node(m[1], { label: m[2].trim() });
+      b.define(m[1]);
       continue;
     }
     if (/^[\w.-]+$/.test(line)) {
-      b.node(line);
+      b.define(line);
       continue;
     }
     b.warnings.push(`解釈できない行: ${line}`);

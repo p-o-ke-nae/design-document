@@ -160,6 +160,7 @@ export function createApp(ctx: ServerContext): Hono {
       toc: buildToc(doc.parsed.headings, ctx.config.toc.minLevel, ctx.config.toc.maxLevel),
       diagrams: doc.parsed.diagrams,
       directives: doc.parsed.directives,
+      blocks: doc.parsed.blocks,
       graphs,
       diffs,
       matrices: matrices.map((m) => ({ ...m, cases: m.cases.map((cs) => ({ ...cs, links: links[cs.id] ?? [] })) })),

@@ -1324,3 +1324,131 @@ button.link {
   max-width: 520px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.2);
 }
+
+/* --- PR の差分・レビュースレッド（REVCMT） --- */
+.review-states {
+  display: inline-flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.badge.review-approved {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+.badge.review-changes_requested {
+  background: var(--ng-bg);
+  color: var(--ng);
+}
+.mark {
+  display: inline-block;
+  width: 1.3em;
+  flex: none;
+  font-weight: 600;
+  font-family: ui-monospace, monospace;
+}
+.mark-a {
+  color: #1a7f37;
+}
+.mark-m,
+.mark-r {
+  color: #9a6700;
+}
+.mark-d {
+  color: #cf222e;
+}
+.tree .changed .deleted {
+  display: flex;
+  gap: 6px;
+  padding: 4px 8px;
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.diff-view {
+  margin: 0 0 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+}
+.diff-view > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.diff-view h4 {
+  margin: 10px 0 4px;
+}
+.diff-view .diagram-changes .removed {
+  color: #cf222e;
+}
+.ids .added {
+  color: #1a7f37;
+}
+.ids .removed {
+  color: #cf222e;
+}
+.doc .block {
+  border-left: 3px solid transparent;
+  padding-left: 6px;
+  margin-left: -9px;
+}
+.doc .block.added {
+  background: #e6ffec;
+  border-left-color: #1a7f37;
+}
+.doc .block.changed {
+  background: #fff8c5;
+  border-left-color: #d4a72c;
+}
+.doc .block.removed {
+  background: #ffebe9;
+  border-left-color: #cf222e;
+  text-decoration: line-through;
+  color: #6e2a2a;
+}
+.doc tr.block.added > td {
+  background: #e6ffec;
+}
+.doc tr.block.changed > td {
+  background: #fff8c5;
+}
+.diagram-block.pr-added {
+  border-left: 3px solid #1a7f37;
+  padding-left: 6px;
+}
+.threads {
+  margin: 4px 0 12px 12px;
+}
+.threads-count {
+  font-size: 12px;
+}
+.thread {
+  margin: 4px 0 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  font-size: 13px;
+}
+.thread.resolved {
+  opacity: 0.75;
+}
+.thread > summary {
+  cursor: pointer;
+}
+.thread .who {
+  font-weight: 600;
+}
+.thread .comments {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+}
+.thread .comments li {
+  margin: 6px 0;
+}
+.thread .comment-body {
+  white-space: pre-wrap;
+}
+.thread-place {
+  font-size: 12px;
+}

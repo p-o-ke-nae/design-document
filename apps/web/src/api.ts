@@ -1,7 +1,7 @@
 import type { Graph, GraphDiff, StateEventTable, TestCase } from '@ddv/graph';
-import type { DdvConfig, DiagramBlock, DirectiveRef, Heading, TocEntry } from '@ddv/core';
+import type { DdvConfig, DiagramBlock, DirectiveRef, DocElement, Heading, SourceBlock, TocEntry } from '@ddv/core';
 
-export type { Graph, GraphDiff, StateEventTable, TestCase, DdvConfig, DiagramBlock, Heading, TocEntry };
+export type { Graph, GraphDiff, StateEventTable, TestCase, DdvConfig, DiagramBlock, DocElement, Heading, SourceBlock, TocEntry };
 
 export interface TestLink {
   id: string;
@@ -64,6 +64,8 @@ export interface DocResponse {
   toc: TocEntry[];
   diagrams: DiagramBlock[];
   directives: DirectiveRef[];
+  /** Commentable source blocks (absent on older servers). */
+  blocks?: SourceBlock[];
   graphs: Record<string, Graph>;
   diffs: Record<string, GraphDiff & { compare: string }>;
   matrices: Matrix[];
@@ -242,6 +244,9 @@ export function createApi(ws: string) {
         steps: s.steps.map((st) => ({ ...st, images: Object.fromEntries(Object.entries(st.images).map(([k, v]) => [k, v && A(v)])) })),
       })),
     approveSnapshots: (body: { id: string; steps?: number[] }) => post(A('/api/snapshots/approve'), body).then((r) => json<unknown>(r)),
+    prFiles: () => get<ChangedFiles>('/api/pr/files'),
+    prDiff: (path: string) => get<DocDiff>(`/api/pr/diff?path=${encodeURIComponent(path)}`),
+    prThreads: (path?: string) => get<Thread[]>(path ? `/api/pr/threads?path=${encodeURIComponent(path)}` : '/api/pr/threads'),
   };
 }
 
@@ -307,6 +312,74 @@ export interface PrInfo extends Omit<WorkspaceInfo, 'pr'> {
   baseRef?: string;
   mergeBase?: string;
   pr: { number: number; title: string; state: 'open' | 'closed'; merged: boolean; htmlUrl: string; baseRef: string; headRef: string; headSha: string } | null;
+  /** Latest review state per reviewer. */
+  reviews?: ReviewerState[];
+}
+
+export interface ReviewerState {
+  login: string;
+  state: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED';
+  submittedAt?: string;
+}
+
+// --- PR diff / review threads (REVCMT) ---
+
+export type FileStatus = 'A' | 'M' | 'D' | 'R';
+
+export interface ChangedFile {
+  status: FileStatus;
+  path: string;
+  oldPath?: string;
+}
+
+export interface ChangedFiles {
+  base?: string;
+  head: string;
+  docs: ChangedFile[];
+  mocks: ChangedFile[];
+  others: number;
+}
+
+export interface DiagramDiff {
+  change: 'added' | 'changed' | 'unchanged' | 'removed';
+  beforeId?: string;
+  before?: string;
+  diff?: GraphDiff;
+}
+
+export interface DocDiff {
+  path: string;
+  status: FileStatus | null;
+  oldPath?: string;
+  base?: string;
+  head: string;
+  blocks: { line: number; endLine: number; change: 'added' | 'changed' }[];
+  removed: { beforeLine: number | null; markdown: string }[];
+  diagrams: Record<string, DiagramDiff>;
+  ids: { added: string[]; retired: string[] };
+}
+
+export interface ThreadComment {
+  id: number;
+  author: string;
+  body: string;
+  createdAt: string;
+  url: string;
+}
+
+export type ThreadPlacement = { kind: 'element'; element: DocElement } | { kind: 'file' } | { kind: 'outdated' };
+
+export interface Thread {
+  id: string;
+  url: string;
+  resolved: boolean;
+  outdated: boolean;
+  path: string;
+  line: number | null;
+  startLine: number | null;
+  side: 'LEFT' | 'RIGHT';
+  comments: ThreadComment[];
+  placement?: ThreadPlacement;
 }
 
 export const gh = {

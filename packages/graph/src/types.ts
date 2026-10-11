@@ -5,6 +5,8 @@ export interface GraphNode {
   label: string;
   /** start / end pseudo states ([*]) or choice nodes */
   role: 'normal' | 'start' | 'end' | 'choice';
+  /** Line in the diagram code (1-based) where the node is defined, or first appears. */
+  line?: number;
 }
 
 export interface GraphEdge {
@@ -19,6 +21,8 @@ export interface GraphEdge {
   action: string;
   /** Unique, stable key inside a diagram: from|label|to (+#n for duplicates). */
   key: string;
+  /** Line in the diagram code (1-based). */
+  line?: number;
 }
 
 export interface Graph {

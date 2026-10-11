@@ -217,3 +217,51 @@ describe('ワークスペースの API とルーティング', () => {
     expect((await env.req('/api/testids/generate', { method: 'POST', headers: { origin: 'https://evil.example' } })).status).toBe(403);
   });
 });
+
+describe('PR の差分・スレッド・レビュー状態の API（REVCMT 段階A）', () => {
+  it('/pr/files・/pr/diff・/pr/threads・/pr の reviews を返す', async () => {
+    const env = await setup();
+    const P = 'docs/design/basic/order.md';
+    env.state.threads['acme/order-app#12'] = [
+      { id: 'T1', path: P, line: 10, comments: [{ id: 11, author: 'bob', body: 'ここを確認' }] },
+      { id: 'T2', path: P, line: null, comments: [{ id: 12, author: 'bob', body: 'ファイル全体' }] },
+    ];
+    env.state.reviews['acme/order-app#12'] = [
+      { user: { login: 'bob' }, state: 'CHANGES_REQUESTED' },
+      { user: { login: 'carol' }, state: 'APPROVED' },
+      { user: { login: 'carol' }, state: 'COMMENTED' },
+    ];
+    const id = (await env.json('/api/workspaces', post({ repo: 'acme/order-app', pr: 12 }))).body.id;
+    await env.manager.settled(id);
+
+    const files = await env.json(`/api/w/${id}/pr/files`);
+    expect(files).toMatchObject({ status: 200, body: { docs: [{ status: 'M', path: P }], mocks: [], others: 0 } });
+    const diff = await env.json(`/api/w/${id}/pr/diff?path=${encodeURIComponent(P)}`);
+    expect(diff.status).toBe(200);
+    expect(diff.body).toMatchObject({
+      status: 'M',
+      blocks: [
+        { line: 8, endLine: 8, change: 'added' },
+        { line: 10, endLine: 10, change: 'added' },
+      ],
+      removed: [
+        { beforeLine: 8, markdown: '# 注文 基本設計' },
+        { beforeLine: 10, markdown: '## 概要' },
+        { beforeLine: 10, markdown: '注文を受け付ける。' },
+      ],
+    });
+
+    const threads = await env.json(`/api/w/${id}/pr/threads?path=${encodeURIComponent(P)}`);
+    expect(threads.body.map((t: any) => [t.id, t.placement.kind])).toEqual([
+      ['T1', 'element'],
+      ['T2', 'file'],
+    ]);
+
+    const pr = await env.json(`/api/w/${id}/pr`);
+    expect(pr.body.reviews).toEqual([
+      { login: 'bob', state: 'CHANGES_REQUESTED' },
+      { login: 'carol', state: 'APPROVED' },
+    ]);
+    expect(env.bodies.join('\n')).not.toContain(env.state.token);
+  });
+});

@@ -57,6 +57,7 @@ function readNode(c: Cursor, b: GraphBuilder): string | null {
     if (j >= c.s.length) continue;
     const text = unquote(c.s.slice(c.i + open.length, j));
     b.node(id, { label: text, role });
+    b.define(id);
     c.i = j + close.length;
     break;
   }
@@ -113,7 +114,8 @@ function readArrow(c: Cursor): { label: string } | null {
 export function parseFlowchart(source: string): Graph {
   const b = new GraphBuilder();
   let headerSeen = false;
-  for (const raw of source.split(/\r?\n/)) {
+  for (const [i, raw] of source.split(/\r?\n/).entries()) {
+    b.line = i + 1;
     const body = stripComment(raw, b).trim();
     if (!body) continue;
     if (!headerSeen && /^(flowchart|graph)\b/.test(body)) {

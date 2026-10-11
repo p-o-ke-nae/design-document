@@ -38,6 +38,14 @@ export interface DirectiveRef {
   line: number;
 }
 
+/** A commentable source block (REVCMT ソース位置): top-level blocks, list items and table rows. Lines are 1-based. */
+export interface SourceBlock {
+  /** mdast type: heading / paragraph / listItem / tableRow / code / diagram / blockquote / html / thematicBreak / leafDirective … */
+  type: string;
+  line: number;
+  endLine: number;
+}
+
 export interface ParsedDoc {
   frontMatter: Record<string, unknown>;
   frontMatterError?: string;
@@ -45,6 +53,7 @@ export interface ParsedDoc {
   headings: Heading[];
   diagrams: DiagramBlock[];
   directives: DirectiveRef[];
+  blocks: SourceBlock[];
 }
 
 const processor = unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter, ['yaml']).use(remarkDirective);
@@ -67,10 +76,28 @@ export function slugify(text: string): string {
   return new GithubSlugger().slug(text);
 }
 
+/** Top-level blocks; lists are split into items and tables into rows (1 row = 1 element). Front matter is excluded. */
+export function sourceBlocks(tree: Root): SourceBlock[] {
+  const out: SourceBlock[] = [];
+  const pos = (n: any) => ({ line: n.position.start.line as number, endLine: n.position.end.line as number });
+  const listItems = (list: any) => {
+    for (const item of list.children ?? []) if (item.position) out.push({ type: 'listItem', ...pos(item) });
+  };
+  for (const n of tree.children as any[]) {
+    if (!n.position || n.type === 'yaml' || n.type === 'definition') continue;
+    if (n.type === 'list') listItems(n);
+    else if (n.type === 'table') {
+      for (const row of n.children ?? []) if (row.position) out.push({ type: 'tableRow', ...pos(row) });
+    } else if (n.type === 'code') out.push({ type: n.lang === 'mermaid' ? 'diagram' : 'code', ...pos(n) });
+    else out.push({ type: n.type, ...pos(n) });
+  }
+  return out;
+}
+
 export function parseDoc(text: string): ParsedDoc {
   const tree = parseMarkdownAst(text);
   const slugger = new GithubSlugger();
-  const doc: ParsedDoc = { frontMatter: {}, title: '', headings: [], diagrams: [], directives: [] };
+  const doc: ParsedDoc = { frontMatter: {}, title: '', headings: [], diagrams: [], directives: [], blocks: sourceBlocks(tree) };
   let diagramCount = 0;
   const totalLines = text.split(/\r?\n/).length;
 
