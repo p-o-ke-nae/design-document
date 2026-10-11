@@ -197,6 +197,27 @@ export class ApiError extends Error {
   }
 }
 
+export interface DepsTarget {
+  dir: string;
+  lockfile?: string;
+  manager: 'npm' | 'pnpm' | 'yarn' | 'bun';
+  command: string;
+  args: string[];
+  runners: string[];
+  missing: string[];
+}
+
+export interface DepsStatus {
+  needed: boolean;
+  targets: DepsTarget[];
+  problems: string[];
+}
+
+/** Detail of the `ddv-deps-missing` window event: `retry` re-sends the refused test run. */
+export interface DepsMissingDetail {
+  retry: () => void;
+}
+
 const post = (url: string, body?: unknown) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
 
 export const BAD_RESPONSE = 'サーバの応答を解釈できません（サーバが古い可能性があります。再起動してください）';
@@ -244,6 +265,8 @@ export function createApi(ws: string) {
     runs: () => get<RunSummary[]>('/api/runs'),
     run: (id: string) => get<RunSummary>(`/api/runs/${id}`),
     startRun: (body: { ids?: string[]; runner?: string }) => post(A('/api/tests/run'), body).then((r) => json<{ id: string }>(r)),
+    deps: () => get<DepsStatus>('/api/deps'),
+    installDeps: () => post(A('/api/deps/install')).then((r) => json<{ runId: string; deps: DepsStatus }>(r)),
     generateIds: () => fetch(A('/api/testids/generate'), { method: 'POST' }).then((r) => json<{ changed: boolean; added: string[]; retired: string[] }>(r)),
     scenarios: () => get<{ scenarios: ScenarioSummary[] }>('/api/mocks/scenarios'),
     scenario: (id: string) => get<ScenarioDetail>(`/api/mocks/scenario?id=${encodeURIComponent(id)}`),

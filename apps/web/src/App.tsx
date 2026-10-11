@@ -5,7 +5,7 @@ import { DocTree } from './components/DocTree.tsx';
 import { DocPage } from './components/DocPage.tsx';
 import { TestsPage } from './components/TestsPage.tsx';
 import { StatusBadge } from './components/StatusBadge.tsx';
-import { LoadingPage, OpenPage, PrBar, TopBar, TrustDialog, WorkspaceBar, WorkspaceProvider, useWorkspaces } from './components/Workspace.tsx';
+import { DepsDialog, LoadingPage, OpenPage, PrBar, TopBar, TrustDialog, WorkspaceBar, WorkspaceProvider, useWorkspaces } from './components/Workspace.tsx';
 import { PrProvider } from './components/Pr.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 
@@ -106,6 +106,7 @@ function Root() {
       <AppProvider key={`${ws}@${current.headSha}`}>
         <Shell />
         <TrustDialog />
+        <DepsDialog />
       </AppProvider>
     );
   }

@@ -11,7 +11,7 @@ export interface RunRequest {
   runner?: string;
 }
 
-export type RunKind = 'test' | 'snapshot';
+export type RunKind = 'test' | 'snapshot' | 'deps';
 
 export interface RunEvent {
   event: string;
@@ -105,7 +105,7 @@ export class RunManager extends EventEmitter {
 
   /** Starts a non-test run (one per kind at a time). Progress goes to the same SSE stream (`log`, custom events, `end`). */
   startTask(kind: Exclude<RunKind, 'test'>, request: RunRequest, exec: (h: TaskHandle) => Promise<RunRecord['status']>): RunRecord {
-    if (this.tasks.has(kind)) throw new Error(kind === 'snapshot' ? '別のスナップショット撮影が進行中です' : `別の ${kind} 実行が進行中です`);
+    if (this.tasks.has(kind)) throw new Error(kind === 'snapshot' ? '別のスナップショット撮影が進行中です' : kind === 'deps' ? '依存の導入が進行中です' : `別の ${kind} 実行が進行中です`);
     const now = new Date();
     const id = `${kind}-` + now.toISOString().replace(/[-:.TZ]/g, '').slice(0, 17) + '-' + Math.random().toString(36).slice(2, 6);
     const run: RunRecord = { id, kind, startedAt: now.toISOString(), status: 'running', request, runners: [], results: {}, log: [], events: [] };
@@ -158,6 +158,12 @@ export class RunManager extends EventEmitter {
         run.runners.push({ name: r.name, command: res.command, exitCode: res.exitCode, error: res.error });
         if (res.error) this.log(run, `! ${res.error}`);
         Object.assign(run.results, res.results);
+        const startFailed = res.error ?? (res.exitCode === null && !Object.keys(res.results).length ? 'プロセスを起動できませんでした' : undefined);
+        if (startFailed) {
+          const message = `ランナー ${r.name} を起動できませんでした: ${startFailed}`;
+          const failedIds = ids ?? [...new Set(links.filter((l) => l.runner === r.name).map((l) => l.id))];
+          for (const id of failedIds) run.results[id] ??= { status: 'error', durationMs: 0, message, runner: r.name, test: '' };
+        }
       }
       if (requested) {
         for (const id of requested) {
