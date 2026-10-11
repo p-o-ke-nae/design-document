@@ -1,12 +1,15 @@
 import { existsSync, promises as fs } from 'node:fs';
 import path from 'node:path';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { GitHubError, type TokenResolver } from '@ddv/github';
 import { createApp, mimeOf, type ServerContext } from './app.ts';
 import { normalizePath } from '@ddv/core';
 import { guard } from './guard.ts';
 import { DiffService } from './pr-diff.ts';
+import { PendingStore, ReviewService } from './review.ts';
+import { ReviewError } from './review-error.ts';
+import { StatusCommitter } from './status-commit.ts';
 import { ThreadService } from './threads.ts';
 import { OpenRequestError, parseRepo, toPullInfo, WorkspaceError, type WorkspaceEvent, type WorkspaceManager } from './workspaces.ts';
 
@@ -23,7 +26,7 @@ export interface ServerAppOptions {
 }
 
 /** POSTs that run code from the workspace; refused until the workspace is trusted. */
-const EXEC_PATHS = new Set(['/api/tests/run', '/api/snapshots/run']);
+const EXEC_PATHS = new Set(['/api/tests/run', '/api/snapshots/run', '/api/deps/install']);
 
 const GITHUB_STATUS: Record<GitHubError['kind'], 401 | 403 | 404 | 422 | 429 | 502> = {
   auth: 401,
@@ -81,6 +84,15 @@ export function createServerApp(opts: ServerAppOptions): Hono {
   const local = opts.local ? createApp(opts.local) : null;
   const diffs = new DiffService(manager.git);
   const threads = new ThreadService(manager.github);
+  const review = new ReviewService({
+    store: new PendingStore(manager.home),
+    github: manager.github,
+    git: manager.git,
+    committer: new StatusCommitter(manager.github),
+    refresh: (id) => manager.refresh(id),
+    pull: (id) => manager.pull(id),
+    onChange: (id) => threads.invalidate(id),
+  });
 
   app.use('*', guard({ port: opts.port, devOrigins: opts.devOrigins }));
 
@@ -151,8 +163,12 @@ export function createServerApp(opts: ServerAppOptions): Hono {
 
   app.post('/api/workspaces/:id/refresh', (c) => {
     const id = c.req.param('id');
-    void manager.refresh(id).catch(() => undefined);
-    return c.json(manager.info(manager.get(id)!), 202);
+    const ws = manager.get(id)!;
+    void manager
+      .refresh(id)
+      .then(() => (ws.state === 'Ready' && ws.target.pr ? review.relocate(ws).then(() => undefined) : undefined))
+      .catch(() => undefined);
+    return c.json(manager.info(ws), 202);
   });
 
   app.post('/api/workspaces/:id/trust', async (c) => c.json(await manager.trust(c.req.param('id'))));
@@ -169,16 +185,24 @@ export function createServerApp(opts: ServerAppOptions): Hono {
   });
 
   // --- per-workspace API (GitHub-only endpoints first, then the rewritten existing API) ---
+  const loadReviews = (ws: { target: { owner: string; repo: string; pr?: number } }) =>
+    ws.target.pr
+      ? manager.github
+          .paginate<RawReview>(`/repos/${ws.target.owner}/${ws.target.repo}/pulls/${ws.target.pr}/reviews?per_page=100`)
+          .then(latestReviews)
+          .catch(() => [] as ReviewerState[])
+      : Promise.resolve([] as ReviewerState[]);
+
   app.get('/api/w/:ws/pr', async (c) => {
     const { ws } = appFor(c.req.param('ws'));
     const pr = await manager.pull(ws.id).catch(() => ws.pr);
-    const reviews = ws.target.pr
-      ? await manager.github
-          .paginate<RawReview>(`/repos/${ws.target.owner}/${ws.target.repo}/pulls/${ws.target.pr}/reviews?per_page=100`)
-          .then(latestReviews)
-          .catch(() => [])
-      : [];
+    const reviews = await loadReviews(ws);
     return c.json({ ...manager.info(ws), baseRef: ws.baseRef, mergeBase: ws.mergeBase, pr: pr ?? null, reviews });
+  });
+
+  app.get('/api/w/:ws/reviews', async (c) => {
+    const { ws } = manager.context(c.req.param('ws'));
+    return c.json(await loadReviews(ws));
   });
 
   app.get('/api/w/:ws/pr/files', async (c) => {
@@ -196,6 +220,89 @@ export function createServerApp(opts: ServerAppOptions): Hono {
     const p = c.req.query('path');
     return c.json(await threads.list(ws, p ? normalizePath(p) : undefined));
   });
+
+  /*
+   * Review writes (REVCMT). Errors: { error, code, message } with 400 / 404 / 409 / 422 (ReviewError) or GitHub's status (github-<kind>).
+   *
+   * Anchor   = { path, side: 'RIGHT'|'LEFT', startLine, line, lineText: string[], element: { kind, key, label } }
+   * Anchor input (any of): a full Anchor (lineText is re-read from the file) | { path, side?, startLine?, line?, element? } (lines win over
+   * element) | { path, element: { kind, key, label? }, side? } (lines computed from the element; RIGHT only, no mockElement).
+   * Comment input = { anchor?: <anchor input>  |  path, element, side (top-level), body, suggestion? }   suggestion: ''/null = none, RIGHT only
+   * PendingComment = { id, anchor, body, suggestion?, state: 'Pending'|'Drifted', placement: 'line'|'file', shrunk?, commitId, reason? }
+   *
+   * GET    /api/w/<ws>/review                      → 200 { headSha, mergeBase?, comments: PendingComment[] }
+   * POST   /api/w/<ws>/review/comments             → 201 PendingComment            (body empty 422 comment-required, >2000 comment-too-long)
+   * PATCH  /api/w/<ws>/review/comments/<id>        → 200 PendingComment            ({ body?, suggestion?, anchor? | path+element }; a new anchor → Pending)
+   * DELETE /api/w/<ws>/review/comments/<id>        → 200 { ok: true }
+   * POST   /api/w/<ws>/review/submit               → 200 SubmitResult              { event: COMMENT|APPROVE|REQUEST_CHANGES, body?, approveDocs?: string[] }
+   *   SubmitResult = { reviewId, reviewUrl, posted: { line, file, body }, failed: [{ id, message }], statusCommit?: { mode: 'commit', sha, paths } | { mode: 'suggestion', paths }, warnings?: string[] }
+   *   422 drifted / body-required / body-too-long / invalid-event, 409 stale (head moved), GitHub's 422 on review creation (nothing is removed)
+   * GET    /api/w/<ws>/reviews                     → 200 ReviewerState[] [{ login, state, submittedAt? }]
+   * POST   /api/w/<ws>/pr/threads/<id>/replies     { body } → 201 ThreadComment
+   * POST   /api/w/<ws>/pr/threads/<id>/resolve     { resolved: boolean } → 200 { id, resolved }
+   */
+  const guarded = async (c: Context, fn: () => Promise<Response>): Promise<Response> => {
+    try {
+      return await fn();
+    } catch (e) {
+      if (e instanceof ReviewError) return c.json({ error: e.message, code: e.code, message: e.message }, e.status);
+      if (e instanceof GitHubError) return c.json({ error: e.message, code: `github-${e.kind}`, message: e.message }, GITHUB_STATUS[e.kind]);
+      throw e;
+    }
+  };
+  const jsonBody = async (c: Context): Promise<Record<string, unknown>> => {
+    const b = await c.req.json().catch(() => null);
+    if (!b || typeof b !== 'object' || Array.isArray(b)) throw new ReviewError(400, 'bad-request', 'JSON オブジェクトで指定してください');
+    return b as Record<string, unknown>;
+  };
+
+  app.get('/api/w/:ws/review', (c) => guarded(c, async () => c.json(await review.get(manager.context(c.req.param('ws')).ws))));
+
+  app.post('/api/w/:ws/review/comments', (c) =>
+    guarded(c, async () => {
+      const { ws } = manager.context(c.req.param('ws'));
+      return c.json(await review.add(ws, await jsonBody(c)), 201);
+    }),
+  );
+
+  app.patch('/api/w/:ws/review/comments/:id', (c) =>
+    guarded(c, async () => {
+      const { ws } = manager.context(c.req.param('ws'));
+      return c.json(await review.update(ws, c.req.param('id'), await jsonBody(c)));
+    }),
+  );
+
+  app.delete('/api/w/:ws/review/comments/:id', (c) =>
+    guarded(c, async () => {
+      const { ws } = manager.context(c.req.param('ws'));
+      await review.remove(ws, c.req.param('id'));
+      return c.json({ ok: true });
+    }),
+  );
+
+  app.post('/api/w/:ws/review/submit', (c) =>
+    guarded(c, async () => {
+      const { ws } = manager.context(c.req.param('ws'));
+      const b = await jsonBody(c);
+      return c.json(await review.submit(ws, b.event, b.body, b.approveDocs));
+    }),
+  );
+
+  app.post('/api/w/:ws/pr/threads/:id/replies', (c) =>
+    guarded(c, async () => {
+      const { ws } = manager.context(c.req.param('ws'));
+      return c.json(await threads.reply(ws, c.req.param('id'), (await jsonBody(c)).body), 201);
+    }),
+  );
+
+  app.post('/api/w/:ws/pr/threads/:id/resolve', (c) =>
+    guarded(c, async () => {
+      const { ws } = manager.context(c.req.param('ws'));
+      const b = await jsonBody(c);
+      if (typeof b.resolved !== 'boolean') throw new ReviewError(422, 'bad-request', 'resolved（真偽値）が必要です');
+      return c.json(await threads.resolve(ws, c.req.param('id'), b.resolved));
+    }),
+  );
 
   app.all('/api/w/:ws/*', async (c) => {
     const id = c.req.param('ws');

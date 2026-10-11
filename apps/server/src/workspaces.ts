@@ -318,6 +318,10 @@ export class WorkspaceManager {
     return this.opts.github;
   }
 
+  get home(): string {
+    return this.opts.home;
+  }
+
   /** Restores saved workspaces whose worktree still exists (as Ready, with the saved head) and starts polling. */
   async init(): Promise<void> {
     for (const s of await this.store.load()) {
@@ -329,6 +333,7 @@ export class WorkspaceManager {
       Object.assign(ws, { trusted: s.trusted, headSha: s.headSha, baseRef: s.baseRef, mergeBase: s.mergeBase, dir });
       try {
         ws.ctx = await this.opts.createContext(dir);
+        ws.ctx.checkDeps = true;
         ws.generation++;
         ws.state = 'Ready';
       } catch (e) {
@@ -564,6 +569,7 @@ export class WorkspaceManager {
         if (baseSha) mergeBase = await git.mergeBase(owner, repo, baseSha, headSha).catch(() => undefined);
       }
       const ctx = await this.opts.createContext(ws.dir);
+      ctx.checkDeps = true;
       if (nextWsState(ws.state, 'done') !== 'Ready') {
         ctx.close();
         return;

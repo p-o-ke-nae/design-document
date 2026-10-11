@@ -135,7 +135,7 @@ sequenceDiagram
 | 文書・図・差分の表示、コメント | なし | 不要 |
 | モック再生（プレイヤー） | モックの JS（ブラウザの iframe 内。既存と同じ sandbox） | 不要 |
 | テスト実行・スナップショット撮影 | ランナー（Vitest / Playwright 等）と PR のコード | 必要 |
-| 依存の導入 | `npm ci` 等（ロックファイルで判定）。worktree に `node_modules` が無いときにテスト実行の前に提案 | 必要（導入するかも都度確認） |
+| 依存の導入 | `npm ci` 等（ロックファイルで判定）。worktree に `node_modules` が無いときにテスト実行の前に提案し、導入後にテストを実行し直す（:ref[../detailed/workspace.md#依存の導入]） | 必要（導入するかも都度確認） |
 
 ## PR の差分
 
@@ -468,6 +468,8 @@ erDiagram
 | DELETE | `/api/w/{ws}/review/comments/{id}` | 削除 |
 | POST | `/api/w/{ws}/review/submit` | `{ event, body, approveDocs? }` 送信 |
 | POST | `/api/w/{ws}/mock-source` | `{ mock, path }` モックの要素の行範囲と元のソース |
+| GET | `/api/w/{ws}/deps` | テストの実行に必要な依存（導入先・コマンド・不足パッケージ） |
+| POST | `/api/w/{ws}/deps/install` | 依存の導入（信頼が必要）。202 `{ runId }`、進捗は `/api/w/{ws}/runs/{runId}/events` |
 
 ## 設定と CLI
 

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ApiError, BAD_RESPONSE, gh, type AuthStatus, type FetchStep, type PrInfo, type PullSummary, type WorkspaceInfo } from '../api.ts';
+import { api, apiUrl, ApiError, BAD_RESPONSE, gh, type AuthStatus, type DepsMissingDetail, type DepsStatus, type FetchStep, type PrInfo, type PullSummary, type WorkspaceInfo } from '../api.ts';
 import { parseHash, type Route } from '../state.tsx';
-import { ReviewStates } from './Pr.tsx';
+import { ReviewStates, usePr } from './Pr.tsx';
 
 export const LOGIN_MESSAGE = 'GitHub にログインしてください（`gh auth login` または `GITHUB_TOKEN`）';
 
@@ -415,6 +415,9 @@ export function LoadingPage() {
 /** PR bar: number, title, base ← head, head, 更新あり, 最新化, review states. */
 export function PrBar() {
   const { current, update, reload } = useWorkspaces();
+  const prCtx = usePr();
+  const pr$ = !!prCtx && current?.kind === 'pr';
+  const pendingCount = Array.isArray(prCtx?.review?.comments) ? prCtx.review.comments.length : 0;
   const [info, setInfo] = useState<PrInfo | null>(null);
   const [error, setError] = useState('');
   const id = current?.id ?? '';
@@ -491,6 +494,11 @@ export function PrBar() {
       {error && <span className="error">{error}</span>}
       <span className="spacer" />
       <ReviewStates info={info} />
+      {pr$ && (
+        <button type="button" className="primary" onClick={() => (location.hash = `#/w/${encodeURIComponent(id)}/review`)} data-testid="to-review" title="保留中のレビューを開く">
+          レビュー（<span data-testid="pending-count">{pendingCount}</span>）
+        </button>
+      )}
       {pr && (
         <a href={pr.htmlUrl} target="_blank" rel="noreferrer">
           GitHub で開く
@@ -539,6 +547,108 @@ export function TrustDialog() {
           </button>
         </div>
         <p className="muted small">許可した後、もう一度実行してください。</p>
+      </div>
+    </div>
+  );
+}
+
+/** Proposes installing the dependencies of a GitHub workspace when a test run was refused with `deps-missing`, then re-runs it. */
+export function DepsDialog() {
+  const { current } = useWorkspaces();
+  const [retry, setRetry] = useState<(() => void) | null>(null);
+  const [deps, setDeps] = useState<DepsStatus | null>(null);
+  const [phase, setPhase] = useState<'confirm' | 'installing' | 'failed'>('confirm');
+  const [log, setLog] = useState<string[]>([]);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<DepsMissingDetail>).detail;
+      setRetry(() => d.retry);
+      setDeps(null);
+      setPhase('confirm');
+      setLog([]);
+      setError('');
+      api.deps().then(setDeps, (err: Error) => setError(err.message));
+    };
+    window.addEventListener('ddv-deps-missing', on);
+    return () => window.removeEventListener('ddv-deps-missing', on);
+  }, []);
+  if (!retry || !current) return null;
+  const close = () => setRetry(null);
+  const install = async () => {
+    setPhase('installing');
+    setLog([]);
+    setError('');
+    let runId: string;
+    try {
+      runId = (await api.installDeps()).runId;
+    } catch (e) {
+      setError((e as Error).message);
+      setPhase('failed');
+      return;
+    }
+    await new Promise<void>((resolve) => {
+      const es = new EventSource(apiUrl(`/api/runs/${runId}/events`));
+      es.addEventListener('log', (e) => setLog((l) => [...l, (e as MessageEvent).data]));
+      es.addEventListener('end', () => {
+        es.close();
+        resolve();
+      });
+      es.onerror = () => {
+        es.close();
+        resolve();
+      };
+    });
+    const done = await api.run(runId).catch(() => null);
+    if (done?.status === 'passed') {
+      setRetry(null);
+      retry();
+    } else {
+      setError('依存の導入に失敗しました。ログを確認してください');
+      setPhase('failed');
+    }
+  };
+  return (
+    <div className="dialog-backdrop">
+      <div className="dialog" role="dialog" aria-modal="true" data-testid="deps-dialog">
+        <h3>依存を導入しますか</h3>
+        <p>{wsLabel(current)} にはテストの実行に必要なパッケージ（node_modules）がありません。次のコマンドで導入します。PR に含まれるインストールスクリプトもこの PC で実行されます。</p>
+        {deps ? (
+          <ul className="deps-targets" data-testid="deps-targets">
+            {deps.targets.map((t) => (
+              <li key={t.dir}>
+                <code>{[t.command, ...t.args].join(' ')}</code>（{t.dir}
+                {t.lockfile ? ` / ${t.lockfile}` : ''}）<span className="muted small"> 不足: {t.missing.join(', ')}</span>
+              </li>
+            ))}
+            {deps.problems.map((p) => (
+              <li key={p} className="error">
+                {p}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          !error && <p className="muted small">確認しています…</p>
+        )}
+        {log.length > 0 && (
+          <pre className="deps-log" data-testid="deps-log">
+            {log.join('\n')}
+          </pre>
+        )}
+        {error && (
+          <p className="error" data-testid="deps-error">
+            {error}
+          </p>
+        )}
+        <div className="actions">
+          <button type="button" onClick={close} disabled={phase === 'installing'} data-testid="deps-cancel">
+            {phase === 'failed' ? '閉じる' : 'キャンセル'}
+          </button>
+          <button type="button" className="primary" onClick={() => void install()} disabled={phase === 'installing' || !deps?.targets.length} data-testid="deps-install">
+            {phase === 'installing' ? '導入中…' : phase === 'failed' ? '再試行' : '導入する'}
+          </button>
+        </div>
+        <p className="muted small">導入が終わると、テストを自動で実行し直します。</p>
       </div>
     </div>
   );

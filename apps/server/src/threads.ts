@@ -3,6 +3,7 @@ import path from 'node:path';
 import { elementAt, elementsOf, parseDoc, type DocElement } from '@ddv/core';
 import { safeJoin } from '@ddv/core/node';
 import type { GitHubClient } from '@ddv/github';
+import { COMMENT_MAX, ReviewError } from './review-error.ts';
 
 export interface ThreadComment {
   /** REST databaseId (used for replies) */
@@ -135,6 +136,40 @@ export class ThreadService {
     }
     // Unresolved first; keep GitHub's order otherwise.
     return out.map((t, i) => ({ t, i })).sort((a, b) => Number(a.t.resolved) - Number(b.t.resolved) || a.i - b.i).map(({ t }) => t);
+  }
+
+  private async find(ws: ThreadTarget, threadId: string): Promise<Thread> {
+    let t = (await this.fetchAll(ws)).find((x) => x.id === threadId);
+    if (!t) {
+      this.invalidate(ws.id);
+      t = (await this.fetchAll(ws)).find((x) => x.id === threadId);
+    }
+    if (!t) throw new ReviewError(404, 'not-found', 'スレッドが見つかりません');
+    return t;
+  }
+
+  /** Reply to a thread right away (REST `.../comments/{first comment id}/replies`). */
+  async reply(ws: ThreadTarget, threadId: string, body: unknown): Promise<ThreadComment> {
+    if (typeof body !== 'string' || !body.trim()) throw new ReviewError(422, 'comment-required', 'コメントを入力してください');
+    if (body.length > COMMENT_MAX) throw new ReviewError(422, 'comment-too-long', `コメントは ${COMMENT_MAX} 文字以内で入力してください`);
+    const t = await this.find(ws, threadId);
+    const { owner, repo, pr } = ws.target;
+    const r = await this.github.rest<{ id: number; node_id: string; user?: { login: string } | null; body: string; created_at: string; html_url: string }>(
+      'POST',
+      `/repos/${owner}/${repo}/pulls/${pr}/comments/${t.comments[0].id}/replies`,
+      { body },
+    );
+    this.invalidate(ws.id);
+    return { id: r.id, nodeId: r.node_id, author: r.user?.login ?? 'ghost', body: r.body, createdAt: r.created_at, url: r.html_url };
+  }
+
+  /** Resolve / unresolve a thread right away (GraphQL). */
+  async resolve(ws: ThreadTarget, threadId: string, resolved: boolean): Promise<{ id: string; resolved: boolean }> {
+    await this.find(ws, threadId);
+    const mutation = resolved ? 'resolveReviewThread' : 'unresolveReviewThread';
+    await this.github.graphql(`mutation($threadId: ID!) { ${mutation}(input: { threadId: $threadId }) { thread { id isResolved } } }`, { threadId });
+    this.invalidate(ws.id);
+    return { id: threadId, resolved };
   }
 
   /** Threads of the PR; with `docPath`, only that document's threads, each placed on an element (THREAD). */

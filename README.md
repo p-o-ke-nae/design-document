@@ -184,7 +184,7 @@ npm run ddv -- serve --repo .   # ddv 自身の設計書を表示し、ビュー
 | 0–1 | 閲覧・Mermaid 描画（パン/ズーム）・TOC・参照・マトリクス/ID・経路ハイライト・テスト紐づけ/実行・As-Is/To-Be 差分 | ✅ |
 | 1' | プラグイン最小版（要件/基本/詳細のスキルとテンプレート、`ddv-lint`） | ✅ |
 | 2 | モック runtime（疑似 BE/DB）、シナリオ DSL＋データ分離（骨組み自動生成）、プレイヤー（巻き戻し/速度）、シナリオの E2E 実行（データ駆動）、スナップショット | ✅（[要件](docs/design/requirements/mock.md) / [基本設計](docs/design/basic/mock-player.md) / 詳細設計：[シナリオ](docs/design/detailed/scenario.md)・[runtime](docs/design/detailed/mock-runtime.md)・[スナップショット](docs/design/detailed/snapshot.md)） |
-| 3 | GitHub repo/branch 指定、PR 行コメント・Approve 連携、モックのレビュー調整 → suggestion | 実装中：ワークスペース（PR・branch の取得と表示）✅、PR の差分・レビュースレッドの表示 ✅、コメント送信・Approve・調整は未（[要件](docs/design/requirements/github.md) / [基本設計](docs/design/basic/github-review.md) / 詳細設計：[ワークスペース](docs/design/detailed/workspace.md) / [レビューコメント](docs/design/detailed/review-comment.md)） |
+| 3 | GitHub repo/branch 指定、PR 行コメント・Approve 連携、モックのレビュー調整 → suggestion | 実装中：ワークスペース（PR・branch の取得と表示）✅、PR の差分・レビュースレッドの表示 ✅、コメント・送信・Approve＋status 連動・スレッド返信/解決・`ddv review comments`・`ddv-review-response` スキル ✅（実 GitHub での受入は未）、モックの調整は未（[要件](docs/design/requirements/github.md) / [基本設計](docs/design/basic/github-review.md) / 詳細設計：[ワークスペース](docs/design/detailed/workspace.md) / [レビューコメント](docs/design/detailed/review-comment.md)） |
 | 4 | テスト監視（履歴・フレーキー・カバレッジ）、テストデータ編集（シナリオの入力値・fixtures・期待値をビューアで編集）、トレースビュー | 未着手 |
 | 5 | .NET デスクトップ（XAML → CSS トークン、FlaUI エクスポート） | 未着手 |
 | 6 | ホスト型（GitHub Pages + API + Actions） | 未着手 |

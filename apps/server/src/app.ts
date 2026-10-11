@@ -9,6 +9,7 @@ import { diffGraphs, parseMermaidGraph } from '@ddv/graph';
 import { activeIds, docMatrices, generateAll, readLock, scanTestLinks, LOCK_PATH, type TestLink } from '@ddv/testid';
 import { checkMocks, scaffoldMock } from '@ddv/mock';
 import { RunManager, RUNS_DIR, type RunEvent } from './runs.ts';
+import { checkDeps, installDeps } from './deps.ts';
 import { listScenarios, recordPlay, scenarioDetail } from './scenarios.ts';
 import { checkId, SnapshotError, SnapshotService, SNAPSHOTS_DIR, type SnapKind } from './snapshots.ts';
 
@@ -41,6 +42,8 @@ export interface ServerContext {
   runs: RunManager;
   snapshots: SnapshotService;
   events: EventEmitter;
+  /** GitHub workspaces: refuse test runs (409 deps-missing) until the runners' packages are installed. */
+  checkDeps?: boolean;
   close(): void;
 }
 
@@ -211,6 +214,12 @@ export function createApp(ctx: ServerContext): Hono {
     const ids = Array.isArray(body.ids) ? body.ids.filter((x): x is string => typeof x === 'string') : undefined;
     const runner = typeof body.runner === 'string' ? body.runner : undefined;
     if (runner && !ctx.config.runners.some((r) => r.name === runner)) return c.json({ error: `unknown runner: ${runner}` }, 400);
+    if (ctx.runs.activeTask('deps')) return c.json({ error: '依存の導入が進行中です。終わってから実行してください', code: 'deps-installing' }, 409);
+    if (ctx.checkDeps) {
+      const all = checkDeps(root, ctx.config);
+      const targets = all.targets.filter((t) => !runner || t.runners.includes(runner));
+      if (targets.length) return c.json({ error: 'テストの実行に必要な依存が導入されていません', code: 'deps-missing', deps: { ...all, needed: true, targets } }, 409);
+    }
     try {
       const run = ctx.runs.start({ ids, runner });
       return c.json({ id: run.id, status: run.status }, 202);
@@ -220,6 +229,28 @@ export function createApp(ctx: ServerContext): Hono {
   });
 
   app.get('/api/runs', (c) => c.json(ctx.runs.list().map(({ log: _log, ...r }) => ({ ...r, total: Object.keys(r.results).length }))));
+
+  app.get('/api/deps', (c) => c.json(checkDeps(root, ctx.config)));
+
+  app.post('/api/deps/install', (c) => {
+    if (ctx.runs.active) return c.json({ error: 'テストの実行中は依存を導入できません' }, 409);
+    const status = checkDeps(root, ctx.config);
+    try {
+      const run = ctx.runs.startTask('deps', {}, async (h) => {
+        if (!status.targets.length) {
+          h.log('導入が必要な依存はありません');
+          return 'passed';
+        }
+        if (!(await installDeps(root, status.targets, h.log))) return 'error';
+        const after = checkDeps(root, ctx.config);
+        for (const t of after.targets) h.log(`! 導入後も ${t.missing.join(', ')} が見つかりません（${t.dir}）`);
+        return after.needed ? 'error' : 'passed';
+      });
+      return c.json({ runId: run.id, deps: status }, 202);
+    } catch (e) {
+      return c.json({ error: (e as Error).message }, 409);
+    }
+  });
 
   app.get('/api/runs/:id', (c) => {
     const r = ctx.runs.runs.get(c.req.param('id'));

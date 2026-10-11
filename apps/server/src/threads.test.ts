@@ -83,4 +83,36 @@ describe('ThreadService', () => {
     await svc.list(ws, P);
     expect(state.calls.filter((c) => c === 'POST /graphql')).toHaveLength(3);
   });
+
+  async function replyEnv() {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ddv-thr-'));
+    dirs.push(dir);
+    const state = fakeGitHubState({ threads: { 'acme/order-app#12': [{ id: 'T1', path: P, line: 3, comments: [{ id: 7, author: 'bob', body: '質問' }] }] } });
+    const f = fakeGitHub(state);
+    const tokens = new TokenResolver({ runGh: async () => null, env: { GITHUB_TOKEN: state.token }, fetch: f });
+    const svc = new ThreadService(new GitHubClient(tokens, { fetch: f }));
+    return { state, svc, ws: { id: 'w', target: { owner: 'acme', repo: 'order-app', pr: 12 }, headSha: 'h', dir } };
+  }
+
+  it('reply posts to the first comment id right away and drops the cache', async () => {
+    const { state, svc, ws } = await replyEnv();
+    await svc.list(ws);
+    const c = await svc.reply(ws, 'T1', '回答です');
+    expect(c).toMatchObject({ author: 'alice', body: '回答です' });
+    expect(state.requests.find((q) => q.path.endsWith('/comments/7/replies'))?.body).toEqual({ body: '回答です' });
+    expect((await svc.list(ws))[0].comments.map((x) => x.body)).toEqual(['質問', '回答です']);
+    expect(state.calls.filter((x) => x === 'POST /graphql')).toHaveLength(2);
+    await expect(svc.reply(ws, 'T1', ' ')).rejects.toMatchObject({ status: 422, message: 'コメントを入力してください' });
+    await expect(svc.reply(ws, 'nope', 'x')).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('resolve / unresolve go through GraphQL mutations and drop the cache', async () => {
+    const { state, svc, ws } = await replyEnv();
+    expect((await svc.list(ws))[0].resolved).toBe(false);
+    expect(await svc.resolve(ws, 'T1', true)).toEqual({ id: 'T1', resolved: true });
+    expect((await svc.list(ws))[0].resolved).toBe(true);
+    expect(state.requests.filter((q) => q.path === '/graphql').some((q) => q.body.query.includes('resolveReviewThread') && !q.body.query.includes('unresolve'))).toBe(true);
+    await svc.resolve(ws, 'T1', false);
+    expect((await svc.list(ws))[0].resolved).toBe(false);
+  });
 });

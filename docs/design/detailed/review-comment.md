@@ -175,7 +175,7 @@ flowchart TD
 ```mermaid id=place code=PLACE matrix nswitch=0
 flowchart TD
   A[placement] --> B{ファイルが PR で変更されている}
-  B -->|いいえ| F1[file: 本文に L行と内容を引用]
+  B -->|いいえ| F1[body: レビュー本文に path・L行・内容を引用して含める]
   B -->|はい| C{startLine..line が 1 つの hunk の side 側の範囲に収まる}
   C -->|はい| L[line: 複数行なら start_line も付ける]
   C -->|いいえ| D{line だけなら hunk に収まる}
@@ -185,6 +185,7 @@ flowchart TD
 
 - `Hunks` は `git diff --unified=3 <mergeBase> <head> -- <path>` を解析する（GitHub の差分と同じ文脈 3 行）。`side` の範囲は `RIGHT` = `+c,d`、`LEFT` = `-a,b`
 - suggestion 付きで「line に縮める」場合は suggestion が範囲とずれるため、`file` にする（suggestion の行範囲は変えない）
+- PR の差分に無いファイルは、GitHub がファイルへのコメント（`subject_type: file`）を受け付けず（422 `could not be resolved`）、行コメントも付けられない。そのため `body`（レビュー本文に含める）とする。送信時はレビュー本文の末尾に `**path**` と引用・コメントを区切り線（`---`）つきで並べ、レビュー作成と同時に送るので、一部だけ失敗することは無い。スレッドにならないため返信・解決はできない
 - 判定は追加時と `relocate` 後に行い、`placement` として保存する（一覧の区別表示に使う）
 
 ## 付け直し
@@ -331,6 +332,7 @@ flowchart TD
 ```
 
 - base 側に対応の無い図は「削除」。`parseMermaidGraph` が解析できない図（シーケンス図等）は、ソースの行差分だけを示す
+- 図が「変更」か「変更なし」かは、改行（CRLF / LF）と行末の空白を正規化して比べる（base は git の blob で LF、head は作業ツリーで autocrlf により CRLF のことがあるため）。それ以外の文字の違いは「変更」
 - 本文：`Hunks.addedLines()` を含む head のブロックを追加・変更、base で削除行だけからなるブロックを削除ブロックとして、直後の head のブロックの前に入れる
 - テストIDの増減：`git show <mergeBase>:.ddv/testids.lock.json` と head のロックを比べ、図ごとに `active` のIDの差（追加・欠番化）を返す。base にロックが無ければ全部追加
 - `DocDiff`：`{ status: A/M/D/R, oldPath?, blocks: [{ line, endLine, change }], removed: [{ beforeLine, markdown }], diagrams: { [id]: { change, diff? } }, ids: { added: [], retired: [] } }`

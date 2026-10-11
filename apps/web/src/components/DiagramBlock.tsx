@@ -7,6 +7,7 @@ import { useMockHub } from '../mockHub.tsx';
 import { MermaidView } from './MermaidView.tsx';
 import { MatrixPanel } from './MatrixPanel.tsx';
 import { usePr } from './Pr.tsx';
+import { CommentGutter } from './Review.tsx';
 
 type Side = 'before' | 'after';
 type Targets = { before: HoverTarget | null; after: HoverTarget | null };
@@ -109,6 +110,7 @@ export function DiagramBlock({ doc, diagram }: { doc: DocResponse; diagram: Diag
       <span className="chip" title="図ID">
         #{diagram.id}
       </span>
+      <CommentGutter inline path={doc.path} element={{ kind: 'diagram', key: diagram.id, label: diagram.id }} />
       {prd && prd.change !== 'unchanged' && (
         <span className={`badge diff-${prd.change}`} data-testid="pr-diagram-change">
           PR で{prd.change === 'added' ? '追加' : '変更'}

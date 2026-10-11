@@ -2855,7 +2855,7 @@
         "P:A||B>B|いいえ|F1": {
           "id": "DD-REVCMT-PLACE-P001",
           "status": "active",
-          "title": "placement → ファイルが PR で変更されている → [いいえ] file: 本文に L行と内容を引用"
+          "title": "placement → ファイルが PR で変更されている → [いいえ] body: レビュー本文に path・L行・内容を引用して含める"
         },
         "P:A||B>B|はい|C>C|はい|L": {
           "id": "DD-REVCMT-PLACE-P002",
@@ -2880,7 +2880,7 @@
         "T:B|いいえ|F1": {
           "id": "DD-REVCMT-PLACE-T002",
           "status": "active",
-          "title": "ファイルが PR で変更されている --[いいえ]--> file: 本文に L行と内容を引用"
+          "title": "ファイルが PR で変更されている --[いいえ]--> body: レビュー本文に path・L行・内容を引用して含める"
         },
         "T:B|はい|C": {
           "id": "DD-REVCMT-PLACE-T003",
@@ -4912,6 +4912,131 @@
           "id": "DD-WSPACE-APIERR-T009",
           "status": "active",
           "title": "status --[その他]--> network"
+        }
+      }
+    },
+    "DD-WSPACE-DEPS": {
+      "doc": "docs/design/detailed/workspace.md",
+      "diagram": "deps",
+      "next": {
+        "P": 10,
+        "T": 15
+      },
+      "cases": {
+        "P:A||B>B|ない|N1": {
+          "id": "DD-WSPACE-DEPS-P001",
+          "status": "active",
+          "title": "checkDeps → Node 系ランナー（vitest / playwright）がある → [ない] 導入不要"
+        },
+        "P:A||B>B|ある|C>C|できる|N2": {
+          "id": "DD-WSPACE-DEPS-P002",
+          "status": "active",
+          "title": "checkDeps → Node 系ランナー（vitest / playwright）がある → [ある] ランナーのパッケージを cwd から解決できる → [できる] 導入不要"
+        },
+        "P:A||B>B|ある|C>C|できない|D>D|pnpm-lock.yaml|P": {
+          "id": "DD-WSPACE-DEPS-P003",
+          "status": "active",
+          "title": "checkDeps → Node 系ランナー（vitest / playwright）がある → [ある] ランナーのパッケージを cwd から解決できる → [できない] cwd から repoRoot までにロックファイルがある → [pnpm-lock.yaml] pnpm install --frozen-lockfile"
+        },
+        "P:A||B>B|ある|C>C|できない|D>D|yarn.lock|Y>Y|ある|Y2": {
+          "id": "DD-WSPACE-DEPS-P004",
+          "status": "active",
+          "title": "checkDeps → Node 系ランナー（vitest / playwright）がある → [ある] ランナーのパッケージを cwd から解決できる → [できない] cwd から repoRoot までにロックファイルがある → [yarn.lock] .yarnrc.yml がある → [ある] yarn install --immutable"
+        },
+        "P:A||B>B|ある|C>C|できない|D>D|yarn.lock|Y>Y|ない|Y1": {
+          "id": "DD-WSPACE-DEPS-P005",
+          "status": "active",
+          "title": "checkDeps → Node 系ランナー（vitest / playwright）がある → [ある] ランナーのパッケージを cwd から解決できる → [できない] cwd から repoRoot までにロックファイルがある → [yarn.lock] .yarnrc.yml がある → [ない] yarn install --frozen-lockfile"
+        },
+        "P:A||B>B|ある|C>C|できない|D>D|bun.lock / bun.lockb|BN": {
+          "id": "DD-WSPACE-DEPS-P006",
+          "status": "active",
+          "title": "checkDeps → Node 系ランナー（vitest / playwright）がある → [ある] ランナーのパッケージを cwd から解決できる → [できない] cwd から repoRoot までにロックファイルがある → [bun.lock / bun.lockb] bun install --frozen-lockfile"
+        },
+        "P:A||B>B|ある|C>C|できない|D>D|package-lock.json / npm-shrinkwrap.json|NC": {
+          "id": "DD-WSPACE-DEPS-P007",
+          "status": "active",
+          "title": "checkDeps → Node 系ランナー（vitest / playwright）がある → [ある] ランナーのパッケージを cwd から解決できる → [できない] cwd から repoRoot までにロックファイルがある → [package-lock.json / npm-shrinkwrap.json] npm ci"
+        },
+        "P:A||B>B|ある|C>C|できない|D>D|ない|E>E|ある|NI": {
+          "id": "DD-WSPACE-DEPS-P008",
+          "status": "active",
+          "title": "checkDeps → Node 系ランナー（vitest / playwright）がある → [ある] ランナーのパッケージを cwd から解決できる → [できない] cwd から repoRoot までにロックファイルがある → [ない] cwd から repoRoot までに package.json がある → [ある] npm install"
+        },
+        "P:A||B>B|ある|C>C|できない|D>D|ない|E>E|ない|X": {
+          "id": "DD-WSPACE-DEPS-P009",
+          "status": "active",
+          "title": "checkDeps → Node 系ランナー（vitest / playwright）がある → [ある] ランナーのパッケージを cwd から解決できる → [できない] cwd から repoRoot までにロックファイルがある → [ない] cwd から repoRoot までに package.json がある → [ない] 導入できない: problems に理由"
+        },
+        "T:A||B": {
+          "id": "DD-WSPACE-DEPS-T001",
+          "status": "active",
+          "title": "checkDeps --> Node 系ランナー（vitest / playwright）がある"
+        },
+        "T:B|ない|N1": {
+          "id": "DD-WSPACE-DEPS-T002",
+          "status": "active",
+          "title": "Node 系ランナー（vitest / playwright）がある --[ない]--> 導入不要"
+        },
+        "T:B|ある|C": {
+          "id": "DD-WSPACE-DEPS-T003",
+          "status": "active",
+          "title": "Node 系ランナー（vitest / playwright）がある --[ある]--> ランナーのパッケージを cwd から解決できる"
+        },
+        "T:C|できる|N2": {
+          "id": "DD-WSPACE-DEPS-T004",
+          "status": "active",
+          "title": "ランナーのパッケージを cwd から解決できる --[できる]--> 導入不要"
+        },
+        "T:C|できない|D": {
+          "id": "DD-WSPACE-DEPS-T005",
+          "status": "active",
+          "title": "ランナーのパッケージを cwd から解決できる --[できない]--> cwd から repoRoot までにロックファイルがある"
+        },
+        "T:D|pnpm-lock.yaml|P": {
+          "id": "DD-WSPACE-DEPS-T006",
+          "status": "active",
+          "title": "cwd から repoRoot までにロックファイルがある --[pnpm-lock.yaml]--> pnpm install --frozen-lockfile"
+        },
+        "T:D|yarn.lock|Y": {
+          "id": "DD-WSPACE-DEPS-T007",
+          "status": "active",
+          "title": "cwd から repoRoot までにロックファイルがある --[yarn.lock]--> .yarnrc.yml がある"
+        },
+        "T:Y|ある|Y2": {
+          "id": "DD-WSPACE-DEPS-T008",
+          "status": "active",
+          "title": ".yarnrc.yml がある --[ある]--> yarn install --immutable"
+        },
+        "T:Y|ない|Y1": {
+          "id": "DD-WSPACE-DEPS-T009",
+          "status": "active",
+          "title": ".yarnrc.yml がある --[ない]--> yarn install --frozen-lockfile"
+        },
+        "T:D|bun.lock / bun.lockb|BN": {
+          "id": "DD-WSPACE-DEPS-T010",
+          "status": "active",
+          "title": "cwd から repoRoot までにロックファイルがある --[bun.lock / bun.lockb]--> bun install --frozen-lockfile"
+        },
+        "T:D|package-lock.json / npm-shrinkwrap.json|NC": {
+          "id": "DD-WSPACE-DEPS-T011",
+          "status": "active",
+          "title": "cwd から repoRoot までにロックファイルがある --[package-lock.json / npm-shrinkwrap.json]--> npm ci"
+        },
+        "T:D|ない|E": {
+          "id": "DD-WSPACE-DEPS-T012",
+          "status": "active",
+          "title": "cwd から repoRoot までにロックファイルがある --[ない]--> cwd から repoRoot までに package.json がある"
+        },
+        "T:E|ある|NI": {
+          "id": "DD-WSPACE-DEPS-T013",
+          "status": "active",
+          "title": "cwd から repoRoot までに package.json がある --[ある]--> npm install"
+        },
+        "T:E|ない|X": {
+          "id": "DD-WSPACE-DEPS-T014",
+          "status": "active",
+          "title": "cwd から repoRoot までに package.json がある --[ない]--> 導入できない: problems に理由"
         }
       }
     },

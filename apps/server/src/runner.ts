@@ -80,7 +80,12 @@ export function parseTrx(xml: string): RawResult[] {
 
 function resolveBin(cwd: string, pkg: string, bin: string): string {
   const req = createRequire(path.join(cwd, '__ddv__.js'));
-  const pkgJson = req.resolve(`${pkg}/package.json`);
+  let pkgJson: string;
+  try {
+    pkgJson = req.resolve(`${pkg}/package.json`);
+  } catch {
+    throw new Error(`${pkg} が見つかりません（${cwd}）。依存が導入されていない可能性があります（npm ci 等を実行してください）`);
+  }
   const meta = JSON.parse(readFileSync(pkgJson, 'utf8'));
   const rel = typeof meta.bin === 'string' ? meta.bin : meta.bin[bin];
   return path.join(path.dirname(pkgJson), rel);

@@ -285,7 +285,7 @@ sequenceDiagram
 
 - `/w/:ws/raw/*` も同じく `/raw/*` に書き換える（モックの iframe はこの URL で開く）
 - ワークスペースが無い → 404、`Ready` / `Stale` 以外 → 409 `{ code: 'not-ready' }`
-- 実行系（`POST tests/run`・`POST snapshots/run`）で `trusted = false` → 403 `{ code: 'untrusted' }`。ビューアはこれを受けて信頼の確認を出す
+- 実行系（`POST tests/run`・`POST snapshots/run`・`POST deps/install`）で `trusted = false` → 403 `{ code: 'untrusted' }`。ビューアはこれを受けて信頼の確認を出す
 - GitHub 専用の API（`pr`・`review`・`mock-source`）は書き換えずにサーバ側の `ReviewService` 等が処理する
 
 ### 要求の検査
@@ -307,6 +307,52 @@ flowchart TD
 
 - 手元のワークスペースの既存 API にも同じ検査をかける（変更系を外部サイトから呼べないようにする。既存の画面・テストの挙動は変わらない）
 - 開発時（`vite` 経由、`5173`）は Origin が違うため、`DDV_DEV_ORIGIN` 環境変数で追加の Origin を許可する
+
+## 依存の導入
+
+PR の worktree は `git worktree add` しただけなので `node_modules` が無く、Vitest / Playwright のランナーを起動できない。GitHub のワークスペースでは、テスト実行の前に依存を確認し、無ければ導入を提案する（:ref[../basic/github-review.md#pr-のコードの実行]）。実装は `apps/server/src/deps.ts`。
+
+```mermaid id=deps code=DEPS matrix nswitch=0
+flowchart TD
+  A[checkDeps] --> B{Node 系ランナー（vitest / playwright）がある}
+  B -->|ない| N1[導入不要]
+  B -->|ある| C{ランナーのパッケージを cwd から解決できる}
+  C -->|できる| N2[導入不要]
+  C -->|できない| D{cwd から repoRoot までにロックファイルがある}
+  D -->|pnpm-lock.yaml| P[pnpm install --frozen-lockfile]
+  D -->|yarn.lock| Y{.yarnrc.yml がある}
+  Y -->|ある| Y2[yarn install --immutable]
+  Y -->|ない| Y1[yarn install --frozen-lockfile]
+  D -->|bun.lock / bun.lockb| BN[bun install --frozen-lockfile]
+  D -->|package-lock.json / npm-shrinkwrap.json| NC[npm ci]
+  D -->|ない| E{cwd から repoRoot までに package.json がある}
+  E -->|ある| NI[npm install]
+  E -->|ない| X[導入できない: problems に理由]
+```
+
+- ランナーのパッケージ：`vitest` → `vitest`、`playwright` → `@playwright/test`。`<cwd>/__ddv__.js` 起点の `require.resolve('<pkg>/package.json')` で判定する（ランナーの起動と同じ解決）。`dotnet`・`command` は対象外（`dotnet test` が restore する）
+- ロックファイルは cwd に近い順に探す（モノレポで cwd が `apps/web` でも、ルートのロックファイルで導入する）。導入先が同じランナーはまとめる
+- 結果：`{ needed, targets: [{ dir, lockfile?, manager, command, args, runners, missing }], problems }`（`dir` はリポジトリ相対）
+
+| API | 動作 |
+|---|---|
+| `GET /api/deps` | `checkDeps` の結果 |
+| `POST /api/deps/install` | `RunManager.startTask('deps')` で `targets` のコマンドを順に実行（失敗したらそこで止める）。202 `{ runId, deps }`。ログは `/api/runs/{runId}/events`。導入後にもう一度 `checkDeps` し、まだ不足があれば `error`。テストの実行中は 409 |
+| `POST /api/tests/run` | `ServerContext.checkDeps`（GitHub のワークスペースのみ true）のとき、対象ランナーに不足があれば 409 `{ code: 'deps-missing', deps }` で実行しない。依存の導入中は 409 `{ code: 'deps-installing' }`。手元のワークスペースは確認しない（従来どおり） |
+
+- コマンドはロックファイルから決まる固定の値だけで組み立てる。Windows では `npm` 等が `.cmd` のため shell 経由で起動する。環境変数 `CI=1`（対話の確認を出させない）
+- install スクリプト（`postinstall` 等）は通常どおり実行する。信頼済み（`trusted`）のワークスペースだけで、さらに導入ごとにビューアで確認する
+- ランナーを起動できなかったとき（パッケージが見つからない等）は、そのランナーに紐づくテストIDの結果を `error`、メッセージを「ランナー <name> を起動できませんでした: <理由>」にする（「紐づくテストが無いか…」は本当に紐づけが無い ID だけ）
+
+ビューア（`DepsDialog`）：`tests/run` が `deps-missing` を返したら開く。
+
+| 項目 | testid | 種類 | 取得元・送信先 | 備考 |
+|---|---|---|---|---|
+| 導入するコマンド | `deps-targets` | 一覧 | `GET /api/deps` の `targets`（コマンド・導入先・ロックファイル・不足パッケージ）と `problems` | — |
+| 導入する | `deps-install` | ボタン | `POST /api/deps/install` → SSE でログを表示 | 成功したら閉じて、拒否されたテスト実行をもう一度送る。失敗したら「再試行」 |
+| ログ | `deps-log` | 表示 | SSE `log` | — |
+| エラー | `deps-error` | メッセージ | 導入の失敗・API のエラー | — |
+| キャンセル / 閉じる | `deps-cancel` | ボタン | 閉じる（テストは実行しない） | 導入中は押せない |
 
 ## 更新の検知
 
@@ -340,4 +386,4 @@ flowchart TD
 
 - ルート：`#/w/<ws>/doc?path=…` / `#/w/<ws>/tests`（`ws` 省略時は手元）。基本設計の `/w/<ID>/...` はハッシュ内のパスとして実現する
 - `api.ts` の各関数はワークスペースの接頭辞（`''` または `/api/w/<ws>` の差分）を受け取る `createApi(ws)` に変える。モックの iframe の URL も `/w/<ws>/raw/...`
-- `WorkspaceSwitcher`（ヘッダ）・`OpenDialog`・`LoadingPage`・`PrBar`・`TrustDialog` を追加する。`AppProvider` は `ws` が変わったら状態（文書・実行結果）を読み直す
+- `WorkspaceSwitcher`（ヘッダ）・`OpenDialog`・`LoadingPage`・`PrBar`・`TrustDialog`・`DepsDialog` を追加する。`AppProvider` は `ws` が変わったら状態（文書・実行結果）を読み直す

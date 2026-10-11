@@ -23,8 +23,8 @@ export function DocPage() {
     if (!pr) return undefined;
     const threads = pr.threads.flatMap((t) => (t.placement?.kind === 'element' ? [{ id: t.id, line: t.placement.element.startLine }] : []));
     const diffOn = pr.diffOn && prDiff;
-    return { threads, blocks: diffOn ? prDiff.blocks : undefined, removed: diffOn ? prDiff.removed : undefined };
-  }, [pr, prDiff]);
+    return { threads, blocks: diffOn ? prDiff.blocks : undefined, removed: diffOn ? prDiff.removed : undefined, commentLines: doc?.blocks?.map((b) => b.line) };
+  }, [pr, prDiff, doc]);
   const looseThreads = pr?.threads.filter((t) => t.placement?.kind !== 'element') ?? [];
 
   useEffect(() => {

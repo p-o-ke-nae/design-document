@@ -1,15 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { api, apiUrl, workspace, type CaseResult, type DdvConfig, type RunSummary } from './api.ts';
+import { api, apiUrl, ApiError, workspace, type CaseResult, type DdvConfig, type DepsMissingDetail, type RunSummary } from './api.ts';
 
 export interface Route {
   /** Workspace id ('' = local). */
   ws: string;
-  view: 'doc' | 'tests' | 'open';
+  view: 'doc' | 'tests' | 'open' | 'review' | 'done';
   path: string;
   heading: string;
 }
 
-/** `#/doc?path=…` / `#/tests` / `#/open`, and `#/w/<ws>/doc?path=…` / `#/w/<ws>/tests` for a GitHub workspace. */
+/** `#/doc?path=…` / `#/tests` / `#/open`, and `#/w/<ws>/doc?path=…` / `#/w/<ws>/tests` / `#/w/<ws>/review` / `#/w/<ws>/review/done` for a GitHub workspace. */
 export function parseHash(hash: string): Route {
   let h = hash.replace(/^#/, '');
   let ws = '';
@@ -22,6 +22,8 @@ export function parseHash(hash: string): Route {
   const params = new URLSearchParams(q);
   if (p === '/open') return { ws: '', view: 'open', path: '', heading: '' };
   if (p === '/tests') return { ws, view: 'tests', path: '', heading: '' };
+  if (ws && p === '/review') return { ws, view: 'review', path: '', heading: '' };
+  if (ws && p === '/review/done') return { ws, view: 'done', path: '', heading: '' };
   return { ws, view: 'doc', path: params.get('path') ?? '', heading: params.get('h') ?? '' };
 }
 
@@ -161,6 +163,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         id = (await api.startRun(body)).id;
       } catch (e) {
+        if (e instanceof ApiError && e.code === 'deps-missing') {
+          window.dispatchEvent(new CustomEvent<DepsMissingDetail>('ddv-deps-missing', { detail: { retry: () => void runTestsRef.current(body) } }));
+        }
         setRunError((e as Error).message);
         return;
       }
@@ -168,6 +173,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     [follow],
   );
+  const runTestsRef = useRef(runTests);
+  runTestsRef.current = runTests;
 
   const value = useMemo<AppState>(
     () => ({ config, repoName, route, version, latest, activeRun, runLog, runError, runTests, showMatrix, setShowMatrix, refreshResults }),

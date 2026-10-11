@@ -56,6 +56,17 @@ describe('matchDiagrams', () => {
     expect(r.flow.diff?.items.some((i) => i.status === 'added')).toBe(true);
     expect(r.flow.before).toBe(S1);
   });
+  it('[DD-REVCMT-DGMATCH-P001] [DD-REVCMT-DGMATCH-T001] line endings and trailing spaces do not make a diagram changed (CRLF worktree vs LF blob)', () => {
+    const crlf = fence('id=flow', S1).replace(/\n/g, '\r\n');
+    const r = matchDiagrams(diagrams(fence('id=flow', S1)), diagrams(crlf));
+    expect(r.flow.change).toBe('unchanged');
+    const spaced = fence('id=flow', S1.replace(/\n/g, '  \n'));
+    expect(matchDiagrams(diagrams(fence('id=flow', S1)), diagrams(spaced)).flow.change).toBe('unchanged');
+    const edited = diagrams(fence('id=flow', S2).replace(/\n/g, '\r\n'));
+    const c = matchDiagrams(diagrams(fence('id=flow', S1)), edited);
+    expect(c.flow.change).toBe('changed');
+    expect(c.flow.before).toBe(S1);
+  });
   it('[DD-REVCMT-DGMATCH-P002] [DD-REVCMT-DGMATCH-T004] id not in base → added (and base-only → removed)', () => {
     const r = matchDiagrams(diagrams(fence('id=old', S1)), diagrams(fence('id=flow', S1)));
     expect(r.flow).toEqual({ change: 'added' });

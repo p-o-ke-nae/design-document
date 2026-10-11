@@ -26,7 +26,8 @@ export interface Hunk {
 
 /** Parsed `git diff --unified=3` (REVCMT Hunks). RIGHT = `+c,d` (head), LEFT = `-a,b` (merge-base). */
 export class Hunks {
-  constructor(readonly hunks: Hunk[]) {}
+  /** `changed` = the diff text is not empty (a file outside the PR diff has no diff at all). */
+  constructor(readonly hunks: Hunk[], readonly changed: boolean = hunks.length > 0) {}
 
   static parse(unifiedDiff: string): Hunks {
     const hunks: Hunk[] = [];
@@ -50,7 +51,7 @@ export class Hunks {
       else if (t === '-') cur.lines.push({ type: '-', old: o++, new: n });
       else if (t !== '\\') cur = undefined;
     }
-    return new Hunks(hunks);
+    return new Hunks(hunks, unifiedDiff.trim() !== '');
   }
 
   /** Whether start..end fits inside one hunk on the given side. */
@@ -251,7 +252,7 @@ export function matchDiagrams(base: DiagramBlock[], head: DiagramBlock[]): Recor
       continue;
     }
     used.add(b);
-    const entry: DiagramDiff = { change: b.code === h.code ? 'unchanged' : 'changed', beforeId: b.id };
+    const entry: DiagramDiff = { change: normalizeCode(b.code) === normalizeCode(h.code) ? 'unchanged' : 'changed', beforeId: b.id };
     if (entry.change === 'changed') {
       entry.before = b.code;
       const [g0, g1] = [safeGraph(b.code), safeGraph(h.code)];
@@ -264,6 +265,11 @@ export function matchDiagrams(base: DiagramBlock[], head: DiagramBlock[]): Recor
     out[out[b.id] ? `base:${b.id}` : b.id] = { change: 'removed', beforeId: b.id, before: b.code };
   }
   return out;
+}
+
+/** Line endings (CRLF worktree vs LF blob) and trailing spaces are not changes. */
+function normalizeCode(code: string): string {
+  return code.replace(/\r\n?/g, '\n').replace(/[ \t]+$/gm, '');
 }
 
 function safeGraph(code: string) {

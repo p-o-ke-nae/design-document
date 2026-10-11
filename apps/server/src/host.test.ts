@@ -187,6 +187,8 @@ describe('ワークスペースの API とルーティング', () => {
     await env.manager.settled(id);
     expect(await env.json(`/api/w/${id}/tests/run`, post({ runner: 'nope' }))).toMatchObject({ status: 403, body: { code: 'untrusted' } });
     expect(await env.json(`/api/w/${id}/snapshots/run`, post({}))).toMatchObject({ status: 403, body: { code: 'untrusted' } });
+    expect(await env.json(`/api/w/${id}/deps/install`, post())).toMatchObject({ status: 403, body: { code: 'untrusted' } });
+    expect(env.manager.get(id)!.ctx!.checkDeps).toBe(true);
     expect((await env.json(`/api/workspaces/${id}/trust`, post())).body).toMatchObject({ trusted: true });
     expect(await env.json(`/api/w/${id}/tests/run`, post({ runner: 'nope' }))).toMatchObject({ status: 400, body: { error: 'unknown runner: nope' } });
   });
