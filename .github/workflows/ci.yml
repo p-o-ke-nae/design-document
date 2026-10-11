@@ -27,11 +27,12 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # Unit tests (snapshots, scenarios) also launch Chromium.
+      - run: npx playwright install --with-deps chromium
       - run: npm run typecheck
       - run: npm test
       - run: npm run ddv-lint
       - run: npm run ddv-testid -- check
-      - run: npx playwright install --with-deps chromium
       - run: npm run e2e
       - uses: actions/upload-artifact@v4
         if: failure()
