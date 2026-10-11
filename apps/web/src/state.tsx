@@ -1,24 +1,43 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { api, type CaseResult, type DdvConfig, type RunSummary } from './api.ts';
+import { api, apiUrl, workspace, type CaseResult, type DdvConfig, type RunSummary } from './api.ts';
 
 export interface Route {
-  view: 'doc' | 'tests';
+  /** Workspace id ('' = local). */
+  ws: string;
+  view: 'doc' | 'tests' | 'open';
   path: string;
   heading: string;
 }
 
+/** `#/doc?path=…` / `#/tests` / `#/open`, and `#/w/<ws>/doc?path=…` / `#/w/<ws>/tests` for a GitHub workspace. */
 export function parseHash(hash: string): Route {
-  const h = hash.replace(/^#/, '');
+  let h = hash.replace(/^#/, '');
+  let ws = '';
+  const m = /^\/w\/([^/?]+)(.*)$/.exec(h);
+  if (m) {
+    ws = decodeURIComponent(m[1]);
+    h = m[2] || '/';
+  }
   const [p, q = ''] = h.split('?');
   const params = new URLSearchParams(q);
-  if (p === '/tests') return { view: 'tests', path: '', heading: '' };
-  return { view: 'doc', path: params.get('path') ?? '', heading: params.get('h') ?? '' };
+  if (p === '/open') return { ws: '', view: 'open', path: '', heading: '' };
+  if (p === '/tests') return { ws, view: 'tests', path: '', heading: '' };
+  return { ws, view: 'doc', path: params.get('path') ?? '', heading: params.get('h') ?? '' };
+}
+
+/** Hash prefix of a workspace: '#' (local) or '#/w/<ws>'. */
+export function wsBase(ws = workspace()): string {
+  return ws ? `#/w/${encodeURIComponent(ws)}` : '#';
 }
 
 export function docHref(path: string, heading = ''): string {
   const q = new URLSearchParams({ path });
   if (heading) q.set('h', heading);
-  return `#/doc?${q}`;
+  return `${wsBase()}/doc?${q}`;
+}
+
+export function viewHref(view: 'tests' | 'root'): string {
+  return `${wsBase()}/${view === 'tests' ? 'tests' : ''}`;
 }
 
 export function useLocalStorage<T>(key: string, initial: T): [T, (v: T) => void] {
@@ -89,7 +108,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     refreshResults();
     const onHash = () => setRoute(parseHash(location.hash));
     window.addEventListener('hashchange', onHash);
-    const es = new EventSource('/api/events');
+    const es = new EventSource(apiUrl('/api/events'));
     es.addEventListener('change', () => setVersion((v) => v + 1));
     es.addEventListener('run-end', () => refreshResults());
     return () => {
@@ -105,7 +124,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActiveRun(run);
       esRef.current?.close();
       await new Promise<void>((resolve) => {
-        const es = new EventSource(`/api/runs/${id}/events`);
+        const es = new EventSource(apiUrl(`/api/runs/${id}/events`));
         esRef.current = es;
         es.addEventListener('log', (e) => setRunLog((l) => [...l, (e as MessageEvent).data]));
         es.addEventListener('end', () => {

@@ -185,31 +185,140 @@ export interface SnapshotInfo {
   steps: SnapshotStep[];
 }
 
-const post = (url: string, body: unknown) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code?: string,
+  ) {
+    super(message);
+  }
+}
+
+const post = (url: string, body?: unknown) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
 
 async function json<T>(res: Response): Promise<T> {
   const body = await res.json().catch(() => ({}));
-  if (!res.ok && !(body && typeof body === 'object' && 'ok' in body)) throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+  if (!res.ok && !(body && typeof body === 'object' && 'ok' in body)) {
+    const b = body as { error?: string; message?: string; code?: string };
+    if (res.status === 403 && b.code === 'untrusted') window.dispatchEvent(new CustomEvent('ddv-untrusted'));
+    throw new ApiError(b.message ?? b.error ?? `HTTP ${res.status}`, res.status, b.code);
+  }
   return body as T;
 }
 
-export const api = {
-  config: () => fetch('/api/config').then((r) => json<{ repoRoot: string; repoName: string; config: DdvConfig }>(r)),
-  tree: () => fetch('/api/tree').then((r) => json<{ docsRoot: string; docs: TreeDoc[] }>(r)),
-  doc: (path: string) => fetch(`/api/doc?path=${encodeURIComponent(path)}`).then((r) => json<DocResponse>(r)),
-  resolve: (from: string, ref: string) => fetch(`/api/resolve?from=${encodeURIComponent(from)}&ref=${encodeURIComponent(ref)}`).then((r) => json<ResolveResponse>(r)),
-  tests: () => fetch('/api/tests').then((r) => json<TestsResponse>(r)),
-  latest: () => fetch('/api/results/latest').then((r) => json<Record<string, CaseResult>>(r)),
-  runs: () => fetch('/api/runs').then((r) => json<RunSummary[]>(r)),
-  run: (id: string) => fetch(`/api/runs/${id}`).then((r) => json<RunSummary>(r)),
-  startRun: (body: { ids?: string[]; runner?: string }) =>
-    fetch('/api/tests/run', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then((r) => json<{ id: string }>(r)),
-  generateIds: () => fetch('/api/testids/generate', { method: 'POST' }).then((r) => json<{ changed: boolean; added: string[]; retired: string[] }>(r)),
-  scenarios: () => fetch('/api/mocks/scenarios').then((r) => json<{ scenarios: ScenarioSummary[] }>(r)),
-  scenario: (id: string) => fetch(`/api/mocks/scenario?id=${encodeURIComponent(id)}`).then((r) => json<ScenarioDetail>(r)),
-  played: (body: { id: string; ok: boolean; failures?: StepFailure[] }) => post('/api/mocks/played', body).then((r) => json<unknown>(r)),
-  scaffold: (body: { mock?: string } = {}) => post('/api/mocks/scaffold', body).then((r) => json<Record<string, unknown>>(r)),
-  runSnapshots: (body: { ids?: string[] }) => post('/api/snapshots/run', body).then((r) => json<{ runId: string }>(r)),
-  snapshots: (id: string) => fetch(`/api/snapshots?id=${encodeURIComponent(id)}`).then((r) => json<SnapshotInfo>(r)),
-  approveSnapshots: (body: { id: string; steps?: number[] }) => post('/api/snapshots/approve', body).then((r) => json<unknown>(r)),
+/** `/api/...` of the given workspace ('' = the local one): `/api/w/<ws>/...`. */
+export function apiPath(ws: string, p: string): string {
+  return ws ? `/api/w/${encodeURIComponent(ws)}${p.replace(/^\/api/, '')}` : p;
+}
+
+/** `/raw/...` of the given workspace: `/w/<ws>/raw/...`. */
+export function rawPath(ws: string, p: string): string {
+  return ws ? `/w/${encodeURIComponent(ws)}${p}` : p;
+}
+
+export function createApi(ws: string) {
+  const A = (p: string) => apiPath(ws, p);
+  const get = <T>(p: string) => fetch(A(p)).then((r) => json<T>(r));
+  return {
+    config: () => get<{ repoRoot: string; repoName: string; config: DdvConfig }>('/api/config'),
+    tree: () => get<{ docsRoot: string; docs: TreeDoc[] }>('/api/tree'),
+    doc: (path: string) => get<DocResponse>(`/api/doc?path=${encodeURIComponent(path)}`),
+    resolve: (from: string, ref: string) => get<ResolveResponse>(`/api/resolve?from=${encodeURIComponent(from)}&ref=${encodeURIComponent(ref)}`),
+    tests: () => get<TestsResponse>('/api/tests'),
+    latest: () => get<Record<string, CaseResult>>('/api/results/latest'),
+    runs: () => get<RunSummary[]>('/api/runs'),
+    run: (id: string) => get<RunSummary>(`/api/runs/${id}`),
+    startRun: (body: { ids?: string[]; runner?: string }) => post(A('/api/tests/run'), body).then((r) => json<{ id: string }>(r)),
+    generateIds: () => fetch(A('/api/testids/generate'), { method: 'POST' }).then((r) => json<{ changed: boolean; added: string[]; retired: string[] }>(r)),
+    scenarios: () => get<{ scenarios: ScenarioSummary[] }>('/api/mocks/scenarios'),
+    scenario: (id: string) => get<ScenarioDetail>(`/api/mocks/scenario?id=${encodeURIComponent(id)}`),
+    played: (body: { id: string; ok: boolean; failures?: StepFailure[] }) => post(A('/api/mocks/played'), body).then((r) => json<unknown>(r)),
+    scaffold: (body: { mock?: string } = {}) => post(A('/api/mocks/scaffold'), body).then((r) => json<Record<string, unknown>>(r)),
+    runSnapshots: (body: { ids?: string[] }) => post(A('/api/snapshots/run'), body).then((r) => json<{ runId: string }>(r)),
+    snapshots: (id: string) =>
+      get<SnapshotInfo>(`/api/snapshots?id=${encodeURIComponent(id)}`).then((s) => ({
+        ...s,
+        steps: s.steps.map((st) => ({ ...st, images: Object.fromEntries(Object.entries(st.images).map(([k, v]) => [k, v && A(v)])) })),
+      })),
+    approveSnapshots: (body: { id: string; steps?: number[] }) => post(A('/api/snapshots/approve'), body).then((r) => json<unknown>(r)),
+  };
+}
+
+let currentWs = '';
+
+/** The workspace the viewer shows ('' = local). `api`, `apiUrl` and `rawUrl` follow it. */
+export function workspace(): string {
+  return currentWs;
+}
+
+export function setWorkspace(ws: string): void {
+  if (ws === currentWs) return;
+  currentWs = ws;
+  api = createApi(ws);
+}
+
+export function apiUrl(p: string): string {
+  return apiPath(currentWs, p);
+}
+
+export function rawUrl(p: string): string {
+  return rawPath(currentWs, p);
+}
+
+export let api = createApi('');
+
+// --- GitHub workspaces ---
+
+export type WsState = 'None' | 'Fetching' | 'Ready' | 'Stale' | 'Error';
+export type FetchStep = 'pr' | 'clone' | 'fetch' | 'worktree' | 'ready' | 'error';
+
+export interface WorkspaceInfo {
+  id: string;
+  repo: string;
+  kind: 'pr' | 'ref';
+  pr?: number;
+  ref?: string;
+  title?: string;
+  state: WsState;
+  step?: FetchStep;
+  error?: string;
+  trusted: boolean;
+  headSha: string;
+  remoteHeadSha?: string;
+  openedAt: string;
+}
+
+export interface AuthStatus {
+  source: 'gh' | 'env' | 'none';
+  login: string;
+  reason?: 'missing' | 'invalid';
+}
+
+export interface PullSummary {
+  number: number;
+  title: string;
+  author: string;
+  headRef: string;
+  baseRef: string;
+}
+
+export interface PrInfo extends Omit<WorkspaceInfo, 'pr'> {
+  baseRef?: string;
+  mergeBase?: string;
+  pr: { number: number; title: string; state: 'open' | 'closed'; merged: boolean; htmlUrl: string; baseRef: string; headRef: string; headSha: string } | null;
+}
+
+export const gh = {
+  auth: () => fetch('/api/github/auth').then((r) => json<AuthStatus>(r)),
+  pulls: (repo: string) => fetch(`/api/github/pulls?repo=${encodeURIComponent(repo)}`).then((r) => json<PullSummary[]>(r)),
+  workspaces: () => fetch('/api/workspaces').then((r) => json<{ local: boolean; workspaces: WorkspaceInfo[] }>(r)),
+  open: (body: { repo: string; pr?: string; ref?: string }) => post('/api/workspaces', body).then((r) => json<{ id: string; state: WsState }>(r)),
+  info: (id: string) => fetch(`/api/workspaces/${encodeURIComponent(id)}`).then((r) => json<WorkspaceInfo>(r)),
+  refresh: (id: string) => post(`/api/workspaces/${encodeURIComponent(id)}/refresh`).then((r) => json<WorkspaceInfo>(r)),
+  trust: (id: string) => post(`/api/workspaces/${encodeURIComponent(id)}/trust`).then((r) => json<WorkspaceInfo>(r)),
+  check: (id: string) => post(`/api/workspaces/${encodeURIComponent(id)}/check`).then((r) => json<WorkspaceInfo & { stale: boolean }>(r)),
+  close: (id: string) => fetch(`/api/workspaces/${encodeURIComponent(id)}`, { method: 'DELETE' }).then((r) => json<unknown>(r)),
+  pr: (id: string) => fetch(apiPath(id, '/api/pr')).then((r) => json<PrInfo>(r)),
+  eventsUrl: (id: string) => `/api/workspaces/${encodeURIComponent(id)}/events`,
 };

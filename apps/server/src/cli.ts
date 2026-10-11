@@ -1,19 +1,31 @@
 #!/usr/bin/env node
 import { existsSync, promises as fs } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serve } from '@hono/node-server';
 import { loadConfig } from '@ddv/core/node';
+import { GitHubClient, TokenResolver } from '@ddv/github';
 import { initMocks, scaffoldMock } from '@ddv/mock';
-import { createApp, createContext, mimeOf } from './app.ts';
+import { createContext } from './app.ts';
+import { GitCache } from './git.ts';
+import { devOriginsFromEnv } from './guard.ts';
+import { createServerApp } from './host.ts';
 import { SnapshotService } from './snapshots.ts';
+import { cleanWorkspaces, OpenRequestError, parseOpenRequest, WorkspaceManager } from './workspaces.ts';
 
 const HELP = `ddv - Design Doc Viewer
 
 使い方:
-  ddv serve [--repo <path>] [--port <n>] [--host 127.0.0.1]
+  ddv serve [--repo <path>] [--port <n>] [--host 127.0.0.1] [--dev-origin <url>]
       ローカルリポジトリを閲覧するサーバを起動します（既定: カレント, 5178）
       apps/web/dist が無い場合は API のみ提供します（開発時は npm run dev:web）
+      --dev-origin: 変更系 API を許可する追加の Origin（vite 開発サーバ。環境変数 DDV_DEV_ORIGIN でも可）
+  ddv serve [--repo <path>] --github <owner/repo> (--pr <n> | --ref <name>)
+      起動時に GitHub の PR・branch・tag をワークスペースとして開きます（--repo 省略時は手元のワークスペース無し）
+      認証: gh auth token → 環境変数 GITHUB_TOKEN
+  ddv gh clean [--repo <owner/repo>]
+      閉じたワークスペースの worktree を削除します（--repo 指定時は使われていない clone も削除）
   ddv mock scaffold [--repo <path>] [--mock <name>]
       画面遷移図の経路（P）ごとにシナリオの骨組みを生成・マージします（ddv-testid generate の後に実行）
   ddv mock init [--repo <path>]
@@ -22,6 +34,10 @@ const HELP = `ddv - Design Doc Viewer
       シナリオを再生して各ステップの画面を撮影し、基準画像と比較します（--id 省略時は全シナリオ）
       --approve: 今回の撮影結果を基準として承認します（.ddv/snapshots/baseline/ へコピー）
       ブラウザは mock.browser.channel（環境変数 DDV_BROWSER_CHANNEL で上書き可）
+
+環境変数:
+  DDV_HOME          キャッシュ・ワークスペースの置き場所（既定: ~/.ddv）
+  DDV_GITHUB_POLL   PR の更新検知の間隔（秒。既定 60、0 で無効）
 
 関連コマンド:
   ddv-testid generate|list|check|show   テストIDの採番・確認
@@ -86,6 +102,34 @@ async function mockCommand(argv: string[]) {
   console.log(`追加: ${r.added}、更新: ${r.updated}、欠番: ${r.retired}、変更なし: ${r.unchanged}、要確認: ${r.todo}`);
 }
 
+function ddvHome(): string {
+  return path.resolve(process.env.DDV_HOME || path.join(os.homedir(), '.ddv'));
+}
+
+/** GitHub access. DDV_GITHUB_API / DDV_GITHUB_GIT_URL ({owner}, {repo}) / DDV_GITHUB_NO_GH=1 point it at a test double. */
+function githubDeps(home: string) {
+  const apiBase = process.env.DDV_GITHUB_API || undefined;
+  const tokens = new TokenResolver({ apiBase, ...(process.env.DDV_GITHUB_NO_GH === '1' ? { runGh: async () => null } : {}) });
+  const github = new GitHubClient(tokens, { apiBase });
+  const tpl = process.env.DDV_GITHUB_GIT_URL;
+  const git = new GitCache(home, tokens, tpl ? { remoteUrl: (o, r) => tpl.replaceAll('{owner}', o).replaceAll('{repo}', r) } : {});
+  return { tokens, github, git };
+}
+
+async function ghCommand(argv: string[]) {
+  if (argv[0] !== 'clean') {
+    console.error(`不明なサブコマンド: gh ${argv[0] ?? ''}\n\n${HELP}`);
+    process.exitCode = 2;
+    return;
+  }
+  const home = ddvHome();
+  const r = await cleanWorkspaces(home, githubDeps(home).git, arg(argv, '--repo'));
+  for (const d of r.worktrees) console.log(`削除: ${d}`);
+  for (const d of r.clones) console.log(`削除: ${d}`);
+  for (const d of r.kept) console.log(`残しました（開いているワークスペースが使用中）: ${d}`);
+  if (!r.worktrees.length && !r.clones.length) console.log('削除するものはありません');
+}
+
 async function main(argv: string[]) {
   const cmd = argv[0];
   if (!cmd || cmd === '-h' || cmd === '--help') {
@@ -96,37 +140,56 @@ async function main(argv: string[]) {
     await mockCommand(argv.slice(1));
     return;
   }
+  if (cmd === 'gh') {
+    await ghCommand(argv.slice(1));
+    return;
+  }
   if (cmd !== 'serve') {
     console.error(`不明なコマンド: ${cmd}\n\n${HELP}`);
     process.exitCode = 2;
     return;
   }
-  const repo = path.resolve(arg(argv, '--repo') ?? process.cwd());
-  if (!existsSync(repo)) throw new Error(`リポジトリが見つかりません: ${repo}`);
+  const githubRepo = arg(argv, '--github');
+  let open: { repo: string; pr?: string; ref?: string } | null = null;
+  if (githubRepo) {
+    open = { repo: githubRepo, pr: arg(argv, '--pr'), ref: arg(argv, '--ref') };
+    try {
+      parseOpenRequest(open);
+    } catch (e) {
+      if (!(e instanceof OpenRequestError)) throw e;
+      console.error(`${e.message}\n\n${HELP}`);
+      process.exitCode = 2;
+      return;
+    }
+  }
+  const repoArg = arg(argv, '--repo');
+  const repo = repoArg || !open ? path.resolve(repoArg ?? process.cwd()) : null;
+  if (repo && !existsSync(repo)) throw new Error(`リポジトリが見つかりません: ${repo}`);
   const port = Number(arg(argv, '--port') ?? process.env.DDV_PORT ?? 5178);
   const host = arg(argv, '--host') ?? '127.0.0.1';
   if (host !== '127.0.0.1' && host !== 'localhost' && host !== '::1') {
     console.warn('[ddv] 警告: ループバック以外で待ち受けます。テスト実行 API が外部から呼べる状態になります');
   }
-  const ctx = await createContext(repo);
-  const app = createApp(ctx);
-
+  const local = repo ? await createContext(repo) : undefined;
+  const home = ddvHome();
+  const { tokens, github, git } = githubDeps(home);
+  const poll = Number(process.env.DDV_GITHUB_POLL ?? 60);
+  const manager = new WorkspaceManager({ home, github, git, createContext: (dir) => createContext(dir), pollSeconds: Number.isFinite(poll) && poll >= 0 ? poll : 60 });
+  await manager.init();
+  const devOrigins = [...devOriginsFromEnv(), ...(arg(argv, '--dev-origin') ? [arg(argv, '--dev-origin')!] : [])];
   const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');
-  if (existsSync(dist)) {
-    app.get('*', async (c) => {
-      const rel = decodeURIComponent(c.req.path).replace(/^\/+/, '');
-      let abs = path.resolve(dist, rel);
-      if (!abs.startsWith(dist) || !(await fs.stat(abs).catch(() => null))?.isFile()) abs = path.join(dist, 'index.html');
-      return new Response(await fs.readFile(abs), { headers: { 'content-type': mimeOf(abs) } });
-    });
-  }
+  const app = createServerApp({ local, manager, tokens, port, devOrigins, dist });
+  const ws = open ? manager.open(open) : null;
 
   serve({ fetch: app.fetch, port, hostname: host }, (info) => {
-    console.log(`[ddv] ${repo}`);
-    console.log(`[ddv] http://${host}:${info.port}/${existsSync(dist) ? '' : '  (API のみ。UI は npm run dev:web)'}`);
+    if (repo) console.log(`[ddv] ${repo}`);
+    if (ws) console.log(`[ddv] ${ws.id}（取得中）`);
+    const hash = ws ? `#/w/${ws.id}/doc` : '';
+    console.log(`[ddv] http://${host}:${info.port}/${existsSync(dist) ? hash : '  (API のみ。UI は npm run dev:web)'}`);
   });
   const stop = () => {
-    ctx.close();
+    manager.dispose();
+    local?.close();
     process.exit(0);
   };
   process.on('SIGINT', stop);

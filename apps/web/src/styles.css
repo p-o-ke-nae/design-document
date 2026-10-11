@@ -1184,3 +1184,143 @@ button.run.play-mock:not(:disabled) {
   list-style: none;
   padding: 0;
 }
+/* GitHub workspaces */
+.ws-switch {
+  max-width: 260px;
+  font: inherit;
+  padding: 2px 4px;
+}
+.topbar button,
+.prbar button,
+.open-form button,
+.loading-page button,
+.dialog button {
+  font: inherit;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel);
+  cursor: pointer;
+}
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+button.link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+}
+.auth-error {
+  font-size: 12px;
+}
+.small {
+  font-size: 12px;
+}
+.open-page,
+.loading-page {
+  max-width: 640px;
+  margin: 0 auto;
+}
+.open-form {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 12px;
+  align-items: center;
+}
+.open-form input,
+.open-form select {
+  font: inherit;
+  padding: 4px 6px;
+}
+.open-form .error,
+.open-form .actions {
+  grid-column: 1 / -1;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.pulls {
+  list-style: none;
+  padding: 0;
+}
+.pulls li {
+  padding: 3px 0;
+}
+.progress {
+  list-style: none;
+  padding: 0;
+}
+.progress li {
+  padding: 4px 0 4px 22px;
+  position: relative;
+  color: var(--muted);
+}
+.progress li::before {
+  content: '○';
+  position: absolute;
+  left: 0;
+}
+.progress li.now {
+  color: var(--accent);
+  font-weight: 600;
+}
+.progress li.now::before {
+  content: '◔';
+}
+.progress li.done {
+  color: var(--ok);
+}
+.progress li.done::before {
+  content: '✓';
+}
+.progress li.failed {
+  color: var(--ng);
+}
+.progress li.failed::before {
+  content: '✗';
+}
+.prbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 16px;
+  background: var(--accent-weak);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.prbar .title {
+  font-weight: 600;
+}
+.prbar .stale {
+  background: var(--warn-bg);
+  color: var(--warn);
+  border-radius: 10px;
+  padding: 1px 8px;
+}
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.dialog {
+  background: var(--panel);
+  border-radius: 6px;
+  padding: 16px 20px;
+  max-width: 520px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.2);
+}

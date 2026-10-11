@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { api, type ScenarioDetail } from '../api.ts';
+import { api, rawUrl, type ScenarioDetail } from '../api.ts';
 import { useApp, useLocalStorage } from '../state.tsx';
 import { playableScenarios, useMockHub } from '../mockHub.tsx';
 import { PlayerController, SPEEDS, STATE_LABEL, createFrameTransport, type PlayerSnapshot } from '../player.ts';
@@ -142,7 +142,7 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
   const select = useCallback((id: string) => setRequest((r) => ({ id, play: false, seq: r.seq + 1 })), []);
 
   if (!config) return null;
-  const src = `/raw/${config.mocksRoot.replace(/\/$/, '')}/${target.replace(/^\//, '')}`;
+  const src = rawUrl(`/raw/${config.mocksRoot.replace(/\/$/, '')}/${target.replace(/^\//, '')}`);
   const steps = detail?.scenario?.steps ?? [];
   const { state, busy, cursor, total, failure } = snap;
   const loaded = !!detail && snap.scenarioId === detail.id;

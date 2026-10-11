@@ -9,6 +9,7 @@ export default defineConfig({
       '@ddv/core/node': r('./packages/core/src/node-index.ts'),
       '@ddv/core': r('./packages/core/src/index.ts'),
       '@ddv/graph': r('./packages/graph/src/index.ts'),
+      '@ddv/github': r('./packages/github/src/index.ts'),
       '@ddv/testid': r('./packages/testid/src/index.ts'),
       '@ddv/mock/step': r('./packages/mock/src/step.ts'),
       '@ddv/mock/playwright': r('./packages/mock/src/playwright.ts'),

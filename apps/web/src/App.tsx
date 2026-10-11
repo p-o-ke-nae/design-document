@@ -1,9 +1,11 @@
-import { useRef } from 'react';
-import { AppProvider, docHref, useApp } from './state.tsx';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { setWorkspace } from './api.ts';
+import { AppProvider, docHref, useApp, viewHref } from './state.tsx';
 import { DocTree } from './components/DocTree.tsx';
 import { DocPage } from './components/DocPage.tsx';
 import { TestsPage } from './components/TestsPage.tsx';
 import { StatusBadge } from './components/StatusBadge.tsx';
+import { LoadingPage, OpenPage, PrBar, TopBar, TrustDialog, WorkspaceBar, WorkspaceProvider, useWorkspaces } from './components/Workspace.tsx';
 
 function Shell() {
   const { route, repoName, showMatrix, setShowMatrix, activeRun } = useApp();
@@ -15,20 +17,21 @@ function Shell() {
         <a className="brand" href="#/">
           ddv
         </a>
+        <WorkspaceBar />
         <span className="repo" title="リポジトリ">
           {repoName}
         </span>
         <nav className="views">
-          <a href={lastDoc.current ? docHref(lastDoc.current) : '#/'} className={route.view === 'doc' ? 'is-active' : ''} data-testid="nav-docs">
+          <a href={lastDoc.current ? docHref(lastDoc.current) : viewHref('root')} className={route.view === 'doc' ? 'is-active' : ''} data-testid="nav-docs">
             ドキュメント
           </a>
-          <a href="#/tests" className={route.view === 'tests' ? 'is-active' : ''} data-testid="nav-tests">
+          <a href={viewHref('tests')} className={route.view === 'tests' ? 'is-active' : ''} data-testid="nav-tests">
             テスト
           </a>
         </nav>
         <span className="spacer" />
         {activeRun && (
-          <a href="#/tests" className="run-indicator" data-testid="run-indicator">
+          <a href={viewHref('tests')} className="run-indicator" data-testid="run-indicator">
             テスト実行 <StatusBadge status={activeRun.status} />
           </a>
         )}
@@ -37,6 +40,7 @@ function Shell() {
           マトリクス表示
         </label>
       </header>
+      {route.ws && <PrBar />}
       <div className="body">
         <aside className="left">
           <DocTree />
@@ -47,10 +51,58 @@ function Shell() {
   );
 }
 
-export function App() {
+function Screen({ children }: { children: ReactNode }) {
   return (
-    <AppProvider>
+    <div className="app">
+      <TopBar />
+      <div className="body">{children}</div>
+    </div>
+  );
+}
+
+/** Chooses the screen from the hash: 手元 / GitHub を開く / 取得中 / PR の文書. */
+function Root() {
+  const { route, local, current } = useWorkspaces();
+  const ws = route.view === 'open' ? '' : route.ws;
+  // A session without a local repository starts on 「GitHub を開く」.
+  useEffect(() => {
+    if (route.view !== 'open' && !route.ws && local === false) location.hash = '#/open';
+  }, [route.view, route.ws, local]);
+
+  if (route.view === 'open')
+    return (
+      <Screen>
+        <OpenPage />
+      </Screen>
+    );
+  if (ws) {
+    if (!current || (current.state !== 'Ready' && current.state !== 'Stale'))
+      return (
+        <Screen>
+          <LoadingPage />
+        </Screen>
+      );
+    setWorkspace(ws);
+    return (
+      <AppProvider key={`${ws}@${current.headSha}`}>
+        <Shell />
+        <TrustDialog />
+      </AppProvider>
+    );
+  }
+  if (!local) return <Screen>{null}</Screen>;
+  setWorkspace('');
+  return (
+    <AppProvider key="local">
       <Shell />
     </AppProvider>
+  );
+}
+
+export function App() {
+  return (
+    <WorkspaceProvider>
+      <Root />
+    </WorkspaceProvider>
   );
 }

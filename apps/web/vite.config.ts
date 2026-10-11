@@ -16,7 +16,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    proxy: { '/api': { target, changeOrigin: false }, '/raw': { target } },
+    proxy: { '/api': { target, changeOrigin: false }, '/raw': { target }, '/w/': { target } },
   },
   build: { outDir: 'dist', emptyOutDir: true, chunkSizeWarningLimit: 4000 },
 });

@@ -66,6 +66,20 @@ runners:
     snapshot: { threshold: 0.001, viewport: { width: 1280, height: 800 } }
   ```
 
+### GitHub の PR・branch を表示する
+
+```powershell
+npm run ddv -- serve --repo . --github acme/order-app --pr 12   # 手元と並べて PR #12 を開く
+npm run ddv -- serve --github acme/order-app --ref main         # 手元のリポジトリ無しで branch・tag を開く
+npm run ddv -- gh clean [--repo acme/order-app]                 # 開いていない worktree・clone を削除
+```
+
+- ビューアの「GitHub を開く」からも開けます。PR は `refs/pull/<n>/head` を取得して worktree（`~/.ddv/worktrees`）に展開し、`#/w/<ワークスペースID>/…` で表示します
+- 認証は `gh auth token` → 環境変数 `GITHUB_TOKEN` の順。トークンは画面・ログ・保存ファイルに出しません。手元だけの利用では GitHub に問い合わせません
+- PR の更新は 60 秒ごと（`DDV_GITHUB_POLL`、0 で無効）とウィンドウのフォーカス時に検知し「更新あり」を表示。「最新化」で取り直します
+- GitHub のワークスペースでテスト・スナップショットを実行する前に確認ダイアログが出ます（PR のコードがこの PC で動くため）
+- 置き場所は `DDV_HOME`（既定 `~/.ddv`）。レビューコメント・Approve・モックの調整は今後の Phase で追加します
+
 ## ドキュメントの書き方
 
 ````markdown
@@ -167,7 +181,7 @@ npm run ddv -- serve --repo .   # ddv 自身の設計書を表示し、ビュー
 | 0–1 | 閲覧・Mermaid 描画（パン/ズーム）・TOC・参照・マトリクス/ID・経路ハイライト・テスト紐づけ/実行・As-Is/To-Be 差分 | ✅ |
 | 1' | プラグイン最小版（要件/基本/詳細のスキルとテンプレート、`ddv-lint`） | ✅ |
 | 2 | モック runtime（疑似 BE/DB）、シナリオ DSL＋データ分離（骨組み自動生成）、プレイヤー（巻き戻し/速度）、シナリオの E2E 実行（データ駆動）、スナップショット | ✅（[要件](docs/design/requirements/mock.md) / [基本設計](docs/design/basic/mock-player.md) / 詳細設計：[シナリオ](docs/design/detailed/scenario.md)・[runtime](docs/design/detailed/mock-runtime.md)・[スナップショット](docs/design/detailed/snapshot.md)） |
-| 3 | GitHub repo/branch 指定、PR 行コメント・Approve 連携、モックのレビュー調整 → suggestion | 要件定義中（[要件](docs/design/requirements/github.md)） |
+| 3 | GitHub repo/branch 指定、PR 行コメント・Approve 連携、モックのレビュー調整 → suggestion | 実装中：ワークスペース（PR・branch の取得と表示）✅、コメント・Approve・調整は未（[要件](docs/design/requirements/github.md) / [基本設計](docs/design/basic/github-review.md) / 詳細設計：[ワークスペース](docs/design/detailed/workspace.md)） |
 | 4 | テスト監視（履歴・フレーキー・カバレッジ）、テストデータ編集（シナリオの入力値・fixtures・期待値をビューアで編集）、トレースビュー | 未着手 |
 | 5 | .NET デスクトップ（XAML → CSS トークン、FlaUI エクスポート） | 未着手 |
 | 6 | ホスト型（GitHub Pages + API + Actions） | 未着手 |

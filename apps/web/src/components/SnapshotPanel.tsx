@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, type SnapshotInfo, type SnapshotStatus } from '../api.ts';
+import { api, apiUrl, type SnapshotInfo, type SnapshotStatus } from '../api.ts';
 
 const STATUS_LABEL: Record<SnapshotStatus, string> = { None: '未撮影', NoBase: '基準なし', Match: '一致', Diff: '差分あり' };
 
@@ -48,7 +48,7 @@ export function SnapshotPanel({ scenarioId }: { scenarioId: string }) {
     setRunning(true);
     setLog([]);
     es.current?.close();
-    const src = new EventSource(`/api/runs/${runId}/events`);
+    const src = new EventSource(apiUrl(`/api/runs/${runId}/events`));
     es.current = src;
     const done = (e?: Event) => {
       src.close();

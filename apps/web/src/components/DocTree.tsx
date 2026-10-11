@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, type TreeDoc } from '../api.ts';
-import { docHref, useApp } from '../state.tsx';
+import { docHref, parseHash, useApp } from '../state.tsx';
 
 const GROUPS: Array<[string, string]> = [
   ['requirements', '要件定義'],
@@ -19,7 +19,9 @@ export function DocTree() {
       .then((t) => {
         setDocs(t.docs);
         setError('');
-        if (!location.hash && t.docs[0]) location.hash = docHref(t.docs[0].path);
+        const r = parseHash(location.hash);
+        // Open the first document on a bare URL (local) or a workspace root (#/w/<ws>/ or #/w/<ws>/doc).
+        if (t.docs[0] && (r.ws ? r.view === 'doc' && !r.path : !location.hash)) location.hash = docHref(t.docs[0].path);
       })
       .catch((e: Error) => setError(e.message));
   }, [version]);

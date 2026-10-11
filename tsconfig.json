@@ -17,6 +17,7 @@
       "@ddv/core": ["./packages/core/src/index.ts"],
       "@ddv/core/node": ["./packages/core/src/node-index.ts"],
       "@ddv/graph": ["./packages/graph/src/index.ts"],
+      "@ddv/github": ["./packages/github/src/index.ts"],
       "@ddv/testid": ["./packages/testid/src/index.ts"],
       "@ddv/mock/step": ["./packages/mock/src/step.ts"],
       "@ddv/mock/playwright": ["./packages/mock/src/playwright.ts"],
