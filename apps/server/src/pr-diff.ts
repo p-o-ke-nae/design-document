@@ -251,7 +251,7 @@ export function matchDiagrams(base: DiagramBlock[], head: DiagramBlock[]): Recor
       continue;
     }
     used.add(b);
-    const entry: DiagramDiff = { change: b.code === h.code ? 'unchanged' : 'changed', beforeId: b.id };
+    const entry: DiagramDiff = { change: normalizeCode(b.code) === normalizeCode(h.code) ? 'unchanged' : 'changed', beforeId: b.id };
     if (entry.change === 'changed') {
       entry.before = b.code;
       const [g0, g1] = [safeGraph(b.code), safeGraph(h.code)];
@@ -264,6 +264,11 @@ export function matchDiagrams(base: DiagramBlock[], head: DiagramBlock[]): Recor
     out[out[b.id] ? `base:${b.id}` : b.id] = { change: 'removed', beforeId: b.id, before: b.code };
   }
   return out;
+}
+
+/** Line endings (CRLF worktree vs LF blob) and trailing spaces are not changes. */
+function normalizeCode(code: string): string {
+  return code.replace(/\r\n?/g, '\n').replace(/[ \t]+$/gm, '');
 }
 
 function safeGraph(code: string) {

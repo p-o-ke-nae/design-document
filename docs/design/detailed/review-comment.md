@@ -331,6 +331,7 @@ flowchart TD
 ```
 
 - base 側に対応の無い図は「削除」。`parseMermaidGraph` が解析できない図（シーケンス図等）は、ソースの行差分だけを示す
+- 図が「変更」か「変更なし」かは、改行（CRLF / LF）と行末の空白を正規化して比べる（base は git の blob で LF、head は作業ツリーで autocrlf により CRLF のことがあるため）。それ以外の文字の違いは「変更」
 - 本文：`Hunks.addedLines()` を含む head のブロックを追加・変更、base で削除行だけからなるブロックを削除ブロックとして、直後の head のブロックの前に入れる
 - テストIDの増減：`git show <mergeBase>:.ddv/testids.lock.json` と head のロックを比べ、図ごとに `active` のIDの差（追加・欠番化）を返す。base にロックが無ければ全部追加
 - `DocDiff`：`{ status: A/M/D/R, oldPath?, blocks: [{ line, endLine, change }], removed: [{ beforeLine, markdown }], diagrams: { [id]: { change, diff? } }, ids: { added: [], retired: [] } }`
