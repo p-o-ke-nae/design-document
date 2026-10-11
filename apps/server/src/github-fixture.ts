@@ -130,6 +130,20 @@ export function fakeGitHubState(init: Partial<FakeGitHubState> = {}): FakeGitHub
   };
 }
 
+/** GitHub rejects review comments on a file that is not in the PR diff ("could not be resolved"); checked when an upstream repository backs the fixture. */
+function outsideDiff(state: FakeGitHubState, key: string, file: unknown): { message: string; errors: string[] } | null {
+  const [repo, n] = key.split('#');
+  const pr = (state.pulls[repo] ?? []).find((x) => x.number === Number(n));
+  if (!state.upstream || !pr || typeof file !== 'string') return null;
+  let changed: string[];
+  try {
+    changed = state.upstream.git('diff', '--name-only', `${pr.baseRef}...${pr.headSha}`).split('\n');
+  } catch {
+    return null;
+  }
+  return changed.includes(file) ? null : { message: 'Validation Failed', errors: [`Pull request review thread path could not be resolved: ${file}`] };
+}
+
 const sha1 = (s: string) => createHash('sha1').update(s).digest('hex');
 
 const REVIEW_STATE = { APPROVE: 'APPROVED', REQUEST_CHANGES: 'CHANGES_REQUESTED', COMMENT: 'COMMENTED' } as const;
@@ -195,6 +209,10 @@ export function fakeGitHub(state: FakeGitHubState) {
     if (m && req.method === 'POST') {
       const key = `${m[1]}/${m[2]}#${m[3]}`;
       const b = reqBody ?? {};
+      for (const c of (b.comments ?? []) as any[]) {
+        const bad = outsideDiff(state, key, c.path);
+        if (bad) return j(422, bad);
+      }
       const id = ++state.nextId;
       (state.reviews[key] ??= []).push({ id, user: { login: state.login }, state: REVIEW_STATE[b.event as keyof typeof REVIEW_STATE] ?? 'COMMENTED', submitted_at: new Date().toISOString() });
       for (const c of (b.comments ?? []) as any[]) {
@@ -212,6 +230,8 @@ export function fakeGitHub(state: FakeGitHubState) {
     m = /^\/repos\/([^/]+)\/([^/]+)\/pulls\/(\d+)\/comments$/.exec(p);
     if (m && req.method === 'POST') {
       const key = `${m[1]}/${m[2]}#${m[3]}`;
+      const bad = outsideDiff(state, key, reqBody?.path);
+      if (bad) return j(422, bad);
       const id = ++state.nextId;
       (state.threads[key] ??= []).push({ id: `PRRT_${++state.nextId}`, path: reqBody?.path, line: null, comments: [{ id, author: state.login, body: reqBody?.body ?? '' }] });
       return j(201, { id, html_url: `https://github.com/${m[1]}/${m[2]}/pull/${m[3]}#discussion_r${id}` });

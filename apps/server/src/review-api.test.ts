@@ -121,6 +121,31 @@ describe('レビューの書き込み API（REVCMT）', () => {
     expect((await json(`/api/w/${id}/reviews`)).body).toEqual([{ login: 'alice', state: 'CHANGES_REQUESTED', submittedAt: expect.any(String) }]);
   });
 
+  it('[DD-REVCMT-PLACE-P001] [DD-REVCMT-POST-P003] PR の差分に無いファイルへのコメントはレビュー本文に含めて送る（GitHub はそのファイルへのコメントを受け付けない）', async () => {
+    const { json, id, state } = await setup();
+    const base = `/api/w/${id}/review`;
+    const added = await json(`${base}/comments`, send('POST', { anchor: { path: 'ddv.config.yaml', line: 1 }, body: 'この設定は？' }));
+    expect(added).toMatchObject({ status: 201, body: { placement: 'body', anchor: { path: 'ddv.config.yaml', line: 1 } } });
+    const r = await json(`${base}/submit`, send('POST', { event: 'COMMENT', body: '' }));
+    expect(r).toMatchObject({ status: 200, body: { posted: { line: 0, file: 0, body: 1 }, failed: [] } });
+    const review = state.requests.find((q) => q.method === 'POST' && q.path.endsWith('/pulls/12/reviews'))!;
+    expect(review.body.comments).toEqual([]);
+    expect(review.body.body).toContain('ddv.config.yaml');
+    expect(review.body.body).toContain('この設定は？');
+    expect(state.requests.some((q) => q.path.endsWith('/pulls/12/comments'))).toBe(false);
+    expect((await json(base)).body.comments).toEqual([]);
+  });
+
+  it('fixture: PR の差分に無いファイルへのファイルコメントは 422（GitHub の挙動）', async () => {
+    const { state } = await setup();
+    const res = await fakeGitHub(state)('https://api.github.test/repos/acme/order-app/pulls/12/comments', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${state.token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ commit_id: 'x', path: 'ddv.config.yaml', body: 'x', subject_type: 'file' }),
+    });
+    expect(res.status).toBe(422);
+  });
+
   it('[BD-GHREV-APPROVE-P002] Approve + status 連動：head ブランチへ 1 コミット → ワークスペースを新しい head に最新化 → 新しい head へ Approve', async () => {
     const { json, id, state, manager, up } = await setup();
     const base = `/api/w/${id}/review`;

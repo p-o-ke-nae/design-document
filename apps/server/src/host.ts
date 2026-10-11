@@ -235,7 +235,7 @@ export function createServerApp(opts: ServerAppOptions): Hono {
    * PATCH  /api/w/<ws>/review/comments/<id>        → 200 PendingComment            ({ body?, suggestion?, anchor? | path+element }; a new anchor → Pending)
    * DELETE /api/w/<ws>/review/comments/<id>        → 200 { ok: true }
    * POST   /api/w/<ws>/review/submit               → 200 SubmitResult              { event: COMMENT|APPROVE|REQUEST_CHANGES, body?, approveDocs?: string[] }
-   *   SubmitResult = { reviewId, reviewUrl, posted: { line, file }, failed: [{ id, message }], statusCommit?: { mode: 'commit', sha, paths } | { mode: 'suggestion', paths }, warnings?: string[] }
+   *   SubmitResult = { reviewId, reviewUrl, posted: { line, file, body }, failed: [{ id, message }], statusCommit?: { mode: 'commit', sha, paths } | { mode: 'suggestion', paths }, warnings?: string[] }
    *   422 drifted / body-required / body-too-long / invalid-event, 409 stale (head moved), GitHub's 422 on review creation (nothing is removed)
    * GET    /api/w/<ws>/reviews                     → 200 ReviewerState[] [{ login, state, submittedAt? }]
    * POST   /api/w/<ws>/pr/threads/<id>/replies     { body } → 201 ThreadComment

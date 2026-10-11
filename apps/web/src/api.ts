@@ -443,7 +443,7 @@ export interface PendingComment {
   body: string;
   suggestion?: string;
   state: 'Pending' | 'Drifted';
-  placement: 'line' | 'file';
+  placement: 'line' | 'file' | 'body';
   shrunk?: boolean;
   commitId: string;
   reason?: string;
@@ -465,7 +465,7 @@ export interface CommentInput {
 export interface SubmitResult {
   reviewId: number;
   reviewUrl: string;
-  posted: { line: number; file: number };
+  posted: { line: number; file: number; body?: number };
   failed: { id: string; message: string }[];
   statusCommit?: { mode: 'commit'; sha: string; paths: string[] } | { mode: 'suggestion'; paths: string[] };
   warnings?: string[];

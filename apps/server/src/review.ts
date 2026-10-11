@@ -12,7 +12,7 @@ import { setStatus, type StatusCommitter } from './status-commit.ts';
 import type { PullInfo } from './workspaces.ts';
 
 export type CommentState = 'Pending' | 'Drifted';
-export type Placement = 'line' | 'file';
+export type Placement = 'line' | 'file' | 'body';
 export type ReviewEvent = 'COMMENT' | 'APPROVE' | 'REQUEST_CHANGES';
 
 export interface Anchor {
@@ -48,7 +48,7 @@ export interface PendingReview {
 export interface SubmitResult {
   reviewId: number;
   reviewUrl: string;
-  posted: { line: number; file: number };
+  posted: { line: number; file: number; body: number };
   failed: { id: string; message: string }[];
   statusCommit?: { mode: 'commit'; sha: string; paths: string[] } | { mode: 'suggestion'; paths: string[] };
   warnings?: string[];
@@ -103,8 +103,9 @@ export interface ReviewServiceOptions {
   onChange?: (wsId: string) => void;
 }
 
-/** REVCMT PLACE: line comment inside a hunk, or a file comment. */
+/** REVCMT PLACE: line comment inside a hunk, a file comment, or (file outside the PR diff, which GitHub cannot attach to) part of the review body. */
 export function judgePlacement(hunks: Hunks | null, a: Pick<Anchor, 'side' | 'startLine' | 'line'>, hasSuggestion: boolean): { placement: Placement; shrunk: boolean } {
+  if (hunks && !hunks.changed) return { placement: 'body', shrunk: false };
   if (!hunks || !hunks.hunks.length) return { placement: 'file', shrunk: false };
   if (hunks.contains(a.side, a.startLine, a.line)) return { placement: 'line', shrunk: false };
   if (!hasSuggestion && hunks.contains(a.side, a.line, a.line)) return { placement: 'line', shrunk: true };
@@ -138,12 +139,19 @@ function quoteLines(a: Anchor): string {
 export function composeBody(c: PendingComment): string {
   const parts: string[] = [];
   if (c.anchor.element.kind === 'matrixRow') parts.push(`> ${c.anchor.element.key}: ${c.anchor.element.label}`);
-  if (c.placement === 'file') parts.push(quoteLines(c.anchor));
+  if (c.placement !== 'line') parts.push(quoteLines(c.anchor));
   parts.push(c.body);
   if (c.suggestion !== undefined && c.suggestion !== '') {
     parts.push(c.placement === 'line' && !c.shrunk ? fence(c.suggestion, 'suggestion') : `提案する変更:\n\n${fence(c.suggestion)}`);
   }
   return parts.join('\n\n');
+}
+
+/** Review body: the reviewer's text followed by the comments GitHub cannot attach to a file (outside the PR diff). */
+export function composeReviewBody(body: string, comments: PendingComment[]): string {
+  const parts = body.trim() ? [body] : [];
+  for (const c of comments) parts.push(`**\`${c.anchor.path}\`**\n\n${composeBody(c)}`);
+  return parts.join('\n\n---\n\n');
 }
 
 function checkBody(body: unknown): string {
@@ -402,18 +410,20 @@ export class ReviewService {
 
     const review = await this.load(ws);
     if (review.comments.some((c) => c.state === 'Drifted')) throw new ReviewError(422, 'drifted', '位置を確認していないコメントがあります');
-    if (event !== 'APPROVE' && !body.trim() && !review.comments.some((c) => c.placement === 'line')) {
+    if (event !== 'APPROVE' && !body.trim() && !review.comments.some((c) => c.placement !== 'file')) {
       throw new ReviewError(422, 'body-required', 'Comment / Request changes には本文が必要です');
     }
 
-    const result: SubmitResult = { reviewId: 0, reviewUrl: '', posted: { line: 0, file: 0 }, failed: [] };
+    const result: SubmitResult = { reviewId: 0, reviewUrl: '', posted: { line: 0, file: 0, body: 0 }, failed: [] };
     if (event === 'APPROVE' && docs.length) await this.approveStatus(ws, review, docs, result);
 
     const lineComments = review.comments.filter((c) => c.placement === 'line');
+    const bodyComments = review.comments.filter((c) => c.placement === 'body');
+    const reviewBody = composeReviewBody(body, bodyComments);
     const created = await this.opts.github.rest<{ id: number; html_url: string }>('POST', `/repos/${owner}/${repo}/pulls/${pr}/reviews`, {
       commit_id: ws.headSha,
       event,
-      ...(body.trim() ? { body } : {}),
+      ...(reviewBody ? { body: reviewBody } : {}),
       comments: lineComments.map((c) => ({
         path: c.anchor.path,
         body: composeBody(c),
@@ -425,7 +435,8 @@ export class ReviewService {
     result.reviewId = created.id;
     result.reviewUrl = created.html_url;
     result.posted.line = lineComments.length;
-    review.comments = review.comments.filter((c) => c.placement !== 'line');
+    result.posted.body = bodyComments.length;
+    review.comments = review.comments.filter((c) => c.placement === 'file');
     await this.save(ws, review);
 
     const files = [...review.comments];

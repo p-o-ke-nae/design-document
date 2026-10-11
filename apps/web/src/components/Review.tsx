@@ -197,7 +197,8 @@ function PendingItem({ c, onChanged }: { c: PendingComment; onChanged: () => voi
           L{a.startLine}
           {a.line > a.startLine ? `-${a.line}` : ''}
         </span>{' '}
-        <span className="badge">{c.placement === 'file' ? 'ファイルコメント' : '行コメント'}</span>
+        <span className="badge">{c.placement === 'line' ? '行コメント' : c.placement === 'file' ? 'ファイルコメント' : 'レビュー本文'}</span>
+        {c.placement === 'body' && <span className="muted">（PR の差分に無いファイルのため、レビュー本文に含めます）</span>}
         {c.shrunk && <span className="muted">（1 行に縮めました）</span>}
       </div>
       {drifted && (
@@ -390,6 +391,7 @@ export function DonePage({ lastDoc }: { lastDoc: string }) {
       <h2>{failed.length ? 'レビューを送信しました（一部のコメントは未投稿）' : 'レビューを送信しました'}</h2>
       <p data-testid="done-message">
         {EVENT_LABEL[event]} を送信しました（行コメント {result.posted?.line ?? 0} 件・ファイルコメント {result.posted?.file ?? 0} 件
+        {result.posted?.body ? `・本文に含めたコメント ${result.posted.body} 件` : ''}
         {failed.length ? `・失敗 ${failed.length} 件` : ''}）。
         {sc?.mode === 'commit' && ` status を approved にしました（コミット ${sc.sha.slice(0, 7)}・${sc.paths.length} 件）。`}
         {sc?.mode === 'suggestion' && ` status の更新は suggestion コメントとして追加しました（${sc.paths.length} 件）。`}

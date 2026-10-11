@@ -85,9 +85,10 @@ const posts = (state: ReturnType<typeof fakeGitHubState>, suffix: string) => sta
 
 describe('judgePlacement（PLACE）', () => {
   const h = Hunks.parse(PATCH);
-  it('[DD-REVCMT-PLACE-P001] [DD-REVCMT-PLACE-T001] [DD-REVCMT-PLACE-T002] file not changed in the PR → file', () => {
+  it('[DD-REVCMT-PLACE-P001] [DD-REVCMT-PLACE-T001] [DD-REVCMT-PLACE-T002] file with no diff → body; no merge-base information → file', () => {
     expect(judgePlacement(null, { side: 'RIGHT', startLine: 10, line: 10 }, false)).toEqual({ placement: 'file', shrunk: false });
-    expect(judgePlacement(Hunks.parse(''), { side: 'RIGHT', startLine: 10, line: 10 }, false).placement).toBe('file');
+    expect(judgePlacement(Hunks.parse(''), { side: 'RIGHT', startLine: 10, line: 10 }, false)).toEqual({ placement: 'body', shrunk: false });
+    expect(judgePlacement(Hunks.parse('diff --git a/x b/x\nBinary files differ\n'), { side: 'RIGHT', startLine: 10, line: 10 }, false).placement).toBe('file');
   });
   it('[DD-REVCMT-PLACE-P002] [DD-REVCMT-PLACE-T003] [DD-REVCMT-PLACE-T004] range inside one hunk → line (with start_line when multi-line)', () => {
     expect(judgePlacement(h, { side: 'RIGHT', startLine: 10, line: 12 }, true)).toEqual({ placement: 'line', shrunk: false });
@@ -172,7 +173,7 @@ describe('ReviewService.relocate（RELOC）', () => {
     const { svc, ws, patches } = await setup();
     const c = await addA(svc, ws);
     expect(c.placement).toBe('line');
-    patches[P] = '';
+    patches[P] = '@@ -1,1 +1,1 @@\n x\n';
     moveHead(ws);
     const r = await svc.relocate(ws, 'h2');
     expect(r.headSha).toBe('h2');
@@ -309,7 +310,7 @@ describe('ReviewService.submit（SUBMIT / POST）', () => {
     const c = await svc.add(ws, { anchor: { path: P, line: 18 }, body: 'c' });
     state.failOn.push({ match: 'POST /repos/acme/order-app/pulls/12/comments', skip: 1, status: 422, message: 'Validation Failed' });
     const r = await svc.submit(ws, 'COMMENT', '本文');
-    expect(r.posted).toEqual({ line: 0, file: 1 });
+    expect(r.posted).toEqual({ line: 0, file: 1, body: 0 });
     expect(r.failed.map((f) => f.id)).toEqual([b.id, c.id]);
     expect(r.failed[0].message).toContain('Validation Failed');
     expect((await svc.get(ws)).comments.map((x) => x.id)).toEqual([b.id, c.id]);
@@ -338,7 +339,7 @@ describe('ReviewService.submit: Approve 時の status 連動（APPROVE）', () =
   it('[BD-GHREV-SUBMIT-P002] [BD-GHREV-SUBMIT-T004] [BD-GHREV-SUBMIT-T005] [BD-GHREV-SUBMIT-T007] [BD-GHREV-APPROVE-P002] [BD-GHREV-APPROVE-T006] writable head branch → status commit, workspace refreshed, Approve on the new head (pending comments follow)', async () => {
     const { svc, ws, state, patches } = await setup();
     await svc.add(ws, { anchor: { path: P, line: 17 }, body: '図' });
-    patches[P] = '';
+    patches[P] = '@@ -1,1 +1,1 @@\n x\n';
     const r = await svc.submit(ws, 'APPROVE', '', [P]);
     const newHead = state.pulls['acme/order-app'][0].headSha;
     expect(newHead).not.toBe('h1');

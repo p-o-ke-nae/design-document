@@ -26,7 +26,8 @@ export interface Hunk {
 
 /** Parsed `git diff --unified=3` (REVCMT Hunks). RIGHT = `+c,d` (head), LEFT = `-a,b` (merge-base). */
 export class Hunks {
-  constructor(readonly hunks: Hunk[]) {}
+  /** `changed` = the diff text is not empty (a file outside the PR diff has no diff at all). */
+  constructor(readonly hunks: Hunk[], readonly changed: boolean = hunks.length > 0) {}
 
   static parse(unifiedDiff: string): Hunks {
     const hunks: Hunk[] = [];
@@ -50,7 +51,7 @@ export class Hunks {
       else if (t === '-') cur.lines.push({ type: '-', old: o++, new: n });
       else if (t !== '\\') cur = undefined;
     }
-    return new Hunks(hunks);
+    return new Hunks(hunks, unifiedDiff.trim() !== '');
   }
 
   /** Whether start..end fits inside one hunk on the given side. */
