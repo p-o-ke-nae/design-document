@@ -1687,3 +1687,138 @@ li.cmt-host > .cmt-btn {
   width: 100%;
   box-sizing: border-box;
 }
+
+/* test history / flaky / rerun */
+.dots {
+  display: inline-flex;
+  gap: 3px;
+  vertical-align: middle;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+}
+.dot-passed {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+.dot-failed {
+  background: var(--ng);
+  border-color: var(--ng);
+}
+.dot-error {
+  background: #f97316;
+  border-color: #f97316;
+}
+.dot-skipped {
+  background: #94a3b8;
+  border-color: #94a3b8;
+}
+.flaky-mark {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.rerun-panel {
+  margin: 8px 0;
+}
+.rerun-panel .log {
+  max-height: 200px;
+  overflow: auto;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 8px;
+  font-size: 12px;
+}
+.test-history tr.changed td {
+  background: #fffbeb;
+}
+.test-history tr.first-failure td:first-child {
+  border-left: 3px solid var(--ng);
+}
+.coverage-badge {
+  font-size: 12px;
+  color: #475569;
+  white-space: nowrap;
+}
+.cov-chip {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 6px;
+  font-size: 11px;
+  border: 1px solid #cbd5e1;
+}
+.cov-chip.cov-passed {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+.cov-chip.cov-failed {
+  background: var(--ng-bg);
+  color: var(--ng);
+}
+.cov-chip.cov-skipped {
+  background: #e2e8f0;
+}
+.cov-chip.cov-unlinked {
+  border: 1px dashed #f97316;
+  color: #c2410c;
+}
+/* design coverage on diagrams */
+svg g.node.ddv-cov-passed rect,
+svg g.node.ddv-cov-passed polygon,
+svg g.node.ddv-cov-passed circle {
+  fill: #bbf7d0 !important;
+  stroke: #16a34a !important;
+}
+svg g.node.ddv-cov-failed rect,
+svg g.node.ddv-cov-failed polygon,
+svg g.node.ddv-cov-failed circle {
+  fill: #fecaca !important;
+  stroke: #dc2626 !important;
+}
+svg g.node.ddv-cov-skipped rect,
+svg g.node.ddv-cov-skipped polygon,
+svg g.node.ddv-cov-skipped circle {
+  fill: #e2e8f0 !important;
+  stroke: #64748b !important;
+}
+svg g.node.ddv-cov-unexecuted rect,
+svg g.node.ddv-cov-unexecuted polygon,
+svg g.node.ddv-cov-unexecuted circle {
+  fill: #fff !important;
+  stroke: #94a3b8 !important;
+}
+svg g.node.ddv-cov-unlinked rect,
+svg g.node.ddv-cov-unlinked polygon,
+svg g.node.ddv-cov-unlinked circle {
+  fill: #fff !important;
+  stroke: #f97316 !important;
+  stroke-dasharray: 4 3;
+}
+svg path.ddv-cov-passed {
+  stroke: #16a34a !important;
+  stroke-width: 2.5px !important;
+}
+svg path.ddv-cov-failed {
+  stroke: #dc2626 !important;
+  stroke-width: 2.5px !important;
+}
+svg path.ddv-cov-skipped {
+  stroke: #64748b !important;
+}
+svg path.ddv-cov-unexecuted {
+  stroke: #94a3b8 !important;
+}
+svg path.ddv-cov-unlinked {
+  stroke: #f97316 !important;
+  stroke-dasharray: 5 3;
+}

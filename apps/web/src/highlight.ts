@@ -44,7 +44,8 @@ export function findEdgeElements(svg: SVGSVGElement, graph: Graph, edgeIndex: nu
   return out.flatMap((el) => (el.parentElement?.classList.contains('edgeLabel') ? [el, el.parentElement] : [el]));
 }
 
-const MARKS = ['ddv-hl', 'ddv-hl-last', 'ddv-diff-added', 'ddv-diff-removed', 'ddv-diff-changed', 'ddv-pair-hl'];
+const COVERAGE_MARKS = ['ddv-cov-passed', 'ddv-cov-failed', 'ddv-cov-skipped', 'ddv-cov-unexecuted', 'ddv-cov-unlinked'];
+const MARKS = ['ddv-hl', 'ddv-hl-last', 'ddv-diff-added', 'ddv-diff-removed', 'ddv-diff-changed', 'ddv-pair-hl', ...COVERAGE_MARKS];
 
 export type HoverTarget = { type: 'node'; id: string } | { type: 'edge'; index: number };
 
@@ -116,4 +117,9 @@ export function applyPathHighlight(svg: SVGSVGElement, graph: Graph, path: { edg
 export function applyDiff(svg: SVGSVGElement, graph: Graph, side: { nodes: Record<string, string>; edges: Record<number, string> }) {
   for (const [n, st] of Object.entries(side.nodes)) findNodeElements(svg, graph, n).forEach((e) => e.classList.add(`ddv-diff-${st}`));
   for (const [i, st] of Object.entries(side.edges)) findEdgeElements(svg, graph, Number(i)).forEach((e) => e.classList.add(`ddv-diff-${st}`));
+}
+
+export function applyCoverage(svg: SVGSVGElement, graph: Graph, cov: { nodes: Record<string, string>; edges: Record<number, string> }) {
+  for (const [n, c] of Object.entries(cov.nodes)) findNodeElements(svg, graph, n).forEach((e) => e.classList.add(`ddv-cov-${c}`));
+  for (const [i, c] of Object.entries(cov.edges)) findEdgeElements(svg, graph, Number(i)).forEach((e) => e.classList.add(`ddv-cov-${c}`));
 }

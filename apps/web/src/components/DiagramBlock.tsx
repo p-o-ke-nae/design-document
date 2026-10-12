@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useReducer, useState } from 'react';
 import { diffGraphs, pathsThrough } from '@ddv/graph';
 import type { DiagramBlock as Diagram, DocResponse, GraphDiff, Matrix, MatrixCase } from '../api.ts';
 import type { HoverTarget } from '../highlight.ts';
+import { coverageReducer, initialCoverageMode } from '../coverage.ts';
+import { DiagramCoverageBadge, useCoverage } from './CoverageBadge.tsx';
 import { useApp } from '../state.tsx';
 import { useMockHub } from '../mockHub.tsx';
 import { MermaidView } from './MermaidView.tsx';
@@ -22,13 +24,25 @@ export function DiagramBlock({ doc, diagram }: { doc: DocResponse; diagram: Diag
   const pr = usePr();
   const prd = pr?.diffOn && pr.diff?.path === doc.path ? pr.diff.diagrams[diagram.id] : undefined;
   const prCompare = prd?.change === 'changed' && prd.before && prd.diff ? { before: prd.before, diff: prd.diff, beforeId: prd.beforeId ?? diagram.id } : null;
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelectedRaw] = useState<string | null>(null);
+  const [covMode, dispatchCov] = useReducer(coverageReducer, initialCoverageMode);
+  const coverage = useCoverage();
+  const elementCov = coverage?.elements[diagram.id];
+  const setSelected = (id: string | null) => {
+    if (id) dispatchCov('select');
+    setSelectedRaw(id);
+  };
   const [localMatrix, setLocalMatrix] = useState<boolean | null>(null);
   const [showDiff, setShowDiff] = useState(true);
   const matrixVisible = localMatrix ?? showMatrix;
   const sel: MatrixCase | undefined = matrix?.cases.find((c) => c.id === selected);
   const play = useMockHub()?.highlights[diagram.id];
   const highlight = useMemo(() => (sel ? { edges: sel.edges, nodes: sel.nodes } : play ? { edges: play.edges, nodes: play.nodes } : null), [sel, play]);
+  // A mock replay highlights the path, so it turns the coverage view off.
+  useEffect(() => {
+    if (play) dispatchCov('select');
+  }, [play]);
+  const showCoverage = covMode === 'coverage' && !!elementCov;
 
   const before = diff ? doc.diagrams.find((d) => d.id === diff.compare) : undefined;
   const beforeGraph = before ? doc.graphs[before.id] : undefined;
@@ -122,6 +136,21 @@ export function DiagramBlock({ doc, diagram }: { doc: DocResponse; diagram: Diag
           マトリクス
         </label>
       )}
+      {elementCov && (
+        <label className="toggle" title="最新の結果で図の遷移とノードを色分けします（経路の強調は解除されます）">
+          <input
+            type="checkbox"
+            checked={covMode === 'coverage'}
+            onChange={(e) => {
+              dispatchCov(e.target.checked ? 'show' : 'hide');
+              if (e.target.checked) setSelectedRaw(null);
+            }}
+            data-testid="coverage-toggle"
+          />
+          カバレッジを表示
+        </label>
+      )}
+      <DiagramCoverageBadge diagramId={diagram.id} />
       {diff && (
         <>
           <label className="toggle">
@@ -143,7 +172,8 @@ export function DiagramBlock({ doc, diagram }: { doc: DocResponse; diagram: Diag
     <MermaidView
       code={diagram.code}
       graph={graph}
-      highlight={highlight}
+      highlight={showCoverage ? null : highlight}
+      coverage={showCoverage ? elementCov : null}
       diff={prCompare ? prCompare.diff.after : diff && showDiff ? diff.after : null}
       toolbar={toolbar}
       line={diagram.line}

@@ -48,6 +48,13 @@ export const ConfigSchema = z.object({
         .prefault({}),
     })
     .prefault({}),
+  /** Retention of test run records and traces (0 = unlimited). */
+  history: z
+    .object({
+      maxRuns: z.number().int().min(0).default(200),
+      maxTraceRuns: z.number().int().min(0).default(20),
+    })
+    .prefault({}),
 });
 
 export type DdvConfig = z.infer<typeof ConfigSchema>;

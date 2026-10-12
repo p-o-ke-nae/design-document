@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import mermaid from 'mermaid';
 import type { Graph } from '../api.ts';
-import { applyDiff, applyPairHighlight, applyPathHighlight, clearMarks, clearPairHighlight, targetFromElement, type HoverTarget } from '../highlight.ts';
+import { applyCoverage, applyDiff, applyPairHighlight, applyPathHighlight, clearMarks, clearPairHighlight, targetFromElement, type HoverTarget } from '../highlight.ts';
 
 mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'default', fontFamily: 'inherit' });
 
@@ -24,6 +24,8 @@ export interface MermaidViewProps {
   related?: { edges: number[]; nodes: string[] } | null;
   /** Right-click: pin/unpin the element under the pointer (null for empty space). */
   onContext?: (t: HoverTarget | null) => void;
+  /** Coverage classes per element (`ddv-cov-<class>`); never combined with the path highlight. */
+  coverage?: { nodes: Record<string, string>; edges: Record<number, string> } | null;
 }
 
 const MIN = 0.2;
@@ -33,7 +35,7 @@ const MAX_H = 560;
 /** Minimum initial scale so labels stay legible; wider diagrams are panned instead. */
 const READABLE = 0.6;
 
-export function MermaidView({ code, graph, highlight, diff, toolbar, caption, line, diagramId, onHover, pairTarget, related, onContext }: MermaidViewProps) {
+export function MermaidView({ code, graph, highlight, diff, toolbar, caption, line, diagramId, onHover, pairTarget, related, onContext, coverage }: MermaidViewProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState('');
@@ -131,9 +133,10 @@ export function MermaidView({ code, graph, highlight, diff, toolbar, caption, li
     if (!el || !graph) return;
     clearMarks(el);
     if (diff) applyDiff(el, graph, diff);
-    if (highlight) applyPathHighlight(el, graph, highlight);
+    if (coverage) applyCoverage(el, graph, coverage);
+    else if (highlight) applyPathHighlight(el, graph, highlight);
     else if (related) applyPathHighlight(el, graph, related, false);
-  }, [svg, graph, highlight, diff, related]);
+  }, [svg, graph, highlight, diff, related, coverage]);
 
   useEffect(() => {
     const el = svgEl();

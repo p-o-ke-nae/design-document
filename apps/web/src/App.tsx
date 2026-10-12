@@ -4,6 +4,8 @@ import { AppProvider, docHref, useApp, viewHref } from './state.tsx';
 import { DocTree } from './components/DocTree.tsx';
 import { DocPage } from './components/DocPage.tsx';
 import { TestsPage } from './components/TestsPage.tsx';
+import { TestHistoryView } from './components/TestHistory.tsx';
+import { FlakyList } from './components/FlakyList.tsx';
 import { StatusBadge } from './components/StatusBadge.tsx';
 import { DepsDialog, LoadingPage, OpenPage, PrBar, TopBar, TrustDialog, WorkspaceBar, WorkspaceProvider, useWorkspaces } from './components/Workspace.tsx';
 import { PrProvider } from './components/Pr.tsx';
@@ -61,7 +63,23 @@ function ShellBody() {
           <aside className="left">
             <DocTree />
           </aside>
-          <main className="main">{route.view === 'tests' ? <TestsPage /> : route.view === 'review' ? <ReviewPage lastDoc={lastDoc.current} /> : route.view === 'done' ? <DonePage lastDoc={lastDoc.current} /> : <DocPage />}</main>
+          <main className="main">
+            {route.view === 'tests' ? (
+              route.sub === 'history' ? (
+                <TestHistoryView id={route.testId ?? ''} />
+              ) : route.sub === 'flaky' ? (
+                <FlakyList />
+              ) : (
+                <TestsPage />
+              )
+            ) : route.view === 'review' ? (
+              <ReviewPage lastDoc={lastDoc.current} />
+            ) : route.view === 'done' ? (
+              <DonePage lastDoc={lastDoc.current} />
+            ) : (
+              <DocPage />
+            )}
+          </main>
         </div>
         <CommentComposer />
       </ErrorBoundary>

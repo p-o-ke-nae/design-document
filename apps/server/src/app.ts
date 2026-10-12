@@ -10,7 +10,8 @@ import { activeIds, docMatrices, generateAll, readLock, scanTestLinks, LOCK_PATH
 import { checkMocks, scaffoldMock } from '@ddv/mock';
 import { build as buildSuggestion, locate as locateMockElement, NO_SOURCE_MESSAGE, TuneError } from '@ddv/mock/tune';
 import { validatePatch } from '@ddv/mock/tune-patch';
-import { RunManager, RUNS_DIR, type RunEvent } from './runs.ts';
+import { RerunError, RunManager, RUNS_DIR, type RunEvent, type RunRecord } from './runs.ts';
+import { HistoryError, HistoryService } from './history.ts';
 import { checkDeps, installDeps } from './deps.ts';
 import { listScenarios, recordPlay, scenarioDetail } from './scenarios.ts';
 import { checkId, SnapshotError, SnapshotService, SNAPSHOTS_DIR, type SnapKind } from './snapshots.ts';
@@ -42,6 +43,7 @@ export interface ServerContext {
   repoRoot: string;
   config: DdvConfig;
   runs: RunManager;
+  history: HistoryService;
   snapshots: SnapshotService;
   events: EventEmitter;
   /** GitHub workspaces: refuse test runs (409 deps-missing) until the runners' packages are installed. */
@@ -56,6 +58,7 @@ export async function createContext(repoRoot: string, opts: { watch?: boolean; s
     repoRoot: root,
     config: await loadConfig(root),
     runs: undefined as unknown as RunManager,
+    history: undefined as unknown as HistoryService,
     snapshots: undefined as unknown as SnapshotService,
     events: new EventEmitter(),
     close: () => {},
@@ -63,8 +66,10 @@ export async function createContext(repoRoot: string, opts: { watch?: boolean; s
   ctx.events.setMaxListeners(100);
   ctx.runs = new RunManager(root, () => ctx.config);
   ctx.runs.setMaxListeners(100);
+  ctx.history = new HistoryService(ctx.runs, root, () => ctx.config);
   ctx.snapshots = new SnapshotService(root, () => ctx.config, opts.snapshots);
   await ctx.runs.load();
+  await ctx.runs.prune();
   if (opts.watch !== false) {
     let watcher: FSWatcher | null = null;
     const pending = new Set<string>();
@@ -230,7 +235,51 @@ export function createApp(ctx: ServerContext): Hono {
     }
   });
 
-  app.get('/api/runs', (c) => c.json(ctx.runs.list().map(({ log: _log, ...r }) => ({ ...r, total: Object.keys(r.results).length }))));
+  app.post('/api/tests/rerun', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { times?: unknown };
+    const times = body.times;
+    if (typeof times !== 'number' || !Number.isInteger(times) || times < 1 || times > 5) {
+      const e = new RerunError('times-invalid');
+      return c.json({ error: e.message, code: e.code }, 400);
+    }
+    if (ctx.runs.activeTask('deps')) return c.json({ error: '依存の導入が進行中です。終わってから実行してください', code: 'deps-installing' }, 409);
+    if (ctx.checkDeps) {
+      const all = checkDeps(root, ctx.config);
+      if (all.targets.length) return c.json({ error: 'テストの実行に必要な依存が導入されていません', code: 'deps-missing', deps: { ...all, needed: true } }, 409);
+    }
+    try {
+      const run = ctx.runs.rerun(times);
+      return c.json({ id: run.id, status: run.status, rerunOf: run.rerunOf, attempt: run.attempt, times: run.times }, 202);
+    } catch (e) {
+      if (e instanceof RerunError) return c.json({ error: e.message, code: e.code }, e.code === 'times-invalid' ? 400 : 409);
+      return c.json({ error: (e as Error).message }, 409);
+    }
+  });
+
+  app.get('/api/history/summary', async (c) => c.json(await ctx.history.summary()));
+
+  app.get('/api/history/flaky', async (c) => c.json(await ctx.history.flaky()));
+
+  app.get('/api/history/tests/:id', async (c) => {
+    try {
+      return c.json(await ctx.history.test(c.req.param('id')));
+    } catch (e) {
+      if (e instanceof HistoryError) return c.json({ error: e.message, code: e.code }, e.status);
+      throw e;
+    }
+  });
+
+  app.get('/api/coverage', async (c) => {
+    const p = c.req.query('path');
+    if (!p) return c.json({ error: 'path is required' }, 400);
+    try {
+      return c.json(await ctx.history.coverage(p));
+    } catch {
+      return c.json({ error: `文書が見つかりません: ${p}`, code: 'not-found' }, 404);
+    }
+  });
+
+  app.get('/api/runs', (c) => c.json(ctx.runs.list().map(({ log: _log, traces: _traces, ...r }) => ({ ...r, total: Object.keys(r.results).length }))));
 
   app.get('/api/deps', (c) => c.json(checkDeps(root, ctx.config)));
 
@@ -299,13 +348,17 @@ export function createApp(ctx: ServerContext): Hono {
       await new Promise<void>((resolve) => {
         const onChange = (paths: string[]) => void stream.writeSSE({ event: 'change', data: JSON.stringify(paths) });
         const onEnd = (id: string, run?: { kind?: string }) => void stream.writeSSE({ event: 'run-end', data: JSON.stringify({ id, kind: run?.kind ?? 'test' }) });
+        const onRun = (id: string, run: RunRecord) =>
+          void stream.writeSSE({ event: 'run', data: JSON.stringify({ id, kind: 'test', rerunOf: run.rerunOf, attempt: run.attempt, times: run.times }) });
         const ping = setInterval(() => void stream.writeSSE({ event: 'ping', data: '' }), 25000);
         ctx.events.on('change', onChange);
         ctx.runs.on('end', onEnd);
+        ctx.runs.on('run', onRun);
         stream.onAbort(() => {
           clearInterval(ping);
           ctx.events.off('change', onChange);
           ctx.runs.off('end', onEnd);
+          ctx.runs.off('run', onRun);
           resolve();
         });
       });

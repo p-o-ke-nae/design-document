@@ -11,7 +11,7 @@ export default defineConfig({
   reporter: [['list']],
   use: { baseURL: `http://127.0.0.1:${PORT}`, viewport: { width: 1440, height: 960 } },
   webServer: {
-    command: `npx vite build apps/web && npx tsx apps/server/src/cli.ts serve --repo examples/sample-app --port ${PORT}`,
+    command: `npx tsx e2e/seed-history.ts && npx vite build apps/web && npx tsx apps/server/src/cli.ts serve --repo examples/sample-app --port ${PORT}`,
     url: `http://127.0.0.1:${PORT}/api/config`,
     timeout: 120_000,
     reuseExistingServer: false,

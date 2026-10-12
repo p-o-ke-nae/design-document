@@ -26,7 +26,7 @@ export interface ServerAppOptions {
 }
 
 /** POSTs that run code from the workspace; refused until the workspace is trusted. */
-const EXEC_PATHS = new Set(['/api/tests/run', '/api/snapshots/run', '/api/deps/install']);
+const EXEC_PATHS = new Set(['/api/tests/run', '/api/tests/rerun', '/api/snapshots/run', '/api/deps/install']);
 
 const GITHUB_STATUS: Record<GitHubError['kind'], 401 | 403 | 404 | 422 | 429 | 502> = {
   auth: 401,

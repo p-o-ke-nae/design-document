@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
-import { api, type Matrix, type MatrixCase } from '../api.ts';
-import { useApp } from '../state.tsx';
+import { api, type CoverageClass, type Matrix, type MatrixCase, type TestSummary } from '../api.ts';
+import { historyHref, useApp } from '../state.tsx';
+import { useCoverage } from './CoverageBadge.tsx';
+import { FlakyMark } from './TestHistory.tsx';
 import { useMockHub } from '../mockHub.tsx';
 import { StatusBadge } from './StatusBadge.tsx';
 import { CommentGutter } from './Review.tsx';
@@ -8,9 +10,11 @@ import { CommentGutter } from './Review.tsx';
 type Tab = 'all' | 'P' | 'T' | 'S' | 'X' | 'table';
 
 const KIND_LABEL: Record<string, string> = { P: '経路', T: '遷移', S: 'Nスイッチ', X: '不正遷移' };
+const COVERAGE_LABEL: Record<CoverageClass, string> = { passed: '成功', failed: '失敗', skipped: 'スキップ', unexecuted: '未実行', unlinked: '未紐づけ' };
 
 export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; selected: string | null; onSelect(id: string | null): void }) {
-  const { latest, runTests, activeRun } = useApp();
+  const { latest, runTests, activeRun, history } = useApp();
+  const coverage = useCoverage();
   const hub = useMockHub();
   const [tab, setTab] = useState<Tab>('all');
   const [checked, setChecked] = useState<Set<string>>(new Set());
@@ -109,6 +113,8 @@ export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; se
                   onCheck={() => toggle(c.id)}
                   onSelect={() => onSelect(selected === c.id ? null : c.id)}
                   result={latest[c.id]}
+                  coverage={coverage?.cases[c.id]}
+                  summary={history?.tests[c.id]}
                   running={running}
                   onRun={() => run([c.id])}
                   onPlayMock={
@@ -152,6 +158,8 @@ function MatrixRow({
   onRun,
   onPlayMock,
   doc,
+  coverage,
+  summary,
 }: {
   c: MatrixCase;
   doc: string;
@@ -163,7 +171,10 @@ function MatrixRow({
   running: boolean;
   onRun(): void;
   onPlayMock?: () => void;
+  coverage?: CoverageClass;
+  summary?: TestSummary;
 }) {
+  const executed = !!result || !!summary?.recent.some((m) => m !== 'none');
   return (
     <tr className={`${selected ? 'is-selected' : ''}`} onClick={onSelect} data-testid="matrix-row" data-test-id={c.id}>
       <td onClick={(e) => e.stopPropagation()}>
@@ -193,7 +204,15 @@ function MatrixRow({
           <span className="muted">未実装</span>
         )}
       </td>
-      <td>{result ? <StatusBadge status={result.status} title={result.message} /> : <span className="muted">-</span>}</td>
+      <td className="nowrap">
+        {result ? <StatusBadge status={result.status} title={result.message} /> : <span className="muted">-</span>}
+        {coverage && (
+          <span className={`cov-chip cov-${coverage}`} data-testid="matrix-coverage" data-class={coverage} title="設計カバレッジの分類">
+            {COVERAGE_LABEL[coverage]}
+          </span>
+        )}
+        {summary?.flaky && <span data-testid="matrix-flaky"><FlakyMark commits={summary.flakyCommits} /></span>}
+      </td>
       <td onClick={(e) => e.stopPropagation()}>
         <button type="button" className="run" disabled={!c.links.length || running} onClick={onRun} data-testid="run-case" title={c.links.length ? 'このテストを実行' : '紐づくテストがありません'}>
           ▶ 実行
@@ -203,6 +222,9 @@ function MatrixRow({
             ▶ モック
           </button>
         )}
+        <button type="button" className="run" disabled={!executed} onClick={() => (location.hash = historyHref(c.id))} data-testid="matrix-history" title={executed ? 'このテストIDの履歴' : 'まだ実行していません'}>
+          履歴
+        </button>
         <CommentGutter inline path={doc} element={{ kind: 'matrixRow', key: c.id, label: c.title }} />
       </td>
     </tr>

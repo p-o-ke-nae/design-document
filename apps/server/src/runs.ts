@@ -5,6 +5,8 @@ import type { DdvConfig } from '@ddv/core';
 import { safeJoin } from '@ddv/core/node';
 import { idPattern, scanTestLinks, type TestLink } from '@ddv/testid';
 import { executeRunner, type CaseResult } from './runner.ts';
+import { RepoStateReader } from './repo-state.ts';
+import { Pruner, TRACES_DIR, traceDirs, type PrunePlan } from './prune.ts';
 
 export interface RunRequest {
   ids?: string[];
@@ -38,6 +40,43 @@ export interface RunRecord {
   log: string[];
   /** Custom SSE events of task runs (replayed to late subscribers). */
   events?: RunEvent[];
+  /** HEAD at the start of the run; absent = unknown (not git / git missing). */
+  commit?: string;
+  /** Uncommitted changes outside `.ddv/` at the start (present together with `commit`). */
+  dirty?: boolean;
+  /** Re-runs: the run whose failures are re-run (same for every attempt). */
+  rerunOf?: string;
+  /** Re-runs: 1-based attempt. */
+  attempt?: number;
+  /** Re-runs: number of attempts requested. */
+  times?: number;
+  /** Test ids whose trace was written in this run (kept after the traces are pruned). */
+  traces?: string[];
+}
+
+export interface RerunSession {
+  originId: string;
+  ids: string[];
+  times: number;
+  attempt: number;
+}
+
+export type RerunErrorCode = 'no-failures' | 'times-invalid';
+
+export class RerunError extends Error {
+  constructor(
+    readonly code: RerunErrorCode,
+    message = code === 'no-failures' ? '直近の実行に失敗したテストはありません' : 'times は 1〜5 の整数です',
+  ) {
+    super(message);
+    this.name = 'RerunError';
+  }
+}
+
+export const BUSY_MESSAGE = '別のテスト実行が進行中です';
+
+export interface RunManagerOptions {
+  repoState?: RepoStateReader;
 }
 
 export const RUNS_DIR = '.ddv/runs';
@@ -45,12 +84,16 @@ export const RUNS_DIR = '.ddv/runs';
 export class RunManager extends EventEmitter {
   runs = new Map<string, RunRecord>();
   active: RunRecord | null = null;
+  rerunSession: RerunSession | null = null;
+  private repoState: RepoStateReader;
 
   constructor(
     private repoRoot: string,
     private getConfig: () => DdvConfig,
+    opts: RunManagerOptions = {},
   ) {
     super();
+    this.repoState = opts.repoState ?? new RepoStateReader();
   }
 
   async load(): Promise<void> {
@@ -60,7 +103,13 @@ export class RunManager extends EventEmitter {
       if (!f.endsWith('.json')) continue;
       try {
         const r = JSON.parse(await fs.readFile(path.join(dir, f), 'utf8')) as RunRecord;
+        if (!r || typeof r !== 'object' || typeof r.id !== 'string' || typeof r.startedAt !== 'string') continue;
+        r.results ??= {};
+        r.log ??= [];
+        r.runners ??= [];
+        r.request ??= {};
         if (r.status === 'running') r.status = 'error';
+        // A record without `commit` is registered as is (= unknown commit, REQ-309) and never written back.
         this.runs.set(r.id, r);
       } catch {
         /* ignore broken files */
@@ -87,13 +136,47 @@ export class RunManager extends EventEmitter {
   }
 
   start(req: RunRequest): RunRecord {
-    if (this.active) throw new Error('別のテスト実行が進行中です');
-    const now = new Date();
-    const id = now.toISOString().replace(/[-:.TZ]/g, '').slice(0, 17) + '-' + Math.random().toString(36).slice(2, 6);
-    const run: RunRecord = { id, kind: 'test', startedAt: now.toISOString(), status: 'running', request: req, runners: [], results: {}, log: [] };
-    this.runs.set(id, run);
+    if (this.active || this.rerunSession) throw new Error(BUSY_MESSAGE);
+    const run = this.newRun(req);
     this.active = run;
     void this.execute(run);
+    return run;
+  }
+
+  /** Re-runs the failures of the latest test run `times` times in a row (DD-RUNREC-RERUN). Returns the first attempt. */
+  rerun(times: number): RunRecord {
+    if (!Number.isInteger(times) || times < 1 || times > 5) throw new RerunError('times-invalid');
+    if (this.active || this.rerunSession) throw new Error(BUSY_MESSAGE);
+    const ids = this.failedIdsOfLatest();
+    if (!ids.length) throw new RerunError('no-failures');
+    const head = this.list()[0];
+    const originId = head.rerunOf ?? head.id;
+    this.rerunSession = { originId, ids, times, attempt: 1 };
+    const run = this.newRun({ ids }, { rerunOf: originId, attempt: 1, times });
+    this.active = run;
+    void this.execute(run);
+    return run;
+  }
+
+  /** Failed / error ids of the latest test run; when that is a re-run, of the run it re-ran. */
+  failedIdsOfLatest(): string[] {
+    const head = this.list()[0];
+    if (!head) return [];
+    const origin = head.rerunOf ? (this.runs.get(head.rerunOf) ?? head) : head;
+    return Object.entries(origin.results)
+      .filter(([, r]) => r.status === 'failed' || r.status === 'error')
+      .map(([id]) => id);
+  }
+
+  private newRun(request: RunRequest, rerun?: { rerunOf: string; attempt: number; times: number }): RunRecord {
+    const now = new Date();
+    let id = now.toISOString().replace(/[-:.TZ]/g, '').slice(0, 17) + '-' + Math.random().toString(36).slice(2, 6);
+    while (this.runs.has(id)) id = id.slice(0, -4) + Math.random().toString(36).slice(2, 6);
+    // startedAt strictly increases so that attempts started in the same millisecond keep their order in list().
+    const last = this.list()[0]?.startedAt;
+    const at = last && last >= now.toISOString() ? new Date(Date.parse(last) + 1) : now;
+    const run: RunRecord = { id, kind: 'test', startedAt: at.toISOString(), status: 'running', request, runners: [], results: {}, log: [], ...rerun };
+    this.runs.set(id, run);
     return run;
   }
 
@@ -143,6 +226,8 @@ export class RunManager extends EventEmitter {
   private async execute(run: RunRecord) {
     const config = this.getConfig();
     try {
+      const state = await this.repoState.read(this.repoRoot);
+      if (state) Object.assign(run, { commit: state.commit, dirty: state.dirty });
       const links: TestLink[] = await scanTestLinks(this.repoRoot, config);
       const idRe = idPattern(Object.values(config.idPrefix));
       const requested = run.request.ids?.length ? run.request.ids : null;
@@ -182,13 +267,60 @@ export class RunManager extends EventEmitter {
       this.log(run, `! ${(e as Error).stack ?? e}`);
     }
     run.finishedAt = new Date().toISOString();
+    await this.finish(run);
+  }
+
+  /** Lists the run's traces, saves, prunes, then hands over to the next re-run attempt or releases `active`. */
+  private async finish(run: RunRecord) {
+    try {
+      const dir = safeJoin(this.repoRoot, `${TRACES_DIR}/${run.id}`);
+      if (existsSync(dir)) {
+        const ids = (await fs.readdir(dir)).filter((f) => f.endsWith('.json')).map((f) => f.slice(0, -'.json'.length));
+        if (ids.length) run.traces = ids.sort();
+      }
+    } catch {
+      /* no traces */
+    }
     try {
       await this.save(run);
     } catch (e) {
       this.log(run, `! 実行結果を保存できませんでした: ${(e as Error).message}`);
     }
+    await this.prune(run);
+    const session = this.rerunSession;
+    if (session && run.rerunOf === session.originId && session.attempt < session.times) {
+      session.attempt++;
+      // `active` is never empty between attempts so that no other run can start.
+      const next = this.newRun({ ids: session.ids }, { rerunOf: session.originId, attempt: session.attempt, times: session.times });
+      this.active = next;
+      this.emit('end', run.id, run);
+      this.emit('run', next.id, next);
+      void this.execute(next);
+      return;
+    }
+    if (session) this.rerunSession = null;
     // Release before notifying so listeners can start the next run immediately.
     if (this.active === run) this.active = null;
     this.emit('end', run.id, run);
+  }
+
+  /** Deletes records / traces over the `history` limits (after each save and once after `load`). Failures are logged and retried next time. */
+  async prune(run?: RunRecord): Promise<PrunePlan> {
+    let p: PrunePlan;
+    try {
+      p = Pruner.plan(this.list(), await traceDirs(this.repoRoot), this.getConfig().history);
+    } catch {
+      return { runs: [], traces: [] };
+    }
+    if (!p.runs.length && !p.traces.length) return p;
+    try {
+      await Pruner.apply(this.repoRoot, p, RUNS_DIR);
+    } catch (e) {
+      const line = `! 古い実行記録を削除できませんでした: ${(e as Error).message}`;
+      if (run) this.log(run, line);
+      else console.warn(`[ddv] ${line}`);
+    }
+    for (const id of p.runs) if (!existsSync(safeJoin(this.repoRoot, `${RUNS_DIR}/${id}.json`))) this.runs.delete(id);
+    return p;
   }
 }

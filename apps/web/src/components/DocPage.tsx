@@ -7,6 +7,7 @@ import { Toc } from './Toc.tsx';
 import { MermaidView } from './MermaidView.tsx';
 import { ChangeMark, ThreadView, usePr } from './Pr.tsx';
 import type { ReviewMarks } from '../remark-review.ts';
+import { CoverageProvider, DocCoverageBadge } from './CoverageBadge.tsx';
 
 const KIND: Record<string, string> = { requirements: '要件定義', basic: '基本設計', detailed: '詳細設計', other: 'ドキュメント' };
 
@@ -67,12 +68,14 @@ export function DocPage() {
           if (el !== root) setRoot(el);
         }}
       >
+        <CoverageProvider path={doc.path}>
         <article className="doc" data-testid="doc">
           <div className="doc-meta">
             <span className="chip">{KIND[doc.kind] ?? doc.kind}</span>
             <code>{doc.id}</code>
             <span className={`status st-doc-${doc.status}`}>{doc.status}</span>
             <span className="muted">{doc.path}</span>
+            <DocCoverageBadge />
             {doc.traces.length > 0 && (
               <span className="traces" data-testid="traces">
                 トレース:{' '}
@@ -116,6 +119,7 @@ export function DocPage() {
             <Markdown text={doc.text} basePath={doc.path} doc={doc} review={review} />
           </MockHubProvider>
         </article>
+        </CoverageProvider>
       </div>
       <aside className="side">
         <Toc headings={doc.headings} scrollRoot={root} />

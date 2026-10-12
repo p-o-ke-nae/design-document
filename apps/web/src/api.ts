@@ -109,6 +109,83 @@ export interface RunSummary {
   results: Record<string, CaseResult>;
   total: number;
   log?: string[];
+  kind?: string;
+  commit?: string;
+  dirty?: boolean;
+  rerunOf?: string;
+  attempt?: number;
+  times?: number;
+  traces?: string[];
+}
+
+export type RecentMark = TestStatus | 'none';
+export type CoverageClass = 'unlinked' | 'unexecuted' | 'passed' | 'failed' | 'skipped';
+
+export interface TestSummary {
+  recent: RecentMark[];
+  recentAt: Array<{ at: string; commit?: string; dirty?: boolean } | null>;
+  flaky: boolean;
+  flakyCommits: string[];
+}
+
+export interface HistorySummary {
+  tests: Record<string, TestSummary>;
+  flakyCount: number;
+  rerunnable: number;
+}
+
+export interface HistoryEntry {
+  runId: string;
+  at: string;
+  commit?: string;
+  dirty?: boolean;
+  rerunOf?: string;
+  attempt?: number;
+  times?: number;
+  status: TestStatus;
+  durationMs: number;
+  message?: string;
+  trace: boolean;
+}
+
+export interface TestHistory {
+  id: string;
+  known: boolean;
+  doc?: string;
+  diagram?: string;
+  title?: string;
+  entries: HistoryEntry[];
+  changed: string[];
+  firstFailure?: HistoryEntry;
+  flakyCommits: string[];
+}
+
+export interface FlakyEntry {
+  id: string;
+  doc: string;
+  commits: Array<{ commit: string; passed: number; failed: number }>;
+  lastFailedAt: string;
+  lastFailedRun: string;
+}
+
+export interface CoverageCount {
+  ids: number;
+  linked: number;
+  executed: number;
+  passed: number;
+}
+
+export interface ElementCoverage {
+  edges: Record<number, CoverageClass>;
+  nodes: Record<string, CoverageClass>;
+}
+
+export interface DocCoverage {
+  path: string;
+  total: CoverageCount;
+  diagrams: Record<string, CoverageCount>;
+  cases: Record<string, CoverageClass>;
+  elements: Record<string, ElementCoverage>;
 }
 
 export type StepValue = string | number | boolean;
@@ -268,6 +345,11 @@ export function createApi(ws: string) {
     runs: () => get<RunSummary[]>('/api/runs'),
     run: (id: string) => get<RunSummary>(`/api/runs/${id}`),
     startRun: (body: { ids?: string[]; runner?: string }) => post(A('/api/tests/run'), body).then((r) => json<{ id: string }>(r)),
+    rerun: (times: number) => post(A('/api/tests/rerun'), { times }).then((r) => json<{ id: string; status: 'running'; rerunOf: string; attempt: number; times: number }>(r)),
+    historySummary: () => get<HistorySummary>('/api/history/summary'),
+    historyTest: (id: string) => get<TestHistory>(`/api/history/tests/${encodeURIComponent(id)}`),
+    flaky: () => get<FlakyEntry[]>('/api/history/flaky'),
+    coverage: (path: string) => get<DocCoverage>(`/api/coverage?path=${encodeURIComponent(path)}`),
     deps: () => get<DepsStatus>('/api/deps'),
     installDeps: () => post(A('/api/deps/install')).then((r) => json<{ runId: string; deps: DepsStatus }>(r)),
     generateIds: () => fetch(A('/api/testids/generate'), { method: 'POST' }).then((r) => json<{ changed: boolean; added: string[]; retired: string[] }>(r)),
