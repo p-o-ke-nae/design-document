@@ -25,3 +25,9 @@ runners:
     cwd: .
     level: integration
     include: ['e2e/**/*.spec.ts']
+  - name: e2e-pages
+    type: command
+    cwd: .
+    level: integration
+    command: npx tsx e2e-pages/run.ts {junit} {pattern}
+    include: ['e2e-pages/**/*.spec.ts']

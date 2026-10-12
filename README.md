@@ -196,6 +196,7 @@ npm run ddv-lint -- --repo <path> [--strict]           # 必須節・Mermaid 構
 npm test            # Vitest（packages / apps/server）
 npm run typecheck
 npm run e2e         # ビューアの Playwright E2E（examples/sample-app を対象。ポートは DDV_E2E_PORT、既定 5179）
+npm run e2e:pages   # Pages 版の Playwright E2E（ビルドして 5400 で配信し、GitHub はスタブ）
 npm run dev:server  # + 別端末で npm run dev:web（dev:server が表示する「[ddv] 開発: http://localhost:5173/api/session?ddv-token=…」から開く）
 npm run ddv -- serve --repo .   # ddv 自身の設計書を表示し、ビューアからテストを実行
 ```

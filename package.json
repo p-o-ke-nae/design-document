@@ -21,6 +21,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "e2e": "playwright test",
+    "e2e:pages": "playwright test -c playwright.pages.config.ts",
     "check:pages-dist": "tsx apps/web/scripts/check-pages-dist.ts apps/web/dist"
   },
   "devDependencies": {
