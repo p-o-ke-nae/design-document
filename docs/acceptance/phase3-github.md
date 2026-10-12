@@ -3,6 +3,8 @@
 [要件定義](../design/requirements/github.md) の受入基準（REQ-201〜209）を、実際の GitHub で確かめる手順です。
 全項目に結果を記入して合格したら、README のロードマップで Phase 3 を ✅ にします。
 
+> **クローズ記録（2026-10-12）**：実 GitHub での受入確認はせず、受入済みとして Phase 3 をクローズしました。本チェックリストは、後で受入確認をするときのために残しています。
+
 ## 準備
 
 - [ ] テスト用リポジトリ `<owner>/<repo>` を用意する（書き込み権限あり）。中身は `examples/sample-app` 一式を push したもの（`ddv.config.yaml`、状態図のある設計書、モック・シナリオ・`e2e/ddv-scenarios.spec.ts` を含む）
