@@ -291,72 +291,69 @@ describe('TargetLoader の状態（DD-PAGESV-LOADER）', () => {
 
   // 不正遷移：状態を変えない
   type Ev = 'open' | 'loaded' | 'failed' | 'changeTarget' | 'onPatChanged' | 'onHeadChanged' | 'reload';
-  const invalid: Array<[string, LoaderState, Ev]> = [
-    ['X001', 'Idle', 'loaded'],
-    ['X002', 'Idle', 'failed'],
-    ['X003', 'Idle', 'changeTarget'],
-    ['X004', 'Idle', 'onPatChanged'],
-    ['X005', 'Idle', 'onHeadChanged'],
-    ['X006', 'Idle', 'reload'],
-    ['X007', 'Loading', 'onPatChanged'],
-    ['X008', 'Loading', 'onHeadChanged'],
-    ['X009', 'Loading', 'reload'],
-    ['X010', 'NeedToken', 'open'],
-    ['X011', 'NeedToken', 'loaded'],
-    ['X012', 'NeedToken', 'failed'],
-    ['X013', 'NeedToken', 'onHeadChanged'],
-    ['X014', 'NeedToken', 'reload'],
-    ['X015', 'Ready', 'loaded'],
-    ['X016', 'Ready', 'failed'],
-    ['X017', 'Stale', 'open'],
-    ['X018', 'Stale', 'loaded'],
-    ['X019', 'Stale', 'failed'],
-    ['X020', 'Stale', 'onHeadChanged'],
-    ['X021', 'Failed', 'loaded'],
-    ['X022', 'Failed', 'failed'],
-    ['X023', 'Failed', 'changeTarget'],
-    ['X024', 'Failed', 'onPatChanged'],
-    ['X025', 'Failed', 'onHeadChanged'],
-    ['X026', 'Failed', 'reload'],
-  ];
-  for (const [id, state, ev] of invalid) {
-    it(`[DD-PAGESV-LOADER-${id}] ${state} で ${ev} は状態を変えない（取得をやり直さない）`, () => {
-      const { l, to, snap } = harness();
-      to(state);
-      const gen = l.gen;
-      const s = snap();
-      const before = { target: l.target, error: l.error, snapshot: l.snapshot, staleSha: l.staleSha };
-      switch (ev) {
-        case 'open':
-          // 同じ対象の open（URL の文書だけが変わる）
-          l.open(A2);
-          break;
-        case 'loaded':
-          l.onLoaded(gen - 1, s);
-          l.onLoaded(gen, s);
-          break;
-        case 'failed':
-          l.onFailed(gen - 1, new Error('late'));
-          l.onFailed(gen, new Error('late'));
-          break;
-        case 'changeTarget':
-          l.changeTarget();
-          break;
-        case 'onPatChanged':
-          l.onPatChanged();
-          break;
-        case 'onHeadChanged':
-          l.onHeadChanged('e'.repeat(40));
-          break;
-        case 'reload':
-          l.reload();
-          break;
-      }
-      expect(l.state).toBe(state);
-      if (ev !== 'changeTarget' && ev !== 'open') expect(l.gen).toBe(gen);
-      if (ev !== 'changeTarget') expect({ target: l.target, error: l.error, snapshot: l.snapshot, staleSha: l.staleSha }).toEqual(before);
-    });
+  function expectUnchanged(state: LoaderState, ev: Ev) {
+    const { l, to, snap } = harness();
+    to(state);
+    const gen = l.gen;
+    const s = snap();
+    const before = { target: l.target, error: l.error, snapshot: l.snapshot, staleSha: l.staleSha };
+    switch (ev) {
+      case 'open':
+        // 同じ対象の open（URL の文書だけが変わる）
+        l.open(A2);
+        break;
+      case 'loaded':
+        l.onLoaded(gen - 1, s);
+        l.onLoaded(gen, s);
+        break;
+      case 'failed':
+        l.onFailed(gen - 1, new Error('late'));
+        l.onFailed(gen, new Error('late'));
+        break;
+      case 'changeTarget':
+        l.changeTarget();
+        break;
+      case 'onPatChanged':
+        l.onPatChanged();
+        break;
+      case 'onHeadChanged':
+        l.onHeadChanged('e'.repeat(40));
+        break;
+      case 'reload':
+        l.reload();
+        break;
+    }
+    expect(l.state).toBe(state);
+    if (ev !== 'changeTarget' && ev !== 'open') expect(l.gen).toBe(gen);
+    if (ev !== 'changeTarget') expect({ target: l.target, error: l.error, snapshot: l.snapshot, staleSha: l.staleSha }).toEqual(before);
   }
+
+  it('[DD-PAGESV-LOADER-X001] 対象なしで loaded は状態を変えない（取得をやり直さない）', () => expectUnchanged('Idle', 'loaded'));
+  it('[DD-PAGESV-LOADER-X002] 対象なしで failed は状態を変えない（取得をやり直さない）', () => expectUnchanged('Idle', 'failed'));
+  it('[DD-PAGESV-LOADER-X003] 対象なしで changeTarget は状態を変えない（取得をやり直さない）', () => expectUnchanged('Idle', 'changeTarget'));
+  it('[DD-PAGESV-LOADER-X004] 対象なしで onPatChanged は状態を変えない（取得をやり直さない）', () => expectUnchanged('Idle', 'onPatChanged'));
+  it('[DD-PAGESV-LOADER-X005] 対象なしで onHeadChanged は状態を変えない（取得をやり直さない）', () => expectUnchanged('Idle', 'onHeadChanged'));
+  it('[DD-PAGESV-LOADER-X006] 対象なしで reload は状態を変えない（取得をやり直さない）', () => expectUnchanged('Idle', 'reload'));
+  it('[DD-PAGESV-LOADER-X007] 取得中で onPatChanged は状態を変えない（取得をやり直さない）', () => expectUnchanged('Loading', 'onPatChanged'));
+  it('[DD-PAGESV-LOADER-X008] 取得中で onHeadChanged は状態を変えない（取得をやり直さない）', () => expectUnchanged('Loading', 'onHeadChanged'));
+  it('[DD-PAGESV-LOADER-X009] 取得中で reload は状態を変えない（取得をやり直さない）', () => expectUnchanged('Loading', 'reload'));
+  it('[DD-PAGESV-LOADER-X010] PAT が必要で open は状態を変えない（取得をやり直さない）', () => expectUnchanged('NeedToken', 'open'));
+  it('[DD-PAGESV-LOADER-X011] PAT が必要で loaded は状態を変えない（取得をやり直さない）', () => expectUnchanged('NeedToken', 'loaded'));
+  it('[DD-PAGESV-LOADER-X012] PAT が必要で failed は状態を変えない（取得をやり直さない）', () => expectUnchanged('NeedToken', 'failed'));
+  it('[DD-PAGESV-LOADER-X013] PAT が必要で onHeadChanged は状態を変えない（取得をやり直さない）', () => expectUnchanged('NeedToken', 'onHeadChanged'));
+  it('[DD-PAGESV-LOADER-X014] PAT が必要で reload は状態を変えない（取得をやり直さない）', () => expectUnchanged('NeedToken', 'reload'));
+  it('[DD-PAGESV-LOADER-X015] 表示中で loaded は状態を変えない（取得をやり直さない）', () => expectUnchanged('Ready', 'loaded'));
+  it('[DD-PAGESV-LOADER-X016] 表示中で failed は状態を変えない（取得をやり直さない）', () => expectUnchanged('Ready', 'failed'));
+  it('[DD-PAGESV-LOADER-X017] 更新ありで open は状態を変えない（取得をやり直さない）', () => expectUnchanged('Stale', 'open'));
+  it('[DD-PAGESV-LOADER-X018] 更新ありで loaded は状態を変えない（取得をやり直さない）', () => expectUnchanged('Stale', 'loaded'));
+  it('[DD-PAGESV-LOADER-X019] 更新ありで failed は状態を変えない（取得をやり直さない）', () => expectUnchanged('Stale', 'failed'));
+  it('[DD-PAGESV-LOADER-X020] 更新ありで onHeadChanged は状態を変えない（取得をやり直さない）', () => expectUnchanged('Stale', 'onHeadChanged'));
+  it('[DD-PAGESV-LOADER-X021] 取得失敗で loaded は状態を変えない（取得をやり直さない）', () => expectUnchanged('Failed', 'loaded'));
+  it('[DD-PAGESV-LOADER-X022] 取得失敗で failed は状態を変えない（取得をやり直さない）', () => expectUnchanged('Failed', 'failed'));
+  it('[DD-PAGESV-LOADER-X023] 取得失敗で changeTarget は状態を変えない（取得をやり直さない）', () => expectUnchanged('Failed', 'changeTarget'));
+  it('[DD-PAGESV-LOADER-X024] 取得失敗で onPatChanged は状態を変えない（取得をやり直さない）', () => expectUnchanged('Failed', 'onPatChanged'));
+  it('[DD-PAGESV-LOADER-X025] 取得失敗で onHeadChanged は状態を変えない（取得をやり直さない）', () => expectUnchanged('Failed', 'onHeadChanged'));
+  it('[DD-PAGESV-LOADER-X026] 取得失敗で reload は状態を変えない（取得をやり直さない）', () => expectUnchanged('Failed', 'reload'));
 });
 
 // ---- loading against a fake GitHub ----

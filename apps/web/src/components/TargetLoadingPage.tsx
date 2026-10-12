@@ -22,7 +22,7 @@ export function TargetLoadingPage({ target, progress, rate }: { target: HostedTa
   const now = progress.step ? STEPS.indexOf(progress.step) : 0;
   return (
     <main className="main doc pages-loading">
-      <h2 data-testid="loading-target">{targetLabel(target)}を取得中</h2>
+      <h2 data-testid="loading-target">{targetLabel(target)} を取得中</h2>
       <ul className="progress" data-testid="progress">
         {STEPS.map((s, i) => (
           <li key={s} className={i < now ? 'done' : i === now ? 'now' : ''} data-step={s}>

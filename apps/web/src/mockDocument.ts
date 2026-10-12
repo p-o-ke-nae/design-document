@@ -1,6 +1,7 @@
 // Builds the srcdoc of a mock for the Pages viewer (DD-MOCKSB srcdoc の組み立て): every asset becomes a data: URL,
 // fetch'ed files go to ddv:init, and the document gets its own CSP, a virtual base and window.__ddvHost.
-import { init as initLexer, parse as parseModule } from 'es-module-lexer';
+// The asm.js build: the Pages CSP has no 'wasm-unsafe-eval' (pat.md「CSP」)
+import { parse as parseModule } from 'es-module-lexer/js';
 
 /** Structural subset of `RepoReader` (@ddv/services) the builder needs. */
 export interface MockRepoReader {
@@ -240,7 +241,6 @@ export class MockDocumentBuilder {
 
   /** Rewrites relative import specifiers to absolute virtual URLs and queues the imported modules for the import map. */
   async rewriteJs(text: string, from: string): Promise<string> {
-    await initLexer;
     let imports: ReturnType<typeof parseModule>[0];
     try {
       [imports] = parseModule(text);

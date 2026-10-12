@@ -2123,3 +2123,12 @@ svg path.ddv-cov-unlinked {
 .pat-menu { position: relative; }
 .pat-menu .menu { position: absolute; right: 0; z-index: 10; background: #fff; border: 1px solid #d0d7de; border-radius: 6px; padding: 8px; display: grid; gap: 6px; width: 320px; }
 .pat-form { display: grid; gap: 6px; max-width: 480px; }
+
+/* Pages edition (pages-viewer.md「画面」) */
+.target-header { padding: 6px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.target-header .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.target-header .warn { margin: 4px 0 0; }
+.topbar .edition { font-size: 12px; opacity: 0.85; }
+.topbar .rate.warn { color: var(--warn); background: var(--warn-bg); padding: 0 4px; border-radius: 4px; }
+.disabled-reason { margin-left: 6px; font-size: 12px; color: var(--muted, #6e7781); }
+.pages-open .form, .pages-token .form { display: grid; gap: 6px; max-width: 480px; }
