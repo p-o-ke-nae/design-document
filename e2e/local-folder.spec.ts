@@ -44,7 +44,7 @@ test.beforeAll(async () => {
   await fs.writeFile(path.join(tmp, 'note.txt'), 'not a folder');
   if (await fetch(`${BASE}/`).then(() => true, () => false)) throw new Error(`port ${PORT} is already in use`);
   ddv = spawn(process.execPath, ['--import', 'tsx', 'apps/server/src/cli.ts', 'serve', '--port', String(PORT)], {
-    env: { ...process.env, GITHUB_TOKEN: '', GH_TOKEN: '', DDV_HOME: path.join(tmp, 'home'), DDV_GITHUB_NO_GH: '1', DDV_GITHUB_POLL: '0', DDV_TOKEN: E2E_TOKEN },
+    env: { ...process.env, GITHUB_TOKEN: '', GH_TOKEN: '', DDV_HOME: path.join(tmp, 'home'), DDV_GITHUB_NO_GH: '1', DDV_GITHUB_POLL: '0', DDV_GITHUB_API: 'http://127.0.0.1:9', DDV_TOKEN: E2E_TOKEN },
     stdio: 'pipe',
   });
   ddv.stdout?.on('data', (d) => (log += d));

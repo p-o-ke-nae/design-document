@@ -1,5 +1,5 @@
 import { useEffect, useReducer } from 'react';
-import { api, ApiError } from '../api.ts';
+import { api, ApiError, type TraceResponse } from '../api.ts';
 import { viewHref } from '../state.tsx';
 import { acceptsArrowKeys, goBack, reduceTraceView, shortSha, startTrace } from '../trace-view.ts';
 import { TraceStepDetail, TraceTimeline } from './TraceStepDetail.tsx';
@@ -9,22 +9,33 @@ const fmtAt = (iso: string) => {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-/** `#/tests/trace/<runId>/<testId>` — one test id's trace in one run (DD-TRVIEW). */
-export function TraceView({ runId, testId }: { runId: string; testId: string }) {
+/** `#/tests/trace/<runId>/<testId>` — one test id's trace in one run (DD-TRVIEW). `load` / `shotUrl` read another source (an Actions run's files). */
+export function TraceView({
+  runId,
+  testId,
+  load,
+  shotUrl,
+  backHref,
+}: {
+  runId: string;
+  testId: string;
+  load?: () => Promise<TraceResponse>;
+  shotUrl?: (n: number) => string;
+  backHref?: string;
+}) {
   const [state, dispatch] = useReducer(reduceTraceView, { runId, testId }, startTrace);
 
   useEffect(() => {
     const key = { runId, testId };
     dispatch({ type: 'open', key });
     let alive = true;
-    api
-      .trace(runId, testId)
+    (load ? load() : api.trace(runId, testId))
       .then((trace) => alive && dispatch({ type: 'fetched', key, trace }))
       .catch((e: Error) => alive && dispatch({ type: 'fetched', key, code: e instanceof ApiError ? (e.code ?? String(e.status)) : 'error', message: e.message }));
     return () => {
       alive = false;
     };
-  }, [runId, testId]);
+  }, [runId, testId, load]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -38,7 +49,7 @@ export function TraceView({ runId, testId }: { runId: string; testId: string }) 
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const back = () => goBack(viewHref('tests'));
+  const back = () => goBack(backHref ?? viewHref('tests'));
 
   if (state.kind === 'Loading')
     return (
@@ -100,7 +111,7 @@ export function TraceView({ runId, testId }: { runId: string; testId: string }) 
             </button>
           </div>
         </div>
-        <div className="trace-main">{step && <TraceStepDetail step={step} shotUrl={step.screenshot ? api.traceShot(runId, testId, step.index) : null} />}</div>
+        <div className="trace-main">{step && <TraceStepDetail step={step} shotUrl={step.screenshot ? (shotUrl ? shotUrl(step.index) : api.traceShot(runId, testId, step.index)) : null} />}</div>
       </div>
     </div>
   );

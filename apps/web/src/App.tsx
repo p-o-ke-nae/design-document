@@ -7,6 +7,7 @@ import { TestsPage } from './components/TestsPage.tsx';
 import { TestHistoryView } from './components/TestHistory.tsx';
 import { FlakyList } from './components/FlakyList.tsx';
 import { TraceView } from './components/TraceView.tsx';
+import { ActionsPanel } from './components/ActionsPanel.tsx';
 import { StatusBadge } from './components/StatusBadge.tsx';
 import { DepsDialog, LoadingPage, LocalBar, OpenPage, PrBar, TopBar, TrustDialog, WorkspaceBar, WorkspaceProvider, useWorkspaces } from './components/Workspace.tsx';
 import { FolderPicker } from './components/FolderPicker.tsx';
@@ -73,6 +74,8 @@ function ShellBody() {
                 <TestHistoryView id={route.testId ?? ''} />
               ) : route.sub === 'trace' ? (
                 <TraceView runId={route.runId ?? ''} testId={route.testId ?? ''} />
+              ) : route.sub === 'actions' ? (
+                <ActionsPanel path={route.actions ?? ''} />
               ) : route.sub === 'flaky' ? (
                 <FlakyList />
               ) : (

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { emitActionsEvent, resetActionsEvents, type ActionsEvent } from './actionsApi.ts';
 import { api, apiUrl, ApiError, workspace, type CaseResult, type DdvConfig, type DepsMissingDetail, type HistorySummary, type RunSummary } from './api.ts';
 
 export interface Route {
@@ -8,7 +9,9 @@ export interface Route {
   path: string;
   heading: string;
   /** Tests tab: '' = list, 'history' = one test id's history, 'flaky' = flaky tests, 'trace' = one test id's trace in one run. */
-  sub?: '' | 'history' | 'flaky' | 'trace';
+  sub?: '' | 'history' | 'flaky' | 'trace' | 'actions';
+  /** Tests tab, `actions`: the part after `#/tests/actions/` ('' = list, 'setup', 'requests/<id>', 'runs/<id>', 'runs/<id>/trace/<testId>'). */
+  actions?: string;
   /** Tests tab, `history` / `trace`: the test id. */
   testId?: string;
   /** Tests tab, `trace`: the run id. */
@@ -29,6 +32,8 @@ export function parseHash(hash: string): Route {
   if (p === '/open') return { ws: '', view: 'open', path: '', heading: '' };
   if (p === '/folder') return { ws: '', view: 'folder', path: '', heading: '' };
   if (p === '/tests') return { ws, view: 'tests', path: '', heading: '' };
+  const am = /^\/tests\/actions(?:\/(.*))?$/.exec(p);
+  if (am) return { ws, view: 'tests', path: '', heading: '', sub: 'actions', actions: am[1] ?? '' };
   if (p === '/tests/flaky') return { ws, view: 'tests', path: '', heading: '', sub: 'flaky' };
   const hm = /^\/tests\/history\/([^/]+)$/.exec(p);
   if (hm) return { ws, view: 'tests', path: '', heading: '', sub: 'history', testId: decodeURIComponent(hm[1]) };
@@ -65,6 +70,11 @@ export function flakyHref(): string {
 /** Trace view of one test id in one run. */
 export function traceHref(runId: string, id: string): string {
   return `${wsBase()}/tests/trace/${encodeURIComponent(runId)}/${encodeURIComponent(id)}`;
+}
+
+/** Actions tab of the tests view (actions-run.md「画面」): `part` = '' (list) / 'setup' / 'requests/<id>' / 'runs/<id>'. */
+export function actionsHref(part = ''): string {
+  return `${wsBase()}/tests/actions${part ? `/${part}` : ''}`;
 }
 
 export function useLocalStorage<T>(key: string, initial: T): [T, (v: T) => void] {
@@ -182,6 +192,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const onHash = () => setRoute(parseHash(location.hash));
     window.addEventListener('hashchange', onHash);
     const es = new EventSource(apiUrl('/api/events'));
+    resetActionsEvents();
+    es.addEventListener('actions', (e) => {
+      try {
+        const ev = JSON.parse((e as MessageEvent).data) as ActionsEvent;
+        emitActionsEvent(ev);
+        if (ev.type === 'history') refreshResults();
+      } catch {
+        /* ignore */
+      }
+    });
     es.addEventListener('change', () => setVersion((v) => v + 1));
     es.addEventListener('run-end', () => refreshResults());
     es.addEventListener('run', (e) => {

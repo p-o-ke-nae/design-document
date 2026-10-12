@@ -3,6 +3,7 @@ import { api, type RunSummary, type TestsResponse } from '../api.ts';
 import { docHref, flakyHref, historyHref, traceHref, useApp, useLocalStorage } from '../state.tsx';
 import { scenarioLinked } from '../trace-view.ts';
 import { StatusBadge } from './StatusBadge.tsx';
+import { TestsTabs } from './ActionsPanel.tsx';
 import { FlakyMark, RecentDots, RerunPanel, formatCommit } from './TestHistory.tsx';
 
 type Filter = 'all' | 'linked' | 'unlinked' | 'failed' | 'passed' | 'never';
@@ -78,6 +79,7 @@ export function TestsPage() {
 
   return (
     <div className="tests-page" data-testid="tests-page">
+      <TestsTabs actions={false} />
       <section className="summary">
         <Stat label="テストケース" value={summary.total} />
         <Stat label="実装済み(紐づけ)" value={summary.linked} sub={`${summary.total ? Math.round((summary.linked / summary.total) * 100) : 0}%`} />

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { api, type CoverageClass, type Matrix, type MatrixCase, type TestSummary } from '../api.ts';
-import { historyHref, traceHref, useApp } from '../state.tsx';
+import { actionsHref, historyHref, traceHref, useApp } from '../state.tsx';
+import { dispatchFromMatrix, useActionsStatus } from './ActionsPanel.tsx';
 import { scenarioLinked } from '../trace-view.ts';
 import { useCoverage } from './CoverageBadge.tsx';
 import { FlakyMark } from './TestHistory.tsx';
@@ -15,6 +16,7 @@ const COVERAGE_LABEL: Record<CoverageClass, string> = { passed: '成功', failed
 
 export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; selected: string | null; onSelect(id: string | null): void }) {
   const { latest, runTests, activeRun, history } = useApp();
+  const actionsReady = useActionsStatus()?.state === 'ready';
   const coverage = useCoverage();
   const hub = useMockHub();
   const [tab, setTab] = useState<Tab>('all');
@@ -118,6 +120,7 @@ export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; se
                   summary={history?.tests[c.id]}
                   running={running}
                   onRun={() => run([c.id])}
+                  onRunActions={actionsReady && c.links.length ? () => dispatchFromMatrix([c.id]) : undefined}
                   onPlayMock={
                     hub?.hasScenario(c.id)
                       ? () => {
@@ -158,6 +161,7 @@ function MatrixRow({
   result,
   running,
   onRun,
+  onRunActions,
   onPlayMock,
   onTestData,
   doc,
@@ -170,9 +174,10 @@ function MatrixRow({
   checked: boolean;
   onCheck(): void;
   onSelect(): void;
-  result?: { status: string; message?: string; durationMs: number; runId?: string };
+  result?: { status: string; message?: string; durationMs: number; runId?: string; source?: string };
   running: boolean;
   onRun(): void;
+  onRunActions?: () => void;
   onPlayMock?: () => void;
   onTestData?: () => void;
   coverage?: CoverageClass;
@@ -215,12 +220,22 @@ function MatrixRow({
             {COVERAGE_LABEL[coverage]}
           </span>
         )}
+        {result?.source === 'actions' && (
+          <span className="chip" data-testid="matrix-source" title="最新の結果は GitHub Actions の実行">
+            Actions
+          </span>
+        )}
         {summary?.flaky && <span data-testid="matrix-flaky"><FlakyMark commits={summary.flakyCommits} /></span>}
       </td>
       <td onClick={(e) => e.stopPropagation()}>
         <button type="button" className="run" disabled={!c.links.length || running} onClick={onRun} data-testid="run-case" title={c.links.length ? 'このテストを実行' : '紐づくテストがありません'}>
           ▶ 実行
         </button>
+        {onRunActions && (
+          <button type="button" className="run" onClick={onRunActions} data-testid="matrix-run-actions" title="このテストを GitHub Actions で実行">
+            Actionsで実行
+          </button>
+        )}
         {onPlayMock && (
           <button type="button" className="run play-mock" onClick={onPlayMock} data-testid="matrix-play-mock" title="この経路のシナリオを同じ文書のモックで再生">
             ▶ モック
@@ -235,7 +250,7 @@ function MatrixRow({
           履歴
         </button>
         {result?.runId && scenarioLinked(c.links) && (
-          <button type="button" className="run" onClick={() => (location.hash = traceHref(result.runId!, c.id))} data-testid="trace-open" title="直近の実行のトレース（ステップごとの記録）">
+          <button type="button" className="run" onClick={() => (location.hash = result.source === 'actions' ? actionsHref(`runs/${encodeURIComponent(result.runId!)}/trace/${encodeURIComponent(c.id)}`) : traceHref(result.runId!, c.id))} data-testid="trace-open" title="直近の実行のトレース（ステップごとの記録）">
             トレース
           </button>
         )}

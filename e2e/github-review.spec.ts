@@ -6,12 +6,12 @@ import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { E2E_TOKEN, login } from './ddv-auth.ts';
+import { E2E_PORT, E2E_TOKEN, login } from './ddv-auth.ts';
 import { createUpstream, fakeGitHub, fakeGitHubState, type FakeGitHubState, type Upstream } from '../apps/server/src/github-fixture.ts';
 
 // Phase 2B (REVCMT): line comments, pending review, submit, thread reply / resolve against a stub GitHub API. Never touches github.com.
 
-const PORT = 5188;
+const PORT = E2E_PORT + 9;
 const REPO = 'acme/order-app';
 const TOKEN = 'ghp_test_token';
 const WS = 'gh~acme~order-app~pr-12';
