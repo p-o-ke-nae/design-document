@@ -3,10 +3,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { GitHubClient, TokenResolver } from '@ddv/github';
-import { createContext, type ServerContext } from './app.ts';
+import { createContext } from './app.ts';
 import { GitCache } from './git.ts';
 import { createUpstream, fakeGitHub, fakeGitHubState, type FakeGitHubState, type Upstream } from './github-fixture.ts';
 import { createServerApp } from './host.ts';
+import { SessionAuth } from './guard.ts';
+import { LocalWorkspace } from './local.ts';
+import { RecentFolders } from './recent.ts';
 import { WorkspaceManager } from './workspaces.ts';
 
 const PORT = 5178;
@@ -17,7 +20,7 @@ interface Env {
   up: Upstream;
   state: FakeGitHubState;
   manager: WorkspaceManager;
-  local?: ServerContext;
+  local: LocalWorkspace;
   bodies: string[];
   req: (p: string, init?: RequestInit) => Promise<Response>;
   json: <T = any>(p: string, init?: RequestInit) => Promise<{ status: number; body: T }>;
@@ -25,7 +28,7 @@ interface Env {
 
 const envs: Env[] = [];
 
-async function setup(opts: { local?: boolean; gh?: string | null; envToken?: string; dist?: boolean } = {}): Promise<Env> {
+async function setup(opts: { local?: boolean; gh?: string | null; envToken?: string; dist?: boolean; auth?: SessionAuth } = {}): Promise<Env> {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'ddv-host-'));
   const up = await createUpstream(path.join(tmp, 'up'));
   const mainSha = up.git('rev-parse', 'main');
@@ -46,14 +49,16 @@ async function setup(opts: { local?: boolean; gh?: string | null; envToken?: str
   const git = new GitCache(home, tokens, { remoteUrl: (o, r) => path.join(tmp, 'up', o, r) });
   const manager = new WorkspaceManager({ home, github: new GitHubClient(tokens, { fetch: f }), git, createContext: (d) => createContext(d, { watch: false }), pollSeconds: 0 });
   await manager.init();
-  const local = opts.local ? await createContext(path.join(tmp, 'up', 'acme', 'order-app'), { watch: false }) : undefined;
+  const initial = opts.local ? await createContext(path.join(tmp, 'up', 'acme', 'order-app'), { watch: false }) : undefined;
+  const recent = new RecentFolders(path.join(home, 'recent.json'), { warn: () => undefined });
+  const local = new LocalWorkspace({ recent, createContext: (d) => createContext(d, { watch: false }), initial });
   let dist: string | undefined;
   if (opts.dist) {
     dist = path.join(tmp, 'dist');
     await fs.mkdir(dist, { recursive: true });
     await fs.writeFile(path.join(dist, 'index.html'), '<!doctype html><div id="root"></div>');
   }
-  const app = createServerApp({ local, manager, tokens, port: PORT, dist });
+  const app = createServerApp({ local, manager, tokens, port: PORT, dist, auth: opts.auth });
   const bodies: string[] = [];
   const req = async (p: string, init: RequestInit = {}) => {
     const headers = new Headers(init.headers);
@@ -104,7 +109,7 @@ async function readEvents(res: Response, until: (ev: { event: string; data: any 
 afterEach(async () => {
   for (const e of envs.splice(0)) {
     e.manager.dispose();
-    e.local?.close();
+    e.local.dispose();
     await fs.rm(e.tmp, { recursive: true, force: true }).catch(() => undefined);
   }
 });
@@ -225,16 +230,16 @@ describe('ワークスペースの API とルーティング', () => {
     expect((await env.json(`/api/workspaces/${id}`)).body).toMatchObject({ state: 'Ready' });
   });
 
-  it('手元のワークスペースが無いとき既存の API は 404 no-local', async () => {
+  it('手元のフォルダが開かれていないとき既存の API は 409 no-folder', async () => {
     const env = await setup();
-    expect(await env.json('/api/config')).toMatchObject({ status: 404, body: { code: 'no-local' } });
+    expect(await env.json('/api/config')).toMatchObject({ status: 409, body: { code: 'no-folder', error: 'フォルダが開かれていません' } });
   });
 
-  it('未知の /api/* は画面の HTML でなく JSON の 404 を返す（エラー表示（共通））', async () => {
+  it('未知の /api/* は画面の HTML でなく JSON の 404 を返す（未選択は 409 no-folder）（エラー表示（共通））', async () => {
     for (const local of [true, false]) {
       const env = await setup({ local, dist: true });
       const res = await env.req('/api/no-such-api');
-      expect(res.status).toBe(404);
+      expect(res.status).toBe(local ? 404 : 409);
       expect(res.headers.get('content-type')).toMatch(/json/);
       expect(await res.json()).toHaveProperty('error');
       expect(await (await env.req('/some/page')).text()).toContain('<div id="root">');
@@ -293,5 +298,81 @@ describe('PR の差分・スレッド・レビュー状態の API（REVCMT 段�
       { login: 'carol', state: 'APPROVED' },
     ]);
     expect(env.bodies.join('\n')).not.toContain(env.state.token);
+  });
+});
+
+describe('手元のフォルダの API と起動トークン（LOCALF）', () => {
+  const del = (body: unknown): RequestInit => ({ method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+
+  it('未選択から /api/local/open で開き、/api/workspaces・既存 API・SSE の local が追従する。close で未選択に戻る', async () => {
+    const env = await setup();
+    const root = path.join(env.tmp, 'up', 'acme', 'order-app');
+    expect((await env.json('/api/local')).body).toEqual({ state: 'Empty', root: null, repoName: null, hasConfig: false, busy: null, recent: [] });
+    const sse = env.req('/api/events').then((res) => readEvents(res, (e) => e.event === 'local' && e.data.root === null));
+    await new Promise((r) => setTimeout(r, 50));
+    const opened = await env.json('/api/local/open', post({ path: root }));
+    expect(opened).toMatchObject({ status: 200, body: { repoName: 'order-app' } });
+    const realRoot = opened.body.root as string;
+    expect((await env.json('/api/workspaces')).body).toMatchObject({ local: true });
+    expect((await env.req('/api/doc?path=docs/design/basic/order.md')).status).toBe(200);
+    expect((await env.json('/api/local')).body).toMatchObject({ state: 'Open', root: realRoot, recent: [{ path: realRoot }] });
+    expect(await env.json('/api/local/close', post())).toEqual({ status: 200, body: { ok: true } });
+    const events = await sse;
+    expect(events.map((e) => e.event)).toEqual(['hello', 'local', 'local']);
+    expect(events[1]!.data).toEqual({ root: realRoot, repoName: 'order-app', generation: 1 });
+    expect(events[2]!.data).toEqual({ root: null, repoName: null, generation: 2 });
+    expect(await env.json('/api/config')).toMatchObject({ status: 409, body: { code: 'no-folder' } });
+    expect((await env.json('/api/workspaces')).body).toMatchObject({ local: false });
+  });
+
+  it('開く要求の 400 / 422 と最近から消す（DELETE /api/local/recent）', async () => {
+    const env = await setup();
+    expect(await env.json('/api/local/open', { method: 'POST', headers: { 'content-type': 'application/json' }, body: 'nope' })).toMatchObject({ status: 400, body: { code: 'bad-request' } });
+    expect(await env.json('/api/local/open', post({ path: 1 }))).toMatchObject({ status: 400, body: { code: 'bad-request' } });
+    expect(await env.json('/api/local/open', post({ path: '  ' }))).toEqual({ status: 422, body: { error: 'パスを入力してください', code: 'path-empty', message: 'パスを入力してください' } });
+    const gone = path.join(env.tmp, 'gone');
+    expect(await env.json('/api/local/open', post({ path: gone }))).toMatchObject({ status: 422, body: { code: 'not-found', removed: false } });
+    const root = path.join(env.tmp, 'up', 'acme', 'order-app');
+    const opened = (await env.json('/api/local/open', post({ path: root }))).body.root as string;
+    expect(await env.json('/api/local/recent', del({ path: gone }))).toMatchObject({ status: 200, body: { recent: [{ path: opened }] } });
+    expect(await env.json('/api/local/recent', del({ path: opened }))).toEqual({ status: 200, body: { recent: [] } });
+    expect(await env.json('/api/local/recent', del({}))).toMatchObject({ status: 400, body: { code: 'bad-request' } });
+  });
+
+  it('GET /api/fs/dirs はフォルダの一覧、検査のエラーは 422（removed なし）', async () => {
+    const env = await setup();
+    const r = await env.json(`/api/fs/dirs?path=${encodeURIComponent(path.join(env.tmp, 'up', 'acme'))}`);
+    expect(r).toMatchObject({ status: 200, body: { truncated: false, entries: [{ name: 'order-app', kind: 'dir' }] } });
+    const roots = await env.json('/api/fs/dirs');
+    expect(roots).toMatchObject({ status: 200, body: { path: null, parent: null } });
+    expect(roots.body.entries[0]).toMatchObject({ name: 'ホーム', kind: 'home' });
+    const bad = await env.json('/api/fs/dirs?path=relative');
+    expect(bad).toMatchObject({ status: 422, body: { code: 'path-relative' } });
+    expect(bad.body).not.toHaveProperty('removed');
+  });
+
+  it('auth を渡すと Cookie なしの API は 401、静的ファイルは 200 で index.html に印、開始 URL で Cookie を得る', async () => {
+    const TOKEN = 'host-test-token-0123456789';
+    const auth = new SessionAuth(TOKEN, PORT);
+    const env = await setup({ local: true, dist: true, auth });
+    const api = await env.req('/api/config');
+    expect(api.status).toBe(401);
+    expect(await api.json()).toEqual({ error: 'ddv serve が表示した URL から開いてください', code: 'session-required' });
+    expect((await env.req('/raw/docs/design/basic/order.md')).status).toBe(401);
+    expect((await env.req('/api/local')).status).toBe(401);
+    const page = await env.req('/');
+    expect(page.status).toBe(200);
+    expect(page.headers.get('cache-control')).toBe('no-store');
+    expect(await page.text()).toBe('<!doctype html><meta name="ddv-auth" content="required"><div id="root"></div>');
+    const badToken = await env.req('/?ddv-token=wrong-token-0000000');
+    expect(badToken.status).toBe(401);
+    expect(await badToken.text()).toContain('<meta name="ddv-auth" content="required">');
+    const start = await env.req(`/?ddv-token=${TOKEN}`);
+    expect(start.status).toBe(302);
+    const cookie = start.headers.get('set-cookie')!.split(';')[0]!;
+    expect((await env.req('/api/config', { headers: { cookie } })).status).toBe(200);
+    const page2 = await env.req('/', { headers: { cookie } });
+    expect(await page2.text()).not.toContain('ddv-auth');
+    expect((await env.req('/api/events', { headers: { cookie, origin: 'https://evil.example' } })).status).toBe(403);
   });
 });

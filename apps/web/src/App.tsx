@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { setWorkspace } from './api.ts';
 import { AppProvider, docHref, useApp, viewHref } from './state.tsx';
 import { DocTree } from './components/DocTree.tsx';
@@ -8,7 +8,9 @@ import { TestHistoryView } from './components/TestHistory.tsx';
 import { FlakyList } from './components/FlakyList.tsx';
 import { TraceView } from './components/TraceView.tsx';
 import { StatusBadge } from './components/StatusBadge.tsx';
-import { DepsDialog, LoadingPage, OpenPage, PrBar, TopBar, TrustDialog, WorkspaceBar, WorkspaceProvider, useWorkspaces } from './components/Workspace.tsx';
+import { DepsDialog, LoadingPage, LocalBar, OpenPage, PrBar, TopBar, TrustDialog, WorkspaceBar, WorkspaceProvider, useWorkspaces } from './components/Workspace.tsx';
+import { FolderPicker } from './components/FolderPicker.tsx';
+import { TokenRequired } from './components/TokenRequired.tsx';
 import { PrProvider } from './components/Pr.tsx';
 import { CommentComposer, DonePage, ReviewPage } from './components/Review.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
@@ -39,6 +41,7 @@ function ShellBody() {
         <span className="repo" title="リポジトリ">
           {repoName}
         </span>
+        {!route.ws && <LocalBar />}
         <nav className="views">
           <a href={lastDoc.current ? docHref(lastDoc.current) : viewHref('root')} className={route.view === 'doc' ? 'is-active' : ''} data-testid="nav-docs">
             ドキュメント
@@ -102,15 +105,21 @@ function Screen({ children }: { children: ReactNode }) {
   );
 }
 
-/** Chooses the screen from the hash: 手元 / GitHub を開く / 取得中 / PR の文書. */
+/** Chooses the screen from the hash: フォルダの選択 / 手元 / GitHub を開く / 取得中 / PR の文書. */
 function Root() {
-  const { route, local, current } = useWorkspaces();
-  const ws = route.view === 'open' ? '' : route.ws;
-  // A session without a local repository starts on 「GitHub を開く」.
+  const { route, local, localInfo, current } = useWorkspaces();
+  const ws = route.view === 'open' || route.view === 'folder' ? '' : route.ws;
+  // Without a local folder the viewer starts on 「フォルダの選択」.
   useEffect(() => {
-    if (route.view !== 'open' && !route.ws && local === false) location.hash = '#/open';
+    if (route.view !== 'open' && route.view !== 'folder' && !route.ws && local === false) location.hash = '#/folder';
   }, [route.view, route.ws, local]);
 
+  if (route.view === 'folder')
+    return (
+      <Screen>
+        <FolderPicker />
+      </Screen>
+    );
   if (route.view === 'open')
     return (
       <Screen>
@@ -136,13 +145,20 @@ function Root() {
   if (!local) return <Screen>{null}</Screen>;
   setWorkspace('');
   return (
-    <AppProvider key="local">
+    <AppProvider key={`local@${localInfo.generation}`}>
       <Shell />
     </AppProvider>
   );
 }
 
 export function App() {
+  const [sessionRequired, setSessionRequired] = useState(false);
+  useEffect(() => {
+    const on = () => setSessionRequired(true);
+    window.addEventListener('ddv-session-required', on);
+    return () => window.removeEventListener('ddv-session-required', on);
+  }, []);
+  if (sessionRequired) return <TokenRequired />;
   return (
     <WorkspaceProvider>
       <Root />

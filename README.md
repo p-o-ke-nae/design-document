@@ -36,15 +36,23 @@ flowchart LR
 ```powershell
 npm install
 npx playwright install chromium   # E2E / playwright ランナーを使う場合
-npm run serve:sample              # サンプルを表示 → http://127.0.0.1:5178
+npm run serve:sample              # サンプルを表示（表示された http://127.0.0.1:5178/?ddv-token=… を開く）
 ```
 
-任意のローカルリポジトリを表示する：
+任意のローカルフォルダを表示する：
 
 ```powershell
 npm run build
-npm run ddv -- serve --repo C:\path\to\your-repo [--port 5178]
+npm run ddv -- serve                              # 「フォルダの選択」から作業フォルダを開く
+npm run ddv -- serve --repo C:\path\to\your-repo  # 最初からそのフォルダを開く
+npm run ddv -- serve --last [--open]              # 最近開いたフォルダを開く（--open はブラウザも開く）
 ```
+
+- `--repo` は省略できます。ビューアの「フォルダの選択」でパスを入力するか、フォルダの一覧・最近開いたフォルダ（`~/.ddv/recent.json`、最大 10 件。`DDV_HOME` で場所を変更）から選んで開きます。文書のヘッダの「フォルダを選び直す」で別のフォルダに切り替えられます（テスト実行・スナップショット撮影・依存の導入中は不可）
+- 起動すると `[ddv] http://127.0.0.1:5178/?ddv-token=…` の形の URL を表示します。**この URL から開いてください**。トークンは起動ごとに変わり、開くとセッション Cookie に置き換わります（サーバを起動し直したら新しく表示された URL を開き直す）。Cookie の無いブラウザには「ddv serve が表示した URL から開いてください」と表示します
+- サーバは 127.0.0.1 だけで待ち受け、Host が `127.0.0.1` / `localhost` と待ち受けのポートでない要求（400）、ビューア以外の Origin からの要求（403）、セッション Cookie の無い API（401）を拒否します
+- `DDV_TOKEN` で起動トークンを固定できます（テスト用。16〜128 文字の英数字・`-`・`_`。警告を表示します）
+- `--port` の既定は 5178
 
 対象リポジトリのルートに `ddv.config.yaml` を置きます（雛形：[plugin/templates/ddv.config.yaml](plugin/templates/ddv.config.yaml)）。
 
@@ -187,8 +195,8 @@ npm run ddv-lint -- --repo <path> [--strict]           # 必須節・Mermaid 構
 ```powershell
 npm test            # Vitest（packages / apps/server）
 npm run typecheck
-npm run e2e         # ビューアの Playwright E2E（examples/sample-app を対象）
-npm run dev:server  # + 別端末で npm run dev:web
+npm run e2e         # ビューアの Playwright E2E（examples/sample-app を対象。ポートは DDV_E2E_PORT、既定 5179）
+npm run dev:server  # + 別端末で npm run dev:web（dev:server が表示する「[ddv] 開発: http://localhost:5173/api/session?ddv-token=…」から開く）
 npm run ddv -- serve --repo .   # ddv 自身の設計書を表示し、ビューアからテストを実行
 ```
 

@@ -398,6 +398,7 @@ export async function json<T>(res: Response): Promise<T> {
   if (!res.ok && !(body && typeof body === 'object' && 'ok' in body)) {
     const b = body as { error?: string; message?: string; code?: string };
     if (res.status === 403 && b.code === 'untrusted') window.dispatchEvent(new CustomEvent('ddv-untrusted'));
+    if (res.status === 401 && (b.code === 'session-required' || b.code === 'bad-token')) window.dispatchEvent(new CustomEvent('ddv-session-required'));
     throw new ApiError(b.message ?? b.error ?? `HTTP ${res.status}`, res.status, b.code, body && typeof body === 'object' ? (body as Record<string, unknown>) : undefined);
   }
   return body as T;
@@ -680,4 +681,53 @@ export const gh = {
   close: (id: string) => fetch(`/api/workspaces/${encodeURIComponent(id)}`, { method: 'DELETE' }).then((r) => json<unknown>(r)),
   pr: (id: string) => fetch(apiPath(id, '/api/pr')).then((r) => json<PrInfo>(r)),
   eventsUrl: (id: string) => `/api/workspaces/${encodeURIComponent(id)}/events`,
+};
+
+// --- Local folder (LOCALF) ---
+
+export interface RecentFolder {
+  path: string;
+  openedAt: string;
+  hasConfig: boolean;
+}
+
+export type BusyKind = 'test' | 'snapshot' | 'deps';
+
+export interface LocalInfo {
+  state: 'Empty' | 'Open' | 'Swapping';
+  root: string | null;
+  repoName: string | null;
+  hasConfig: boolean;
+  busy: BusyKind | null;
+  recent: RecentFolder[];
+}
+
+export interface DirEntry {
+  name: string;
+  path: string;
+  kind: 'dir' | 'home' | 'drive';
+  hasConfig: boolean;
+}
+
+export interface DirList {
+  path: string | null;
+  parent: string | null;
+  entries: DirEntry[];
+  truncated: boolean;
+}
+
+/** SSE `local` of `/api/events`: the local folder was swapped or closed. */
+export interface LocalEvent {
+  root: string | null;
+  repoName: string | null;
+  generation: number;
+}
+
+export const localApi = {
+  info: () => fetch('/api/local').then((r) => json<LocalInfo>(r)),
+  open: (path: string) => post('/api/local/open', { path }).then((r) => json<{ root: string; repoName: string; hasConfig: boolean }>(r)),
+  close: () => post('/api/local/close').then((r) => json<{ ok: true }>(r)),
+  removeRecent: (path: string) => send('DELETE', '/api/local/recent', { path }).then((r) => json<{ recent: RecentFolder[] }>(r)),
+  dirs: (path?: string) => fetch(path === undefined ? '/api/fs/dirs' : `/api/fs/dirs?path=${encodeURIComponent(path)}`).then((r) => json<DirList>(r)),
+  eventsUrl: '/api/events',
 };

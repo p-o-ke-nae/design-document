@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { api, apiUrl, ApiError, BAD_RESPONSE, gh, type AuthStatus, type DepsMissingDetail, type DepsStatus, type FetchStep, type PrInfo, type PullSummary, type WorkspaceInfo } from '../api.ts';
+import { api, apiUrl, ApiError, BAD_RESPONSE, gh, localApi, type AuthStatus, type LocalEvent, type DepsMissingDetail, type DepsStatus, type FetchStep, type PrInfo, type PullSummary, type WorkspaceInfo } from '../api.ts';
 import { parseHash, type Route } from '../state.tsx';
 import { ReviewStates, usePr } from './Pr.tsx';
 
@@ -16,6 +16,9 @@ interface WorkspacesState {
   route: Route;
   /** null until /api/workspaces answered. */
   local: boolean | null;
+  /** The open local folder (
+ull root = none) and its generation (SSE `local`). */
+  localInfo: { root: string | null; generation: number };
   list: WorkspaceInfo[];
   /** The GitHub workspace of the route (kept current through SSE). */
   current: WorkspaceInfo | null;
@@ -45,6 +48,7 @@ export function useWorkspaces(): WorkspacesState {
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [route, setRoute] = useState<Route>(() => parseHash(location.hash));
   const [local, setLocal] = useState<boolean | null>(null);
+  const [localInfo, setLocalInfo] = useState<{ root: string | null; generation: number }>({ root: null, generation: 0 });
   const [list, setList] = useState<WorkspaceInfo[]>([]);
   const [current, setCurrent] = useState<WorkspaceInfo | null>(null);
   const [missing, setMissing] = useState(false);
@@ -66,7 +70,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const reload = useCallback(async () => {
-    const r = await gh.workspaces().catch(() => null);
+    const [r, info] = await Promise.all([gh.workspaces().catch(() => null), localApi.info().catch(() => null)]);
+    if (info && typeof info === 'object' && 'root' in info) setLocalInfo((l) => ({ ...l, root: info.root }));
     // Fall back to the local workspace when the list is unavailable (e.g. a server without the GitHub feature).
     if (!r || typeof r !== 'object' || !Array.isArray(r.workspaces)) {
       setLocal(true);
@@ -79,6 +84,26 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void reload();
+  }, [reload]);
+
+  // The local folder swapped / closed (in this tab or another): follow it.
+  useEffect(() => {
+    const es = new EventSource(localApi.eventsUrl);
+    let checked = 0;
+    es.addEventListener('local', (e) => {
+      const ev = JSON.parse((e as MessageEvent).data) as LocalEvent;
+      setLocalInfo({ root: ev.root, generation: ev.generation });
+      void reload();
+      const r = parseHash(location.hash);
+      if (!ev.root && !r.ws && r.view !== 'open' && r.view !== 'folder') location.hash = '#/folder';
+    });
+    // A dropped stream may mean the server restarted (the session is gone): a 401 shows TokenRequired.
+    es.addEventListener('error', () => {
+      if (Date.now() - checked < 5000) return;
+      checked = Date.now();
+      void gh.workspaces().catch(() => null);
+    });
+    return () => es.close();
   }, [reload]);
 
   const checkAuth = useCallback(async () => {
@@ -129,8 +154,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [ws, update]);
 
   const value = useMemo<WorkspacesState>(
-    () => ({ route, local, list, current: current && current.id === ws ? current : null, missing, auth, authError, draft, backHash, reload, checkAuth, setDraft, setAuthError, update }),
-    [route, local, list, current, ws, missing, auth, authError, draft, backHash, reload, checkAuth, update],
+    () => ({ route, local, localInfo, list, current: current && current.id === ws ? current : null, missing, auth, authError, draft, backHash, reload, checkAuth, setDraft, setAuthError, update }),
+    [route, local, localInfo, list, current, ws, missing, auth, authError, draft, backHash, reload, checkAuth, update],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -147,7 +172,7 @@ function authText(a: AuthStatus): string {
 /** Header part shared by every screen: workspace switcher, GitHub auth status, "GitHub を開く". */
 export function WorkspaceBar() {
   const { route, local, list, auth, authError, checkAuth, setAuthError, setDraft } = useWorkspaces();
-  const value = route.view === 'open' ? '__open' : route.ws;
+  const value = route.view === 'open' ? '__open' : route.view === 'folder' ? '__folder' : route.ws;
   // Resolve auth only once GitHub is in use (REQ-209: a local-only session never calls gh).
   useEffect(() => {
     if (!auth && (list.length || route.view === 'open' || route.ws)) void checkAuth();
@@ -166,22 +191,24 @@ export function WorkspaceBar() {
 
   const switchTo = (v: string) => {
     if (v === '__open') location.hash = '#/open';
+    else if (v === '__folder') location.hash = '#/folder';
     else location.hash = v === '' ? '#/' : `#/w/${encodeURIComponent(v)}/doc`;
   };
   // 「GitHub を開く」 starts from 手元の文書 only (screen flow); without a local repository the switcher offers it instead.
-  const onLocal = route.view !== 'open' && !route.ws && !!local;
+  const onLocal = route.view !== 'open' && route.view !== 'folder' && !route.ws && !!local;
 
   return (
     <>
       <select className="ws-switch" value={value} onChange={(e) => switchTo(e.target.value)} title="ワークスペース" data-testid="ws-switch">
         {local && <option value="">手元</option>}
+        {(value === '__folder' || local === false) && <option value="__folder">フォルダの選択</option>}
         {list.map((w) => (
           <option key={w.id} value={w.id}>
             GitHub: {wsLabel(w)}
           </option>
         ))}
         {(value === '__open' || local === false) && <option value="__open">GitHub を開く…</option>}
-        {value && value !== '__open' && !list.some((w) => w.id === value) && <option value={value}>{value}</option>}
+        {value && value !== '__open' && value !== '__folder' && !list.some((w) => w.id === value) && <option value={value}>{value}</option>}
       </select>
       {onLocal && (
         <button type="button" onClick={() => void openGitHub()} data-testid="open-github">
@@ -211,6 +238,50 @@ export function TopBar() {
       <WorkspaceBar />
       <span className="spacer" />
     </header>
+  );
+}
+
+/** 手元のフォルダ（header of the local workspace only）: the open folder and 「フォルダを選び直す」. */
+export function LocalBar() {
+  const { localInfo, reload } = useWorkspaces();
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(''), 5000);
+    return () => clearTimeout(t);
+  }, [error]);
+
+  const reselect = async () => {
+    setError('');
+    setBusy(true);
+    try {
+      await localApi.close();
+      await reload();
+      location.hash = '#/folder';
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      {localInfo.root && (
+        <span className="muted local-root" title={localInfo.root} data-testid="local-root">
+          {localInfo.root}
+        </span>
+      )}
+      <button type="button" disabled={busy} onClick={() => void reselect()} data-testid="reselect">
+        フォルダを選び直す
+      </button>
+      {error && (
+        <span className="error" data-testid="reselect-error">
+          {error}
+        </span>
+      )}
+    </>
   );
 }
 

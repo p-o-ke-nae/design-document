@@ -2064,3 +2064,57 @@ svg path.ddv-cov-unlinked {
 .td-newfield {
   width: 72px;
 }
+/* Local folder picker (LOCALF) */
+.folder-picker,
+.token-required {
+  padding: 12px 16px;
+  display: grid;
+  gap: 10px;
+  max-width: 820px;
+  align-content: start;
+}
+.folder-picker .row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.folder-picker input.path {
+  min-width: 420px;
+  flex: 1;
+}
+.folder-picker h3 {
+  margin: 0;
+}
+.folder-picker .dirs,
+.folder-picker .recent {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 360px;
+  overflow: auto;
+}
+.folder-picker .dirs li,
+.folder-picker .recent-path {
+  cursor: pointer;
+  user-select: none;
+}
+.folder-picker .dirs li {
+  padding: 2px 4px;
+}
+.folder-picker .dirs li:hover {
+  background: #f6f8fa;
+}
+.folder-picker .cfg {
+  margin-left: 6px;
+  font-size: 11px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #dafbe1;
+}
+.local-root {
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

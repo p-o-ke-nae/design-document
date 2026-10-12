@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { spawn } from 'node:child_process';
 import { existsSync, promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -10,17 +11,22 @@ import { initMocks, scaffoldMock } from '@ddv/mock';
 import { createContext } from './app.ts';
 import { CI_HELP, CiCommand } from './ci/cli.ts';
 import { GitCache } from './git.ts';
-import { devOriginsFromEnv } from './guard.ts';
+import { SessionAuth, StartTokenError, startToken, TOKEN_ENV_WARNING } from './guard.ts';
 import { createServerApp } from './host.ts';
+import { LocalError, LocalWorkspace } from './local.ts';
+import { RecentFolders } from './recent.ts';
 import { formatReviewText, parseReviewArgs, ReviewCliError, reviewComments } from './review-cli.ts';
+import { parseServeArgs, ServeArgsError, type ServeArgs } from './serve-args.ts';
 import { SnapshotService } from './snapshots.ts';
-import { cleanWorkspaces, OpenRequestError, parseOpenRequest, WorkspaceManager } from './workspaces.ts';
+import { cleanWorkspaces, OpenRequestError, WorkspaceManager } from './workspaces.ts';
 
 const HELP = `ddv - Design Doc Viewer
 
 使い方:
-  ddv serve [--repo <path>] [--port <n>] [--host 127.0.0.1] [--dev-origin <url>]
-      ローカルリポジトリを閲覧するサーバを起動します（既定: カレント, 5178）
+  ddv serve [--repo <path> | --last] [--open] [--port <n>] [--host 127.0.0.1] [--dev-origin <url>]
+      ローカルリポジトリを閲覧するサーバを起動します（既定ポート: 5178）
+      --repo 省略時はフォルダの選択から始めます（--last: 前回開いたフォルダ、--open: ブラウザで開く）
+      起動時に表示する URL（起動トークン付き）から開いてください
       apps/web/dist が無い場合は API のみ提供します（開発時は npm run dev:web）
       --dev-origin: 変更系 API を許可する追加の Origin（vite 開発サーバ。環境変数 DDV_DEV_ORIGIN でも可）
   ddv serve [--repo <path>] --github <owner/repo> (--pr <n> | --ref <name>)
@@ -43,6 +49,7 @@ const HELP = `ddv - Design Doc Viewer
 環境変数:
   DDV_HOME          キャッシュ・ワークスペースの置き場所（既定: ~/.ddv）
   DDV_GITHUB_POLL   PR の更新検知の間隔（秒。既定 60、0 で無効）
+  DDV_TOKEN         起動トークンを固定する（テスト用。16〜128 文字の英数字・-・_）
 
 関連コマンド:
   ddv-testid generate|list|check|show   テストIDの採番・確認
@@ -193,53 +200,88 @@ async function main(argv: string[]) {
     process.exitCode = 2;
     return;
   }
-  const githubRepo = arg(argv, '--github');
-  let open: { repo: string; pr?: string; ref?: string } | null = null;
-  if (githubRepo) {
-    open = { repo: githubRepo, pr: arg(argv, '--pr'), ref: arg(argv, '--ref') };
-    try {
-      parseOpenRequest(open);
-    } catch (e) {
-      if (!(e instanceof OpenRequestError)) throw e;
-      console.error(`${e.message}\n\n${HELP}`);
+  let args: ServeArgs;
+  let token: string;
+  try {
+    args = parseServeArgs(argv, process.cwd());
+    token = startToken(process.env);
+  } catch (e) {
+    if (e instanceof StartTokenError) {
+      console.error(e.message);
       process.exitCode = 2;
       return;
     }
+    if (!(e instanceof OpenRequestError) && !(e instanceof ServeArgsError)) throw e;
+    console.error(`${e.message}\n\n${HELP}`);
+    process.exitCode = 2;
+    return;
   }
-  const repoArg = arg(argv, '--repo');
-  const repo = repoArg || !open ? path.resolve(repoArg ?? process.cwd()) : null;
-  if (repo && !existsSync(repo)) throw new Error(`リポジトリが見つかりません: ${repo}`);
-  const port = Number(arg(argv, '--port') ?? process.env.DDV_PORT ?? 5178);
-  const host = arg(argv, '--host') ?? '127.0.0.1';
+  if (process.env.DDV_TOKEN) console.warn(TOKEN_ENV_WARNING);
+  const { port, host, devOrigins } = args;
   if (host !== '127.0.0.1' && host !== 'localhost' && host !== '::1') {
     console.warn('[ddv] 警告: ループバック以外で待ち受けます。テスト実行 API が外部から呼べる状態になります');
   }
-  const local = repo ? await createContext(repo) : undefined;
   const home = ddvHome();
+  const local = new LocalWorkspace({ recent: new RecentFolders(path.join(home, 'recent.json')), createContext: (dir) => createContext(dir) });
+  if (args.initial === 'repo') {
+    try {
+      await local.open(args.repo!);
+    } catch (e) {
+      if (e instanceof LocalError && e.code === 'not-found') throw new Error(`リポジトリが見つかりません: ${args.repo}`);
+      throw e;
+    }
+  } else if (args.initial === 'last') {
+    const [last] = await local.recent.load();
+    if (!last) console.log('[ddv] 最近開いたフォルダがありません');
+    else {
+      try {
+        await local.open(last.path);
+      } catch (e) {
+        if (!(e instanceof LocalError)) throw e;
+        console.warn(`[ddv] 前回のフォルダを開けません: ${last.path}（${e.message}）`);
+      }
+    }
+  }
   const { tokens, github, git } = githubDeps(home);
   const poll = Number(process.env.DDV_GITHUB_POLL ?? 60);
   const manager = new WorkspaceManager({ home, github, git, createContext: (dir) => createContext(dir), pollSeconds: Number.isFinite(poll) && poll >= 0 ? poll : 60 });
   await manager.init();
-  const devOrigins = [...devOriginsFromEnv(), ...(arg(argv, '--dev-origin') ? [arg(argv, '--dev-origin')!] : [])];
   const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');
-  const app = createServerApp({ local, manager, tokens, port, devOrigins, dist });
-  const ws = open ? manager.open(open) : null;
+  const auth = new SessionAuth(token, port);
+  const app = createServerApp({ local, manager, tokens, port, devOrigins, dist, auth });
+  const ws = args.github ? manager.open(args.github) : null;
 
   serve({ fetch: app.fetch, port, hostname: host }, (info) => {
-    if (repo) console.log(`[ddv] ${repo}`);
+    if (local.ctx) console.log(`[ddv] ${local.ctx.repoRoot}`);
     if (ws) console.log(`[ddv] ${ws.id}（取得中）`);
-    const hash = ws ? `#/w/${ws.id}/doc` : '';
-    console.log(`[ddv] http://${host}:${info.port}/${existsSync(dist) ? hash : '  (API のみ。UI は npm run dev:web)'}`);
+    const hash = ws ? `#/w/${ws.id}/doc` : local.ctx ? '' : '#/folder';
+    const url = auth.startUrl(`http://${host.includes(':') ? `[${host}]` : host}:${info.port}`, hash);
+    console.log(`[ddv] ${url}${existsSync(dist) ? '' : '  (API のみ。UI は npm run dev:web)'}`);
+    for (const o of devOrigins) console.log(`[ddv] 開発: ${auth.startUrl(o.replace(/\/+$/, ''), hash).replace(/\/\?ddv-token=/, '/api/session?ddv-token=')}`);
+    if (args.openBrowser) openBrowser(url);
   });
   const stop = () => {
     manager.dispose();
-    local?.close();
+    local.dispose();
     process.exit(0);
   };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
 }
 
+/** Opens the start URL in the default browser (`--open`); the server keeps running if that fails. */
+function openBrowser(url: string): void {
+  const fail = () => console.warn('[ddv] ブラウザを開けません。上の URL を開いてください');
+  try {
+    const [cmd, cmdArgs] =
+      process.platform === 'win32' ? ['cmd', ['/c', 'start', '""', url]] : process.platform === 'darwin' ? ['open', [url]] : ['xdg-open', [url]];
+    const child = spawn(cmd as string, cmdArgs as string[], { detached: true, stdio: 'ignore', windowsVerbatimArguments: process.platform === 'win32' });
+    child.on('error', fail);
+    child.unref();
+  } catch {
+    fail();
+  }
+}
 main(process.argv.slice(2)).catch((e) => {
   console.error(e instanceof Error ? e.message : e);
   process.exit(1);

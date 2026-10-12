@@ -6,6 +6,7 @@ import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { E2E_TOKEN, login } from './ddv-auth.ts';
 import { createUpstream, fakeGitHub, fakeGitHubState, type FakeGitHubState, type Upstream } from '../apps/server/src/github-fixture.ts';
 
 // Phase 2B (REVCMT): line comments, pending review, submit, thread reply / resolve against a stub GitHub API. Never touches github.com.
@@ -97,6 +98,7 @@ test.beforeAll(async () => {
       DDV_GITHUB_GIT_URL: `${pathToFileURL(path.join(tmp, 'remote')).href}/{owner}/{repo}`,
       DDV_GITHUB_NO_GH: '1',
       DDV_GITHUB_POLL: '0',
+      DDV_TOKEN: E2E_TOKEN,
     },
     stdio: 'pipe',
   });
@@ -104,7 +106,7 @@ test.beforeAll(async () => {
   ddv.stdout?.on('data', (d) => (log += d));
   ddv.stderr?.on('data', (d) => (log += d));
   for (let i = 0; i < 150; i++) {
-    if (await fetch(`http://127.0.0.1:${PORT}/api/config`).then((r) => r.ok, () => false)) return;
+    if (await fetch(`http://127.0.0.1:${PORT}/`).then((r) => r.ok, () => false)) return;
     if (ddv.exitCode !== null) break;
     await new Promise((r) => setTimeout(r, 200));
   }
@@ -118,6 +120,10 @@ test.afterAll(async () => {
 });
 
 const URL = `http://127.0.0.1:${PORT}/#/w/${WS}/doc?path=${ORDER}`;
+
+test.beforeEach(async ({ page }) => {
+  await login(page, `http://127.0.0.1:${PORT}`);
+});
 
 async function openDoc(page: Page) {
   await page.goto(URL);
