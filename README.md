@@ -61,10 +61,18 @@ runners:
   - { name: dotnet, type: dotnet,     cwd: dotnet, level: unit }
   # - { name: x, type: command, cwd: ., command: "make test FILTER={pattern} JUNIT={junit}" }   # {pattern} {ids} {junit}
     # - { name: e2e, type: playwright, cwd: ., level: integration, scenarios: true }   # シナリオ YAML の id でも紐づける
+  history: { maxRuns: 200, maxTraceRuns: 20 }   # 実行記録・トレースを残す件数（超えた古いものから削除）
   mock:
     browser: { channel: chromium }    # E2E・スナップショットのブラウザ（DDV_BROWSER_CHANNEL で上書き可）
     snapshot: { threshold: 0.001, viewport: { width: 1280, height: 800 } }
   ```
+
+### テストの監視・トレース・テストデータ編集
+
+- テスト一覧には、テストIDごとの直近の結果の推移、フレーキー（同じコミットで成功と失敗の両方がある）の印、「失敗を再実行」が出ます。テストIDを選ぶと履歴と失敗し始めた実行を、マトリクス・図ではカバレッジ（成功・失敗・未実行・未紐づけ）を色で表示します
+- 実行記録（`.ddv/runs/`）には、実行時のコミットと未コミットの変更の有無を残します
+- シナリオの E2E は、ステップごとの画面・API 呼び出し・DB の差分・期待の判定をトレース（`.ddv/traces/`）に残します。結果の「トレース」で開き、←→ でステップを移れます。プレイヤーでの再生中も同じ内容をライブ表示できます
+- マトリクスの行・プレイヤーの「テストデータ」で、シナリオの入力値・期待値と fixtures を編集できます。手元では元の YAML の書式を保ったまま保存し、PR では該当行への suggestion として保留中のレビューに入れます。保存前に編集中のデータで再生できます
 
 ### GitHub の PR・branch を表示する
 
