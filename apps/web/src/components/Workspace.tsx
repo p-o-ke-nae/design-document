@@ -1,5 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { api, apiUrl, ApiError, BAD_RESPONSE, gh, localApi, type AuthStatus, type LocalEvent, type DepsMissingDetail, type DepsStatus, type FetchStep, type PrInfo, type PullSummary, type WorkspaceInfo } from '../api.ts';
+import { BAD_RESPONSE, gh, localApi, type AuthStatus, type DepsMissingDetail, type DepsStatus, type FetchStep, type PrInfo, type PullSummary, type WorkspaceInfo } from '../api.ts';
+import { api, createBackend } from '../backend/index.ts';
+import { ApiError } from '../backend/types.ts';
+
+/** The local folder's feed (`local` events), shared with the local AppProvider's subscription. */
+const localBackend = createBackend('');
 import { parseHash, type Route } from '../state.tsx';
 import { ReviewStates, usePr } from './Pr.tsx';
 
@@ -86,25 +91,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     void reload();
   }, [reload]);
 
-  // The local folder swapped / closed (in this tab or another): follow it.
-  useEffect(() => {
-    const es = new EventSource(localApi.eventsUrl);
-    let checked = 0;
-    es.addEventListener('local', (e) => {
-      const ev = JSON.parse((e as MessageEvent).data) as LocalEvent;
-      setLocalInfo({ root: ev.root, generation: ev.generation });
-      void reload();
-      const r = parseHash(location.hash);
-      if (!ev.root && !r.ws && r.view !== 'open' && r.view !== 'folder') location.hash = '#/folder';
-    });
-    // A dropped stream may mean the server restarted (the session is gone): a 401 shows TokenRequired.
-    es.addEventListener('error', () => {
-      if (Date.now() - checked < 5000) return;
-      checked = Date.now();
-      void gh.workspaces().catch(() => null);
-    });
-    return () => es.close();
-  }, [reload]);
+  // The local folder swapped / closed (in this tab or another): follow it. A dropped stream checks the session (backend/http.ts).
+  useEffect(
+    () =>
+      localBackend.subscribe((ev) => {
+        if (ev.type !== 'local') return;
+        setLocalInfo({ root: ev.root, generation: ev.generation });
+        void reload();
+        const r = parseHash(location.hash);
+        if (!ev.root && !r.ws && r.view !== 'open' && r.view !== 'folder') location.hash = '#/folder';
+      }),
+    [reload],
+  );
 
   const checkAuth = useCallback(async () => {
     const a = await gh.auth().catch(() => null);
@@ -659,16 +657,7 @@ export function DepsDialog() {
       return;
     }
     await new Promise<void>((resolve) => {
-      const es = new EventSource(apiUrl(`/api/runs/${runId}/events`));
-      es.addEventListener('log', (e) => setLog((l) => [...l, (e as MessageEvent).data]));
-      es.addEventListener('end', () => {
-        es.close();
-        resolve();
-      });
-      es.onerror = () => {
-        es.close();
-        resolve();
-      };
+      api.followRun(runId, { onLog: (line) => setLog((l) => [...l, line]), onEnd: () => resolve() });
     });
     const done = await api.run(runId).catch(() => null);
     if (done?.status === 'passed') {

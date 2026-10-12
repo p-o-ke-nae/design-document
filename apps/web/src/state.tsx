@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { api, apiUrl, ApiError, workspace, type CaseResult, type DdvConfig, type DepsMissingDetail, type HistorySummary, type RunSummary } from './api.ts';
+import { api, workspace } from './backend/index.ts';
+import { ApiError } from './backend/types.ts';
+import type { CaseResult, DdvConfig, DepsMissingDetail, HistorySummary, RunSummary } from './api.ts';
 
 export interface Route {
   /** Workspace id ('' = local). */
@@ -125,7 +127,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [runError, setRunError] = useState('');
   const [showMatrix, setShowMatrix] = useLocalStorage('ddv.showMatrix', true);
   const [history, setHistory] = useState<HistorySummary | null>(null);
-  const esRef = useRef<EventSource | null>(null);
   const followRef = useRef<{ id: string; stop: () => void } | null>(null);
 
   const refreshResults = useCallback(() => {
@@ -140,27 +141,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       followRef.current?.stop();
       setRunLog([]);
       setActiveRun(run);
-      esRef.current?.close();
       let stopped = false;
       await new Promise<void>((resolve) => {
-        const es = new EventSource(apiUrl(`/api/runs/${id}/events`));
-        esRef.current = es;
+        const unsubscribe = api.followRun(id, {
+          onLog: (line) => setRunLog((l) => [...l, line]),
+          onEnd: () => resolve(),
+        });
         followRef.current = {
           id,
           stop: () => {
             stopped = true;
-            es.close();
+            unsubscribe();
             resolve();
           },
-        };
-        es.addEventListener('log', (e) => setRunLog((l) => [...l, (e as MessageEvent).data]));
-        es.addEventListener('end', () => {
-          es.close();
-          resolve();
-        });
-        es.onerror = () => {
-          es.close();
-          resolve();
         };
       });
       if (stopped) return;
@@ -181,20 +174,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     refreshResults();
     const onHash = () => setRoute(parseHash(location.hash));
     window.addEventListener('hashchange', onHash);
-    const es = new EventSource(apiUrl('/api/events'));
-    es.addEventListener('change', () => setVersion((v) => v + 1));
-    es.addEventListener('run-end', () => refreshResults());
-    es.addEventListener('run', (e) => {
-      try {
-        const r = JSON.parse((e as MessageEvent).data) as { id: string; rerunOf?: string; attempt?: number; times?: number };
-        void follow({ id: r.id, startedAt: new Date().toISOString(), status: 'running', request: {}, runners: [], results: {}, total: 0, rerunOf: r.rerunOf, attempt: r.attempt, times: r.times });
-      } catch {
-        /* ignore */
-      }
+    const unsubscribe = api.subscribe((ev) => {
+      if (ev.type === 'change') setVersion((v) => v + 1);
+      else if (ev.type === 'run-end') refreshResults();
+      else if (ev.type === 'resync') {
+        // Events may have been missed while reconnecting: the same as a change.
+        refreshResults();
+        setVersion((v) => v + 1);
+      } else if (ev.type === 'run')
+        void follow({ id: ev.id, startedAt: new Date().toISOString(), status: 'running', request: {}, runners: [], results: {}, total: 0, rerunOf: ev.rerunOf, attempt: ev.attempt, times: ev.times });
     });
     return () => {
       window.removeEventListener('hashchange', onHash);
-      es.close();
+      unsubscribe();
     };
   }, [refreshResults, follow]);
 

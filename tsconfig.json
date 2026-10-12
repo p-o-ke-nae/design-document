@@ -31,7 +31,9 @@
       "@ddv/mock/trace-format": ["./packages/mock/src/trace-format.ts"],
       "@ddv/mock/trace": ["./packages/mock/src/trace.ts"],
       "@ddv/mock-runtime": ["./packages/mock-runtime/src/index.ts"],
-      "@ddv/mock": ["./packages/mock/src/index.ts"]
+      "@ddv/mock": ["./packages/mock/src/index.ts"],
+      "#backend-impl": ["./apps/web/src/backend/http.ts"],
+      "#app-impl": ["./apps/web/src/App.tsx"]
     }
   },
   "include": ["./packages/*/src", "apps/*/src", "e2e", "vitest.config.ts", "playwright.config.ts"]

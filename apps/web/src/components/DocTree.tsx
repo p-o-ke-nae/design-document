@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { api, type TreeDoc } from '../api.ts';
+import { api } from '../backend/index.ts';
+import type { TreeDoc } from '../api.ts';
 import { docHref, parseHash, useApp } from '../state.tsx';
 import { ChangeMark, MARK_TITLE, usePr } from './Pr.tsx';
 

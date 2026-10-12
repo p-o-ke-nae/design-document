@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { api, type CoverageCount, type DocCoverage } from '../api.ts';
+import { api } from '../backend/index.ts';
+import type { CoverageCount, DocCoverage } from '../api.ts';
 import { coverageText } from '../coverage.ts';
 import { useApp } from '../state.tsx';
 

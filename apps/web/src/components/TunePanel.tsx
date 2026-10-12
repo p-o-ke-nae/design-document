@@ -13,7 +13,9 @@ import {
   type PatchIssue,
   type PickedElement,
 } from '@ddv/mock/tune-patch';
-import { ApiError, api, workspace, type MockSourceResult, type MockSuggestion, type PendingComment } from '../api.ts';
+import { api, workspace } from '../backend/index.ts';
+import { ApiError } from '../backend/types.ts';
+import type { MockSourceResult, MockSuggestion, PendingComment } from '../api.ts';
 import type { TuneMessage } from '../player.ts';
 import { usePr } from './Pr.tsx';
 

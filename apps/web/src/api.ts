@@ -453,6 +453,7 @@ export function createApi(ws: string) {
         steps: s.steps.map((st) => ({ ...st, images: Object.fromEntries(Object.entries(st.images).map(([k, v]) => [k, v && A(v)])) })),
       })),
     approveSnapshots: (body: { id: string; steps?: number[] }) => post(A('/api/snapshots/approve'), body).then((r) => json<unknown>(r)),
+    pr: () => get<PrInfo>('/api/pr'),
     prFiles: () => get<ChangedFiles>('/api/pr/files'),
     prDiff: (path: string) => get<DocDiff>(`/api/pr/diff?path=${encodeURIComponent(path)}`),
     prThreads: (path?: string) => get<Thread[]>(path ? `/api/pr/threads?path=${encodeURIComponent(path)}` : '/api/pr/threads'),
@@ -467,28 +468,7 @@ export function createApi(ws: string) {
   };
 }
 
-let currentWs = '';
-
-/** The workspace the viewer shows ('' = local). `api`, `apiUrl` and `rawUrl` follow it. */
-export function workspace(): string {
-  return currentWs;
-}
-
-export function setWorkspace(ws: string): void {
-  if (ws === currentWs) return;
-  currentWs = ws;
-  api = createApi(ws);
-}
-
-export function apiUrl(p: string): string {
-  return apiPath(currentWs, p);
-}
-
-export function rawUrl(p: string): string {
-  return rawPath(currentWs, p);
-}
-
-export let api = createApi('');
+// The current workspace's `api` (a `Backend`) and `setWorkspace` / `workspace` live in backend/index.ts (services.md「ビルド時の選択」).
 
 // --- GitHub workspaces ---
 

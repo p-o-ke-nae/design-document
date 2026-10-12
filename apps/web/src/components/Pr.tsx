@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, gh, type ChangedFile, type ChangedFiles, type DocDiff, type ElementRef, type PendingReview, type PrInfo, type ReviewEvent, type ReviewerState, type SubmitResult, type Thread } from '../api.ts';
+import { api } from '../backend/index.ts';
+import type { ChangedFile, ChangedFiles, DocDiff, ElementRef, PendingReview, PrInfo, ReviewEvent, ReviewerState, SubmitResult, Thread } from '../api.ts';
 import { useApp } from '../state.tsx';
 import { useWorkspaces } from './Workspace.tsx';
 
@@ -63,7 +64,7 @@ export function PrProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!id) return;
     let alive = true;
-    gh.pr(id).then((i) => alive && setInfo(i)).catch(() => {});
+    api.pr().then((i) => alive && setInfo(i)).catch(() => {});
     api
       .prFiles()
       .then((f) => alive && setFiles(f))

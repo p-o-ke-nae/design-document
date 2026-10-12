@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { api, type CoverageClass, type Matrix, type MatrixCase, type TestSummary } from '../api.ts';
+import { api } from '../backend/index.ts';
+import type { CoverageClass, Matrix, MatrixCase, TestSummary } from '../api.ts';
 import { historyHref, traceHref, useApp } from '../state.tsx';
 import { scenarioLinked } from '../trace-view.ts';
 import { useCoverage } from './CoverageBadge.tsx';

@@ -24,6 +24,8 @@ export default defineConfig({
       '@ddv/mock/trace': r('./packages/mock/src/trace.ts'),
       '@ddv/mock-runtime': r('./packages/mock-runtime/src/index.ts'),
       '@ddv/mock': r('./packages/mock/src/index.ts'),
+      '#backend-impl': r('./apps/web/src/backend/http.ts'),
+      '#app-impl': r('./apps/web/src/App.tsx'),
     },
   },
   test: {

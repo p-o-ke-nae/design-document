@@ -40,6 +40,9 @@ export default defineConfig({
       '@ddv/mock/frame-protocol': path.join(root, 'packages/mock/src/frame-protocol.ts'),
       '@ddv/mock/tune-patch': path.join(root, 'packages/mock/src/tune-patch.ts'),
       '@ddv/mock/trace-format': path.join(root, 'packages/mock/src/trace-format.ts'),
+      // Only one backend (and screen root) per bundle: the Pages edition has no `/api` client. services.md「ビルド時の選択」
+      '#backend-impl': path.join(import.meta.dirname, edition === 'pages' ? 'src/backend/pages.ts' : 'src/backend/http.ts'),
+      '#app-impl': path.join(import.meta.dirname, edition === 'pages' ? 'src/components/PagesApp.tsx' : 'src/App.tsx'),
     },
   },
   server: {

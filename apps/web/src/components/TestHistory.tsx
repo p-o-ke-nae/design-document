@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { api, ApiError, type HistoryEntry, type RecentMark, type RunSummary, type TestHistory, type TestSummary } from '../api.ts';
+import { api } from '../backend/index.ts';
+import { ApiError } from '../backend/types.ts';
+import type { HistoryEntry, RecentMark, RunSummary, TestHistory, TestSummary } from '../api.ts';
 import { docHref, traceHref, useApp, viewHref } from '../state.tsx';
 import { StatusBadge } from './StatusBadge.tsx';
 

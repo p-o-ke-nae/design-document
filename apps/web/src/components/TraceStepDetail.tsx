@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import type { DbChange, TraceStep } from '../trace-view.ts';
 import { callStatus, describeAction } from '../trace-view.ts';
 
@@ -131,14 +131,33 @@ function ApiCalls({ step }: { step: TraceStep }) {
   );
 }
 
-/** Details of one step: screenshot, operation, screens, expectations, API calls and DB changes. `shotUrl` = undefined hides the screenshot (live view). */
-export function TraceStepDetail({ step, shotUrl }: { step: TraceStep; shotUrl?: string | null }) {
+/**
+ * Details of one step: screenshot, operation, screens, expectations, API calls and DB changes. `shotUrl` = undefined hides the screenshot (live view);
+ * a promise is `Backend.traceShot` (Pages makes a `blob:` URL).
+ */
+export function TraceStepDetail({ step, shotUrl: shot }: { step: TraceStep; shotUrl?: string | null | Promise<string> }) {
   const [broken, setBroken] = useState('');
+  const [resolved, setResolved] = useState<{ from: Promise<string>; url: string | null } | null>(null);
+  useEffect(() => {
+    if (!(shot instanceof Promise)) return;
+    let alive = true;
+    shot.then(
+      (url) => alive && setResolved({ from: shot, url }),
+      () => alive && setResolved({ from: shot, url: null }),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [shot]);
+  const pending = shot instanceof Promise && resolved?.from !== shot;
+  const shotUrl = shot instanceof Promise ? (resolved?.from === shot ? resolved.url : null) : shot;
   const screenExpect = step.expects.find((e) => e.kind === 'screen');
   return (
     <div className="trace-detail" data-testid="trace-detail" data-index={step.index}>
       {shotUrl !== undefined &&
-        (shotUrl && broken !== shotUrl ? (
+        (pending ? (
+          <div className="trace-shot empty muted" />
+        ) : shotUrl && broken !== shotUrl ? (
           <img className="trace-shot" data-testid="screenshot" src={shotUrl} alt={`ステップ ${step.index} のスクリーンショット`} onError={() => setBroken(shotUrl)} />
         ) : (
           <div className="trace-shot empty muted" data-testid="screenshot">
