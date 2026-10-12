@@ -1,0 +1,16 @@
+# ddv mock scaffold が生成。event / click / expect.screen は再生成で更新、それ以外は保持
+
+id: BD-TDATA-EDITOR-P002
+title: 開始 → シナリオ表示 → [編集] 編集中 → [値を変更] 編集中 → [取消] シナリオ表示 → 終了
+fixtures: [ default ]
+start: View
+steps:
+  - event: 編集
+    click: edit
+    expect: { screen: Editing }
+  - event: 値を変更
+    click: change
+    expect: { screen: Editing }
+  - event: 取消
+    click: cancel
+    expect: { screen: View }

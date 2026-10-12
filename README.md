@@ -80,8 +80,15 @@ npm run ddv -- gh clean [--repo acme/order-app]                 # 開いてい�
 - GitHub のワークスペースでテスト・スナップショットを実行する前に確認ダイアログが出ます（PR のコードがこの PC で動くため）
 - PR では PR バーに各レビュアーの最新のレビュー状態、文書ツリーに「変更された文書」（追加 A / 変更 M / 削除 D）を表示します
 - 文書の上の「差分を表示」を開くと、本文に PR の差分（追加・変更・削除）を重ね、変更された図は base / head を並べて比較し、テストIDの増減も表示します
-- PR のレビュースレッドは、対応する要素（見出し・段落・表の行・図のノード/遷移）の後ろに表示します。ファイルへのコメントや以前の版の行へのコメントは文書の先頭にまとめます（返信・解決は GitHub で行います）
-- 置き場所は `DDV_HOME`（既定 `~/.ddv`）。レビューコメントの送信・Approve・モックの調整は今後の Phase で追加します
+- PR のレビュースレッドは、対応する要素（見出し・段落・表の行・図のノード/遷移）の後ろに表示します。ファイルへのコメントや以前の版の行へのコメントは文書の先頭にまとめます。スレッドには ddv から返信でき、「解決済みにする」「未解決に戻す」も切り替えられます
+- 置き場所は `DDV_HOME`（既定 `~/.ddv`）
+
+### PR にレビューを返す
+
+- 文書の要素の 💬 からコメントを保留に追加し、PR バーの「レビュー（n）」で一覧・修正・削除してから、Comment / Approve / Request changes のいずれかで送信します（送信するまで GitHub には投稿されません）
+- Approve のときは、PR で変更された文書のうち選んだものの `status` を `approved` にするコミットを PR のブランチへ追加します（書き込めないときは同じ変更を suggestion として付けます）
+- モックの「調整」で画面の要素を選び、文言と属性（placeholder・required・maxlength・min・max・pattern・選択肢など）を変えるとその場で反映されます。「保留に追加」で、モック HTML の該当行への suggestion として保留中のレビューに入ります（手元のリポジトリでは「HTML をコピー」）
+- AI 側は `ddv review comments --github <owner/repo> --pr <n> --json` でスレッドを取得し、プラグインの `ddv-review-response` スキルで修正・返信します
 
 ## ドキュメントの書き方
 
@@ -184,8 +191,8 @@ npm run ddv -- serve --repo .   # ddv 自身の設計書を表示し、ビュー
 | 0–1 | 閲覧・Mermaid 描画（パン/ズーム）・TOC・参照・マトリクス/ID・経路ハイライト・テスト紐づけ/実行・As-Is/To-Be 差分 | ✅ |
 | 1' | プラグイン最小版（要件/基本/詳細のスキルとテンプレート、`ddv-lint`） | ✅ |
 | 2 | モック runtime（疑似 BE/DB）、シナリオ DSL＋データ分離（骨組み自動生成）、プレイヤー（巻き戻し/速度）、シナリオの E2E 実行（データ駆動）、スナップショット | ✅（[要件](docs/design/requirements/mock.md) / [基本設計](docs/design/basic/mock-player.md) / 詳細設計：[シナリオ](docs/design/detailed/scenario.md)・[runtime](docs/design/detailed/mock-runtime.md)・[スナップショット](docs/design/detailed/snapshot.md)） |
-| 3 | GitHub repo/branch 指定、PR 行コメント・Approve 連携、モックのレビュー調整 → suggestion | 実装中：ワークスペース（PR・branch の取得と表示）✅、PR の差分・レビュースレッドの表示 ✅、コメント・送信・Approve＋status 連動・スレッド返信/解決・`ddv review comments`・`ddv-review-response` スキル ✅（実 GitHub での受入は未）、モックの調整は未（[要件](docs/design/requirements/github.md) / [基本設計](docs/design/basic/github-review.md) / 詳細設計：[ワークスペース](docs/design/detailed/workspace.md) / [レビューコメント](docs/design/detailed/review-comment.md)） |
-| 4 | テスト監視（履歴・フレーキー・カバレッジ）、テストデータ編集（シナリオの入力値・fixtures・期待値をビューアで編集）、トレースビュー | 未着手 |
+| 3 | GitHub repo/branch 指定、PR 行コメント・Approve 連携、モックのレビュー調整 → suggestion | 実装済み・実 GitHub での受入待ち（[受入チェックリスト](docs/acceptance/phase3-github.md)）：ワークスペース（PR・branch の取得と表示）、PR の差分・レビュースレッドの表示、コメント・送信・Approve＋status 連動・スレッド返信/解決、モックの調整 → suggestion、`ddv review comments`・`ddv-review-response` スキル（[要件](docs/design/requirements/github.md) / [基本設計](docs/design/basic/github-review.md) / 詳細設計：[ワークスペース](docs/design/detailed/workspace.md) / [レビューコメント](docs/design/detailed/review-comment.md) / [モック調整](docs/design/detailed/mock-tune.md)） |
+| 4 | テスト監視（履歴・フレーキー・カバレッジ）、テストデータ編集（シナリオの入力値・fixtures・期待値をビューアで編集）、トレースビュー | 設計中：[要件定義](docs/design/requirements/testops.md) ✅ → 基本設計（[テスト監視](docs/design/basic/test-monitoring.md)・[テストデータ編集](docs/design/basic/test-data-editor.md)・[トレースビュー](docs/design/basic/trace-view.md)、レビュー待ち）→ 承認後に詳細設計 |
 | 5 | .NET デスクトップ（XAML → CSS トークン、FlaUI エクスポート） | 未着手 |
 | 6 | ホスト型（GitHub Pages + API + Actions） | 未着手 |
 | 7 | 品質ゲート（描画検査・改ざん検出・CI テンプレート）、プラグイン eval | 未着手 |

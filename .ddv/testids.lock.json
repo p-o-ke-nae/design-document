@@ -2173,6 +2173,893 @@
         }
       }
     },
+    "BD-TDATA-EDITOR": {
+      "doc": "docs/design/basic/test-data-editor.md",
+      "diagram": "editor-flow",
+      "next": {
+        "P": 10,
+        "T": 10,
+        "X": 13
+      },
+      "cases": {
+        "P:[*]start||View>View|編集|Editing>Editing|値を変更|Editing>Editing|保存 [検証OK]|View>View||[*]end": {
+          "id": "BD-TDATA-EDITOR-P001",
+          "status": "active",
+          "title": "開始 → シナリオ表示 → [編集] 編集中 → [値を変更] 編集中 → [保存 [検証OK]] シナリオ表示 → 終了"
+        },
+        "P:[*]start||View>View|編集|Editing>Editing|値を変更|Editing>Editing|取消|View>View||[*]end": {
+          "id": "BD-TDATA-EDITOR-P002",
+          "status": "active",
+          "title": "開始 → シナリオ表示 → [編集] 編集中 → [値を変更] 編集中 → [取消] シナリオ表示 → 終了"
+        },
+        "P:[*]start||View>View|編集|Editing>Editing|再生|Previewing>Previewing|再生終了|Editing>Editing|保存 [検証OK]|View>View||[*]end": {
+          "id": "BD-TDATA-EDITOR-P003",
+          "status": "active",
+          "title": "開始 → シナリオ表示 → [編集] 編集中 → [再生] 編集中の再生 → [再生終了] 編集中 → [保存 [検証OK]] シナリオ表示 → 終了"
+        },
+        "P:[*]start||View>View|編集|Editing>Editing|再生|Previewing>Previewing|再生終了|Editing>Editing|取消|View>View||[*]end": {
+          "id": "BD-TDATA-EDITOR-P004",
+          "status": "active",
+          "title": "開始 → シナリオ表示 → [編集] 編集中 → [再生] 編集中の再生 → [再生終了] 編集中 → [取消] シナリオ表示 → 終了"
+        },
+        "P:[*]start||View>View|編集|Editing>Editing|保存 [検証NG]|Editing>Editing|保存 [検証OK]|View>View||[*]end": {
+          "id": "BD-TDATA-EDITOR-P005",
+          "status": "active",
+          "title": "開始 → シナリオ表示 → [編集] 編集中 → [保存 [検証NG]] 編集中 → [保存 [検証OK]] シナリオ表示 → 終了"
+        },
+        "P:[*]start||View>View|編集|Editing>Editing|保存 [検証NG]|Editing>Editing|取消|View>View||[*]end": {
+          "id": "BD-TDATA-EDITOR-P006",
+          "status": "active",
+          "title": "開始 → シナリオ表示 → [編集] 編集中 → [保存 [検証NG]] 編集中 → [取消] シナリオ表示 → 終了"
+        },
+        "P:[*]start||View>View|編集|Editing>Editing|保存 [検証OK]|View>View||[*]end": {
+          "id": "BD-TDATA-EDITOR-P007",
+          "status": "active",
+          "title": "開始 → シナリオ表示 → [編集] 編集中 → [保存 [検証OK]] シナリオ表示 → 終了"
+        },
+        "P:[*]start||View>View|編集|Editing>Editing|取消|View>View||[*]end": {
+          "id": "BD-TDATA-EDITOR-P008",
+          "status": "active",
+          "title": "開始 → シナリオ表示 → [編集] 編集中 → [取消] シナリオ表示 → 終了"
+        },
+        "P:[*]start||View>View||[*]end": {
+          "id": "BD-TDATA-EDITOR-P009",
+          "status": "active",
+          "title": "開始 → シナリオ表示 → 終了"
+        },
+        "T:[*]start||View": {
+          "id": "BD-TDATA-EDITOR-T001",
+          "status": "active",
+          "title": "開始 --> シナリオ表示"
+        },
+        "T:View|編集|Editing": {
+          "id": "BD-TDATA-EDITOR-T002",
+          "status": "active",
+          "title": "シナリオ表示 --[編集]--> 編集中"
+        },
+        "T:Editing|値を変更|Editing": {
+          "id": "BD-TDATA-EDITOR-T003",
+          "status": "active",
+          "title": "編集中 --[値を変更]--> 編集中"
+        },
+        "T:Editing|再生|Previewing": {
+          "id": "BD-TDATA-EDITOR-T004",
+          "status": "active",
+          "title": "編集中 --[再生]--> 編集中の再生"
+        },
+        "T:Previewing|再生終了|Editing": {
+          "id": "BD-TDATA-EDITOR-T005",
+          "status": "active",
+          "title": "編集中の再生 --[再生終了]--> 編集中"
+        },
+        "T:Editing|保存 [検証NG]|Editing": {
+          "id": "BD-TDATA-EDITOR-T006",
+          "status": "active",
+          "title": "編集中 --[保存 [検証NG]]--> 編集中"
+        },
+        "T:Editing|保存 [検証OK]|View": {
+          "id": "BD-TDATA-EDITOR-T007",
+          "status": "active",
+          "title": "編集中 --[保存 [検証OK]]--> シナリオ表示"
+        },
+        "T:Editing|取消|View": {
+          "id": "BD-TDATA-EDITOR-T008",
+          "status": "active",
+          "title": "編集中 --[取消]--> シナリオ表示"
+        },
+        "T:View||[*]end": {
+          "id": "BD-TDATA-EDITOR-T009",
+          "status": "active",
+          "title": "シナリオ表示 --> 終了"
+        },
+        "X:View|値を変更": {
+          "id": "BD-TDATA-EDITOR-X001",
+          "status": "active",
+          "title": "シナリオ表示 で [値を変更]"
+        },
+        "X:View|再生": {
+          "id": "BD-TDATA-EDITOR-X002",
+          "status": "active",
+          "title": "シナリオ表示 で [再生]"
+        },
+        "X:View|再生終了": {
+          "id": "BD-TDATA-EDITOR-X003",
+          "status": "active",
+          "title": "シナリオ表示 で [再生終了]"
+        },
+        "X:View|保存": {
+          "id": "BD-TDATA-EDITOR-X004",
+          "status": "active",
+          "title": "シナリオ表示 で [保存]"
+        },
+        "X:View|取消": {
+          "id": "BD-TDATA-EDITOR-X005",
+          "status": "active",
+          "title": "シナリオ表示 で [取消]"
+        },
+        "X:Editing|編集": {
+          "id": "BD-TDATA-EDITOR-X006",
+          "status": "active",
+          "title": "編集中 で [編集]"
+        },
+        "X:Editing|再生終了": {
+          "id": "BD-TDATA-EDITOR-X007",
+          "status": "active",
+          "title": "編集中 で [再生終了]"
+        },
+        "X:Previewing|編集": {
+          "id": "BD-TDATA-EDITOR-X008",
+          "status": "active",
+          "title": "編集中の再生 で [編集]"
+        },
+        "X:Previewing|値を変更": {
+          "id": "BD-TDATA-EDITOR-X009",
+          "status": "active",
+          "title": "編集中の再生 で [値を変更]"
+        },
+        "X:Previewing|再生": {
+          "id": "BD-TDATA-EDITOR-X010",
+          "status": "active",
+          "title": "編集中の再生 で [再生]"
+        },
+        "X:Previewing|保存": {
+          "id": "BD-TDATA-EDITOR-X011",
+          "status": "active",
+          "title": "編集中の再生 で [保存]"
+        },
+        "X:Previewing|取消": {
+          "id": "BD-TDATA-EDITOR-X012",
+          "status": "active",
+          "title": "編集中の再生 で [取消]"
+        }
+      }
+    },
+    "BD-TDATA-SAVE": {
+      "doc": "docs/design/basic/test-data-editor.md",
+      "diagram": "save",
+      "next": {
+        "P": 7,
+        "T": 12,
+        "S": 11
+      },
+      "cases": {
+        "P:A||B>B|誤り|NG": {
+          "id": "BD-TDATA-SAVE-P001",
+          "status": "active",
+          "title": "保存 / suggestion に追加 → 形式が正しい → [誤り] 保存しない・理由を表示"
+        },
+        "P:A||B>B|正しい|C>C|重複|NG": {
+          "id": "BD-TDATA-SAVE-P002",
+          "status": "active",
+          "title": "保存 / suggestion に追加 → 形式が正しい → [正しい] fixtures のキーが重複していない → [重複] 保存しない・理由を表示"
+        },
+        "P:A||B>B|正しい|C>C|なし|D>D|違う|NG": {
+          "id": "BD-TDATA-SAVE-P003",
+          "status": "active",
+          "title": "保存 / suggestion に追加 → 形式が正しい → [正しい] fixtures のキーが重複していない → [なし] 基のハッシュが今のファイルと同じ → [違う] 保存しない・理由を表示"
+        },
+        "P:A||B>B|正しい|C>C|なし|D>D|同じ|E>E|手元|F": {
+          "id": "BD-TDATA-SAVE-P004",
+          "status": "active",
+          "title": "保存 / suggestion に追加 → 形式が正しい → [正しい] fixtures のキーが重複していない → [なし] 基のハッシュが今のファイルと同じ → [同じ] ワークスペースの種類 → [手元] YAML の該当箇所だけを書き換えて保存"
+        },
+        "P:A||B>B|正しい|C>C|なし|D>D|同じ|E>E|PR|G>G|収まる|H": {
+          "id": "BD-TDATA-SAVE-P005",
+          "status": "active",
+          "title": "保存 / suggestion に追加 → 形式が正しい → [正しい] fixtures のキーが重複していない → [なし] 基のハッシュが今のファイルと同じ → [同じ] ワークスペースの種類 → [PR] 変更が連続した行の範囲に収まる → [収まる] その範囲への行の suggestion を保留中レビューに追加"
+        },
+        "P:A||B>B|正しい|C>C|なし|D>D|同じ|E>E|PR|G>G|収まらない|I": {
+          "id": "BD-TDATA-SAVE-P006",
+          "status": "active",
+          "title": "保存 / suggestion に追加 → 形式が正しい → [正しい] fixtures のキーが重複していない → [なし] 基のハッシュが今のファイルと同じ → [同じ] ワークスペースの種類 → [PR] 変更が連続した行の範囲に収まる → [収まらない] 変更した行ごとの suggestion に分けて追加"
+        },
+        "T:A||B": {
+          "id": "BD-TDATA-SAVE-T001",
+          "status": "active",
+          "title": "保存 / suggestion に追加 --> 形式が正しい"
+        },
+        "T:B|誤り|NG": {
+          "id": "BD-TDATA-SAVE-T002",
+          "status": "active",
+          "title": "形式が正しい --[誤り]--> 保存しない・理由を表示"
+        },
+        "T:B|正しい|C": {
+          "id": "BD-TDATA-SAVE-T003",
+          "status": "active",
+          "title": "形式が正しい --[正しい]--> fixtures のキーが重複していない"
+        },
+        "T:C|重複|NG": {
+          "id": "BD-TDATA-SAVE-T004",
+          "status": "active",
+          "title": "fixtures のキーが重複していない --[重複]--> 保存しない・理由を表示"
+        },
+        "T:C|なし|D": {
+          "id": "BD-TDATA-SAVE-T005",
+          "status": "active",
+          "title": "fixtures のキーが重複していない --[なし]--> 基のハッシュが今のファイルと同じ"
+        },
+        "T:D|違う|NG": {
+          "id": "BD-TDATA-SAVE-T006",
+          "status": "active",
+          "title": "基のハッシュが今のファイルと同じ --[違う]--> 保存しない・理由を表示"
+        },
+        "T:D|同じ|E": {
+          "id": "BD-TDATA-SAVE-T007",
+          "status": "active",
+          "title": "基のハッシュが今のファイルと同じ --[同じ]--> ワークスペースの種類"
+        },
+        "T:E|手元|F": {
+          "id": "BD-TDATA-SAVE-T008",
+          "status": "active",
+          "title": "ワークスペースの種類 --[手元]--> YAML の該当箇所だけを書き換えて保存"
+        },
+        "T:E|PR|G": {
+          "id": "BD-TDATA-SAVE-T009",
+          "status": "active",
+          "title": "ワークスペースの種類 --[PR]--> 変更が連続した行の範囲に収まる"
+        },
+        "T:G|収まる|H": {
+          "id": "BD-TDATA-SAVE-T010",
+          "status": "active",
+          "title": "変更が連続した行の範囲に収まる --[収まる]--> その範囲への行の suggestion を保留中レビューに追加"
+        },
+        "T:G|収まらない|I": {
+          "id": "BD-TDATA-SAVE-T011",
+          "status": "active",
+          "title": "変更が連続した行の範囲に収まる --[収まらない]--> 変更した行ごとの suggestion に分けて追加"
+        },
+        "S:A||B>B|誤り|NG": {
+          "id": "BD-TDATA-SAVE-S001",
+          "status": "active",
+          "title": "保存 / suggestion に追加 → 形式が正しい → [誤り] 保存しない・理由を表示"
+        },
+        "S:A||B>B|正しい|C": {
+          "id": "BD-TDATA-SAVE-S002",
+          "status": "active",
+          "title": "保存 / suggestion に追加 → 形式が正しい → [正しい] fixtures のキーが重複していない"
+        },
+        "S:B|正しい|C>C|重複|NG": {
+          "id": "BD-TDATA-SAVE-S003",
+          "status": "active",
+          "title": "形式が正しい → [正しい] fixtures のキーが重複していない → [重複] 保存しない・理由を表示"
+        },
+        "S:B|正しい|C>C|なし|D": {
+          "id": "BD-TDATA-SAVE-S004",
+          "status": "active",
+          "title": "形式が正しい → [正しい] fixtures のキーが重複していない → [なし] 基のハッシュが今のファイルと同じ"
+        },
+        "S:C|なし|D>D|違う|NG": {
+          "id": "BD-TDATA-SAVE-S005",
+          "status": "active",
+          "title": "fixtures のキーが重複していない → [なし] 基のハッシュが今のファイルと同じ → [違う] 保存しない・理由を表示"
+        },
+        "S:C|なし|D>D|同じ|E": {
+          "id": "BD-TDATA-SAVE-S006",
+          "status": "active",
+          "title": "fixtures のキーが重複していない → [なし] 基のハッシュが今のファイルと同じ → [同じ] ワークスペースの種類"
+        },
+        "S:D|同じ|E>E|手元|F": {
+          "id": "BD-TDATA-SAVE-S007",
+          "status": "active",
+          "title": "基のハッシュが今のファイルと同じ → [同じ] ワークスペースの種類 → [手元] YAML の該当箇所だけを書き換えて保存"
+        },
+        "S:D|同じ|E>E|PR|G": {
+          "id": "BD-TDATA-SAVE-S008",
+          "status": "active",
+          "title": "基のハッシュが今のファイルと同じ → [同じ] ワークスペースの種類 → [PR] 変更が連続した行の範囲に収まる"
+        },
+        "S:E|PR|G>G|収まる|H": {
+          "id": "BD-TDATA-SAVE-S009",
+          "status": "active",
+          "title": "ワークスペースの種類 → [PR] 変更が連続した行の範囲に収まる → [収まる] その範囲への行の suggestion を保留中レビューに追加"
+        },
+        "S:E|PR|G>G|収まらない|I": {
+          "id": "BD-TDATA-SAVE-S010",
+          "status": "active",
+          "title": "ワークスペースの種類 → [PR] 変更が連続した行の範囲に収まる → [収まらない] 変更した行ごとの suggestion に分けて追加"
+        }
+      }
+    },
+    "BD-TMON-COV": {
+      "doc": "docs/design/basic/test-monitoring.md",
+      "diagram": "coverage",
+      "next": {
+        "P": 7,
+        "T": 11,
+        "S": 10
+      },
+      "cases": {
+        "P:A||B>B|欠番|Z": {
+          "id": "BD-TMON-COV-P001",
+          "status": "active",
+          "title": "文書・図のテストID → ロックで有効なID → [欠番] 集計しない"
+        },
+        "P:A||B>B|有効|C>C|なし|U": {
+          "id": "BD-TMON-COV-P002",
+          "status": "active",
+          "title": "文書・図のテストID → ロックで有効なID → [有効] テストに紐づいている → [なし] 未紐づけ"
+        },
+        "P:A||B>B|有効|C>C|あり|D>D|なし|R": {
+          "id": "BD-TMON-COV-P003",
+          "status": "active",
+          "title": "文書・図のテストID → ロックで有効なID → [有効] テストに紐づいている → [あり] 実行結果が履歴にある → [なし] 未実行"
+        },
+        "P:A||B>B|有効|C>C|あり|D>D|あり|E>E|passed|P": {
+          "id": "BD-TMON-COV-P004",
+          "status": "active",
+          "title": "文書・図のテストID → ロックで有効なID → [有効] テストに紐づいている → [あり] 実行結果が履歴にある → [あり] 最新の結果 → [passed] 成功"
+        },
+        "P:A||B>B|有効|C>C|あり|D>D|あり|E>E|failed または error|F": {
+          "id": "BD-TMON-COV-P005",
+          "status": "active",
+          "title": "文書・図のテストID → ロックで有効なID → [有効] テストに紐づいている → [あり] 実行結果が履歴にある → [あり] 最新の結果 → [failed または error] 失敗"
+        },
+        "P:A||B>B|有効|C>C|あり|D>D|あり|E>E|skipped|K": {
+          "id": "BD-TMON-COV-P006",
+          "status": "active",
+          "title": "文書・図のテストID → ロックで有効なID → [有効] テストに紐づいている → [あり] 実行結果が履歴にある → [あり] 最新の結果 → [skipped] スキップ"
+        },
+        "T:A||B": {
+          "id": "BD-TMON-COV-T001",
+          "status": "active",
+          "title": "文書・図のテストID --> ロックで有効なID"
+        },
+        "T:B|欠番|Z": {
+          "id": "BD-TMON-COV-T002",
+          "status": "active",
+          "title": "ロックで有効なID --[欠番]--> 集計しない"
+        },
+        "T:B|有効|C": {
+          "id": "BD-TMON-COV-T003",
+          "status": "active",
+          "title": "ロックで有効なID --[有効]--> テストに紐づいている"
+        },
+        "T:C|なし|U": {
+          "id": "BD-TMON-COV-T004",
+          "status": "active",
+          "title": "テストに紐づいている --[なし]--> 未紐づけ"
+        },
+        "T:C|あり|D": {
+          "id": "BD-TMON-COV-T005",
+          "status": "active",
+          "title": "テストに紐づいている --[あり]--> 実行結果が履歴にある"
+        },
+        "T:D|なし|R": {
+          "id": "BD-TMON-COV-T006",
+          "status": "active",
+          "title": "実行結果が履歴にある --[なし]--> 未実行"
+        },
+        "T:D|あり|E": {
+          "id": "BD-TMON-COV-T007",
+          "status": "active",
+          "title": "実行結果が履歴にある --[あり]--> 最新の結果"
+        },
+        "T:E|passed|P": {
+          "id": "BD-TMON-COV-T008",
+          "status": "active",
+          "title": "最新の結果 --[passed]--> 成功"
+        },
+        "T:E|failed または error|F": {
+          "id": "BD-TMON-COV-T009",
+          "status": "active",
+          "title": "最新の結果 --[failed または error]--> 失敗"
+        },
+        "T:E|skipped|K": {
+          "id": "BD-TMON-COV-T010",
+          "status": "active",
+          "title": "最新の結果 --[skipped]--> スキップ"
+        },
+        "S:A||B>B|欠番|Z": {
+          "id": "BD-TMON-COV-S001",
+          "status": "active",
+          "title": "文書・図のテストID → ロックで有効なID → [欠番] 集計しない"
+        },
+        "S:A||B>B|有効|C": {
+          "id": "BD-TMON-COV-S002",
+          "status": "active",
+          "title": "文書・図のテストID → ロックで有効なID → [有効] テストに紐づいている"
+        },
+        "S:B|有効|C>C|なし|U": {
+          "id": "BD-TMON-COV-S003",
+          "status": "active",
+          "title": "ロックで有効なID → [有効] テストに紐づいている → [なし] 未紐づけ"
+        },
+        "S:B|有効|C>C|あり|D": {
+          "id": "BD-TMON-COV-S004",
+          "status": "active",
+          "title": "ロックで有効なID → [有効] テストに紐づいている → [あり] 実行結果が履歴にある"
+        },
+        "S:C|あり|D>D|なし|R": {
+          "id": "BD-TMON-COV-S005",
+          "status": "active",
+          "title": "テストに紐づいている → [あり] 実行結果が履歴にある → [なし] 未実行"
+        },
+        "S:C|あり|D>D|あり|E": {
+          "id": "BD-TMON-COV-S006",
+          "status": "active",
+          "title": "テストに紐づいている → [あり] 実行結果が履歴にある → [あり] 最新の結果"
+        },
+        "S:D|あり|E>E|passed|P": {
+          "id": "BD-TMON-COV-S007",
+          "status": "active",
+          "title": "実行結果が履歴にある → [あり] 最新の結果 → [passed] 成功"
+        },
+        "S:D|あり|E>E|failed または error|F": {
+          "id": "BD-TMON-COV-S008",
+          "status": "active",
+          "title": "実行結果が履歴にある → [あり] 最新の結果 → [failed または error] 失敗"
+        },
+        "S:D|あり|E>E|skipped|K": {
+          "id": "BD-TMON-COV-S009",
+          "status": "active",
+          "title": "実行結果が履歴にある → [あり] 最新の結果 → [skipped] スキップ"
+        }
+      }
+    },
+    "BD-TMON-FLAKY": {
+      "doc": "docs/design/basic/test-monitoring.md",
+      "diagram": "flaky",
+      "next": {
+        "P": 4,
+        "T": 6,
+        "S": 5
+      },
+      "cases": {
+        "P:A||B>B|ない|N": {
+          "id": "BD-TMON-FLAKY-P001",
+          "status": "active",
+          "title": "テストIDの結果を履歴から集める → コミットが分かり未コミットの変更が無い実行がある → [ない] 判定しない"
+        },
+        "P:A||B>B|ある|C>C|ある|F": {
+          "id": "BD-TMON-FLAKY-P002",
+          "status": "active",
+          "title": "テストIDの結果を履歴から集める → コミットが分かり未コミットの変更が無い実行がある → [ある] 同じコミットに passed と failed の両方がある → [ある] フレーキー"
+        },
+        "P:A||B>B|ある|C>C|ない|S": {
+          "id": "BD-TMON-FLAKY-P003",
+          "status": "active",
+          "title": "テストIDの結果を履歴から集める → コミットが分かり未コミットの変更が無い実行がある → [ある] 同じコミットに passed と failed の両方がある → [ない] 安定"
+        },
+        "T:A||B": {
+          "id": "BD-TMON-FLAKY-T001",
+          "status": "active",
+          "title": "テストIDの結果を履歴から集める --> コミットが分かり未コミットの変更が無い実行がある"
+        },
+        "T:B|ない|N": {
+          "id": "BD-TMON-FLAKY-T002",
+          "status": "active",
+          "title": "コミットが分かり未コミットの変更が無い実行がある --[ない]--> 判定しない"
+        },
+        "T:B|ある|C": {
+          "id": "BD-TMON-FLAKY-T003",
+          "status": "active",
+          "title": "コミットが分かり未コミットの変更が無い実行がある --[ある]--> 同じコミットに passed と failed の両方がある"
+        },
+        "T:C|ある|F": {
+          "id": "BD-TMON-FLAKY-T004",
+          "status": "active",
+          "title": "同じコミットに passed と failed の両方がある --[ある]--> フレーキー"
+        },
+        "T:C|ない|S": {
+          "id": "BD-TMON-FLAKY-T005",
+          "status": "active",
+          "title": "同じコミットに passed と failed の両方がある --[ない]--> 安定"
+        },
+        "S:A||B>B|ない|N": {
+          "id": "BD-TMON-FLAKY-S001",
+          "status": "active",
+          "title": "テストIDの結果を履歴から集める → コミットが分かり未コミットの変更が無い実行がある → [ない] 判定しない"
+        },
+        "S:A||B>B|ある|C": {
+          "id": "BD-TMON-FLAKY-S002",
+          "status": "active",
+          "title": "テストIDの結果を履歴から集める → コミットが分かり未コミットの変更が無い実行がある → [ある] 同じコミットに passed と failed の両方がある"
+        },
+        "S:B|ある|C>C|ある|F": {
+          "id": "BD-TMON-FLAKY-S003",
+          "status": "active",
+          "title": "コミットが分かり未コミットの変更が無い実行がある → [ある] 同じコミットに passed と failed の両方がある → [ある] フレーキー"
+        },
+        "S:B|ある|C>C|ない|S": {
+          "id": "BD-TMON-FLAKY-S004",
+          "status": "active",
+          "title": "コミットが分かり未コミットの変更が無い実行がある → [ある] 同じコミットに passed と failed の両方がある → [ない] 安定"
+        }
+      }
+    },
+    "BD-TMON-PRUNE": {
+      "doc": "docs/design/basic/test-monitoring.md",
+      "diagram": "retention",
+      "next": {
+        "P": 5,
+        "T": 8,
+        "S": 9
+      },
+      "cases": {
+        "P:A||B>B|超えた|C>C||D>D|超えた|E>E||F": {
+          "id": "BD-TMON-PRUNE-P001",
+          "status": "active",
+          "title": "実行記録を保存した後 → テストの実行記録が上限を超えた → [超えた] 古い実行記録から削除しそのトレースも削除 → トレースのある実行が上限を超えた → [超えた] 古い実行のトレースだけ削除し実行記録は残す → 終了"
+        },
+        "P:A||B>B|超えた|C>C||D>D|以内|F": {
+          "id": "BD-TMON-PRUNE-P002",
+          "status": "active",
+          "title": "実行記録を保存した後 → テストの実行記録が上限を超えた → [超えた] 古い実行記録から削除しそのトレースも削除 → トレースのある実行が上限を超えた → [以内] 終了"
+        },
+        "P:A||B>B|以内|D>D|超えた|E>E||F": {
+          "id": "BD-TMON-PRUNE-P003",
+          "status": "active",
+          "title": "実行記録を保存した後 → テストの実行記録が上限を超えた → [以内] トレースのある実行が上限を超えた → [超えた] 古い実行のトレースだけ削除し実行記録は残す → 終了"
+        },
+        "P:A||B>B|以内|D>D|以内|F": {
+          "id": "BD-TMON-PRUNE-P004",
+          "status": "active",
+          "title": "実行記録を保存した後 → テストの実行記録が上限を超えた → [以内] トレースのある実行が上限を超えた → [以内] 終了"
+        },
+        "T:A||B": {
+          "id": "BD-TMON-PRUNE-T001",
+          "status": "active",
+          "title": "実行記録を保存した後 --> テストの実行記録が上限を超えた"
+        },
+        "T:B|超えた|C": {
+          "id": "BD-TMON-PRUNE-T002",
+          "status": "active",
+          "title": "テストの実行記録が上限を超えた --[超えた]--> 古い実行記録から削除しそのトレースも削除"
+        },
+        "T:B|以内|D": {
+          "id": "BD-TMON-PRUNE-T003",
+          "status": "active",
+          "title": "テストの実行記録が上限を超えた --[以内]--> トレースのある実行が上限を超えた"
+        },
+        "T:C||D": {
+          "id": "BD-TMON-PRUNE-T004",
+          "status": "active",
+          "title": "古い実行記録から削除しそのトレースも削除 --> トレースのある実行が上限を超えた"
+        },
+        "T:D|超えた|E": {
+          "id": "BD-TMON-PRUNE-T005",
+          "status": "active",
+          "title": "トレースのある実行が上限を超えた --[超えた]--> 古い実行のトレースだけ削除し実行記録は残す"
+        },
+        "T:D|以内|F": {
+          "id": "BD-TMON-PRUNE-T006",
+          "status": "active",
+          "title": "トレースのある実行が上限を超えた --[以内]--> 終了"
+        },
+        "T:E||F": {
+          "id": "BD-TMON-PRUNE-T007",
+          "status": "active",
+          "title": "古い実行のトレースだけ削除し実行記録は残す --> 終了"
+        },
+        "S:A||B>B|超えた|C": {
+          "id": "BD-TMON-PRUNE-S001",
+          "status": "active",
+          "title": "実行記録を保存した後 → テストの実行記録が上限を超えた → [超えた] 古い実行記録から削除しそのトレースも削除"
+        },
+        "S:A||B>B|以内|D": {
+          "id": "BD-TMON-PRUNE-S002",
+          "status": "active",
+          "title": "実行記録を保存した後 → テストの実行記録が上限を超えた → [以内] トレースのある実行が上限を超えた"
+        },
+        "S:B|超えた|C>C||D": {
+          "id": "BD-TMON-PRUNE-S003",
+          "status": "active",
+          "title": "テストの実行記録が上限を超えた → [超えた] 古い実行記録から削除しそのトレースも削除 → トレースのある実行が上限を超えた"
+        },
+        "S:B|以内|D>D|超えた|E": {
+          "id": "BD-TMON-PRUNE-S004",
+          "status": "active",
+          "title": "テストの実行記録が上限を超えた → [以内] トレースのある実行が上限を超えた → [超えた] 古い実行のトレースだけ削除し実行記録は残す"
+        },
+        "S:B|以内|D>D|以内|F": {
+          "id": "BD-TMON-PRUNE-S005",
+          "status": "active",
+          "title": "テストの実行記録が上限を超えた → [以内] トレースのある実行が上限を超えた → [以内] 終了"
+        },
+        "S:C||D>D|超えた|E": {
+          "id": "BD-TMON-PRUNE-S006",
+          "status": "active",
+          "title": "古い実行記録から削除しそのトレースも削除 → トレースのある実行が上限を超えた → [超えた] 古い実行のトレースだけ削除し実行記録は残す"
+        },
+        "S:C||D>D|以内|F": {
+          "id": "BD-TMON-PRUNE-S007",
+          "status": "active",
+          "title": "古い実行記録から削除しそのトレースも削除 → トレースのある実行が上限を超えた → [以内] 終了"
+        },
+        "S:D|超えた|E>E||F": {
+          "id": "BD-TMON-PRUNE-S008",
+          "status": "active",
+          "title": "トレースのある実行が上限を超えた → [超えた] 古い実行のトレースだけ削除し実行記録は残す → 終了"
+        }
+      }
+    },
+    "BD-TMON-SCREEN": {
+      "doc": "docs/design/basic/test-monitoring.md",
+      "diagram": "screen-flow",
+      "next": {
+        "P": 7,
+        "T": 11,
+        "X": 14
+      },
+      "cases": {
+        "P:[*]start||List>List|テストIDを選ぶ|Detail>Detail|一覧へ|List>List||[*]end": {
+          "id": "BD-TMON-SCREEN-P001",
+          "status": "active",
+          "title": "開始 → テスト一覧 → [テストIDを選ぶ] テストIDの履歴 → [一覧へ] テスト一覧 → 終了"
+        },
+        "P:[*]start||List>List|フレーキー|Flaky>Flaky|テストIDを選ぶ|Detail>Detail|一覧へ|List>List||[*]end": {
+          "id": "BD-TMON-SCREEN-P002",
+          "status": "active",
+          "title": "開始 → テスト一覧 → [フレーキー] フレーキー一覧 → [テストIDを選ぶ] テストIDの履歴 → [一覧へ] テスト一覧 → 終了"
+        },
+        "P:[*]start||List>List|フレーキー|Flaky>Flaky|一覧へ|List>List||[*]end": {
+          "id": "BD-TMON-SCREEN-P003",
+          "status": "active",
+          "title": "開始 → テスト一覧 → [フレーキー] フレーキー一覧 → [一覧へ] テスト一覧 → 終了"
+        },
+        "P:[*]start||List>List|失敗を再実行 [失敗あり]|Rerunning>Rerunning|実行完了|List>List||[*]end": {
+          "id": "BD-TMON-SCREEN-P004",
+          "status": "active",
+          "title": "開始 → テスト一覧 → [失敗を再実行 [失敗あり]] 再実行中 → [実行完了] テスト一覧 → 終了"
+        },
+        "P:[*]start||List>List|失敗を再実行 [失敗なし]|List>List||[*]end": {
+          "id": "BD-TMON-SCREEN-P005",
+          "status": "active",
+          "title": "開始 → テスト一覧 → [失敗を再実行 [失敗なし]] テスト一覧 → 終了"
+        },
+        "P:[*]start||List>List||[*]end": {
+          "id": "BD-TMON-SCREEN-P006",
+          "status": "active",
+          "title": "開始 → テスト一覧 → 終了"
+        },
+        "T:[*]start||List": {
+          "id": "BD-TMON-SCREEN-T001",
+          "status": "active",
+          "title": "開始 --> テスト一覧"
+        },
+        "T:List|テストIDを選ぶ|Detail": {
+          "id": "BD-TMON-SCREEN-T002",
+          "status": "active",
+          "title": "テスト一覧 --[テストIDを選ぶ]--> テストIDの履歴"
+        },
+        "T:Detail|一覧へ|List": {
+          "id": "BD-TMON-SCREEN-T003",
+          "status": "active",
+          "title": "テストIDの履歴 --[一覧へ]--> テスト一覧"
+        },
+        "T:List|フレーキー|Flaky": {
+          "id": "BD-TMON-SCREEN-T004",
+          "status": "active",
+          "title": "テスト一覧 --[フレーキー]--> フレーキー一覧"
+        },
+        "T:Flaky|テストIDを選ぶ|Detail": {
+          "id": "BD-TMON-SCREEN-T005",
+          "status": "active",
+          "title": "フレーキー一覧 --[テストIDを選ぶ]--> テストIDの履歴"
+        },
+        "T:Flaky|一覧へ|List": {
+          "id": "BD-TMON-SCREEN-T006",
+          "status": "active",
+          "title": "フレーキー一覧 --[一覧へ]--> テスト一覧"
+        },
+        "T:List|失敗を再実行 [失敗あり]|Rerunning": {
+          "id": "BD-TMON-SCREEN-T007",
+          "status": "active",
+          "title": "テスト一覧 --[失敗を再実行 [失敗あり]]--> 再実行中"
+        },
+        "T:List|失敗を再実行 [失敗なし]|List": {
+          "id": "BD-TMON-SCREEN-T008",
+          "status": "active",
+          "title": "テスト一覧 --[失敗を再実行 [失敗なし]]--> テスト一覧"
+        },
+        "T:Rerunning|実行完了|List": {
+          "id": "BD-TMON-SCREEN-T009",
+          "status": "active",
+          "title": "再実行中 --[実行完了]--> テスト一覧"
+        },
+        "T:List||[*]end": {
+          "id": "BD-TMON-SCREEN-T010",
+          "status": "active",
+          "title": "テスト一覧 --> 終了"
+        },
+        "X:List|一覧へ": {
+          "id": "BD-TMON-SCREEN-X001",
+          "status": "active",
+          "title": "テスト一覧 で [一覧へ]"
+        },
+        "X:List|実行完了": {
+          "id": "BD-TMON-SCREEN-X002",
+          "status": "active",
+          "title": "テスト一覧 で [実行完了]"
+        },
+        "X:Detail|テストIDを選ぶ": {
+          "id": "BD-TMON-SCREEN-X003",
+          "status": "active",
+          "title": "テストIDの履歴 で [テストIDを選ぶ]"
+        },
+        "X:Detail|フレーキー": {
+          "id": "BD-TMON-SCREEN-X004",
+          "status": "active",
+          "title": "テストIDの履歴 で [フレーキー]"
+        },
+        "X:Detail|失敗を再実行": {
+          "id": "BD-TMON-SCREEN-X005",
+          "status": "active",
+          "title": "テストIDの履歴 で [失敗を再実行]"
+        },
+        "X:Detail|実行完了": {
+          "id": "BD-TMON-SCREEN-X006",
+          "status": "active",
+          "title": "テストIDの履歴 で [実行完了]"
+        },
+        "X:Flaky|フレーキー": {
+          "id": "BD-TMON-SCREEN-X007",
+          "status": "active",
+          "title": "フレーキー一覧 で [フレーキー]"
+        },
+        "X:Flaky|失敗を再実行": {
+          "id": "BD-TMON-SCREEN-X008",
+          "status": "active",
+          "title": "フレーキー一覧 で [失敗を再実行]"
+        },
+        "X:Flaky|実行完了": {
+          "id": "BD-TMON-SCREEN-X009",
+          "status": "active",
+          "title": "フレーキー一覧 で [実行完了]"
+        },
+        "X:Rerunning|テストIDを選ぶ": {
+          "id": "BD-TMON-SCREEN-X010",
+          "status": "active",
+          "title": "再実行中 で [テストIDを選ぶ]"
+        },
+        "X:Rerunning|一覧へ": {
+          "id": "BD-TMON-SCREEN-X011",
+          "status": "active",
+          "title": "再実行中 で [一覧へ]"
+        },
+        "X:Rerunning|フレーキー": {
+          "id": "BD-TMON-SCREEN-X012",
+          "status": "active",
+          "title": "再実行中 で [フレーキー]"
+        },
+        "X:Rerunning|失敗を再実行": {
+          "id": "BD-TMON-SCREEN-X013",
+          "status": "active",
+          "title": "再実行中 で [失敗を再実行]"
+        }
+      }
+    },
+    "BD-TRACE-VIEW": {
+      "doc": "docs/design/basic/trace-view.md",
+      "diagram": "view-flow",
+      "next": {
+        "P": 6,
+        "T": 9,
+        "X": 8
+      },
+      "cases": {
+        "P:[*]start||Result>Result|トレースを開く [記録あり]|Trace>Trace|ステップを選ぶ|Trace>Trace|戻る|Result>Result||[*]end": {
+          "id": "BD-TRACE-VIEW-P001",
+          "status": "active",
+          "title": "開始 → テスト結果 → [トレースを開く [記録あり]] トレース → [ステップを選ぶ] トレース → [戻る] テスト結果 → 終了"
+        },
+        "P:[*]start||Result>Result|トレースを開く [記録あり]|Trace>Trace|前後のステップ|Trace>Trace|戻る|Result>Result||[*]end": {
+          "id": "BD-TRACE-VIEW-P002",
+          "status": "active",
+          "title": "開始 → テスト結果 → [トレースを開く [記録あり]] トレース → [前後のステップ] トレース → [戻る] テスト結果 → 終了"
+        },
+        "P:[*]start||Result>Result|トレースを開く [記録あり]|Trace>Trace|戻る|Result>Result||[*]end": {
+          "id": "BD-TRACE-VIEW-P003",
+          "status": "active",
+          "title": "開始 → テスト結果 → [トレースを開く [記録あり]] トレース → [戻る] テスト結果 → 終了"
+        },
+        "P:[*]start||Result>Result|トレースを開く [記録なし]|NoTrace>NoTrace|戻る|Result>Result||[*]end": {
+          "id": "BD-TRACE-VIEW-P004",
+          "status": "active",
+          "title": "開始 → テスト結果 → [トレースを開く [記録なし]] トレースなし → [戻る] テスト結果 → 終了"
+        },
+        "P:[*]start||Result>Result||[*]end": {
+          "id": "BD-TRACE-VIEW-P005",
+          "status": "active",
+          "title": "開始 → テスト結果 → 終了"
+        },
+        "T:[*]start||Result": {
+          "id": "BD-TRACE-VIEW-T001",
+          "status": "active",
+          "title": "開始 --> テスト結果"
+        },
+        "T:Result|トレースを開く [記録あり]|Trace": {
+          "id": "BD-TRACE-VIEW-T002",
+          "status": "active",
+          "title": "テスト結果 --[トレースを開く [記録あり]]--> トレース"
+        },
+        "T:Result|トレースを開く [記録なし]|NoTrace": {
+          "id": "BD-TRACE-VIEW-T003",
+          "status": "active",
+          "title": "テスト結果 --[トレースを開く [記録なし]]--> トレースなし"
+        },
+        "T:NoTrace|戻る|Result": {
+          "id": "BD-TRACE-VIEW-T004",
+          "status": "active",
+          "title": "トレースなし --[戻る]--> テスト結果"
+        },
+        "T:Trace|ステップを選ぶ|Trace": {
+          "id": "BD-TRACE-VIEW-T005",
+          "status": "active",
+          "title": "トレース --[ステップを選ぶ]--> トレース"
+        },
+        "T:Trace|前後のステップ|Trace": {
+          "id": "BD-TRACE-VIEW-T006",
+          "status": "active",
+          "title": "トレース --[前後のステップ]--> トレース"
+        },
+        "T:Trace|戻る|Result": {
+          "id": "BD-TRACE-VIEW-T007",
+          "status": "active",
+          "title": "トレース --[戻る]--> テスト結果"
+        },
+        "T:Result||[*]end": {
+          "id": "BD-TRACE-VIEW-T008",
+          "status": "active",
+          "title": "テスト結果 --> 終了"
+        },
+        "X:Result|戻る": {
+          "id": "BD-TRACE-VIEW-X001",
+          "status": "active",
+          "title": "テスト結果 で [戻る]"
+        },
+        "X:Result|ステップを選ぶ": {
+          "id": "BD-TRACE-VIEW-X002",
+          "status": "active",
+          "title": "テスト結果 で [ステップを選ぶ]"
+        },
+        "X:Result|前後のステップ": {
+          "id": "BD-TRACE-VIEW-X003",
+          "status": "active",
+          "title": "テスト結果 で [前後のステップ]"
+        },
+        "X:Trace|トレースを開く": {
+          "id": "BD-TRACE-VIEW-X004",
+          "status": "active",
+          "title": "トレース で [トレースを開く]"
+        },
+        "X:NoTrace|トレースを開く": {
+          "id": "BD-TRACE-VIEW-X005",
+          "status": "active",
+          "title": "トレースなし で [トレースを開く]"
+        },
+        "X:NoTrace|ステップを選ぶ": {
+          "id": "BD-TRACE-VIEW-X006",
+          "status": "active",
+          "title": "トレースなし で [ステップを選ぶ]"
+        },
+        "X:NoTrace|前後のステップ": {
+          "id": "BD-TRACE-VIEW-X007",
+          "status": "active",
+          "title": "トレースなし で [前後のステップ]"
+        }
+      }
+    },
     "BD-VIEWER-RUN": {
       "doc": "docs/design/basic/viewer.md",
       "diagram": "run-state",

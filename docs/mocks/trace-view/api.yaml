@@ -1,0 +1,12 @@
+# 疑似 API（トレースビュー用）
+tables:
+  - traces
+routes:
+  - method: POST
+    path: /trace-open
+    when:                       # 削除済み・導入前の実行にはトレースが無い
+      - if: "body.recorded == 'no'"
+        status: 404
+        body: { message: この実行のトレースはありません }
+    status: 200
+    body: { runId: r-20261012-1403, testId: BD-ORDER-SCREEN-P004 }

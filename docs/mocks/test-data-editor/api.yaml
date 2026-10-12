@@ -1,0 +1,15 @@
+# 疑似 API（テストデータ編集用）
+tables:
+  - saves
+routes:
+  - { method: GET, path: /saves, op: list, table: saves }
+  - method: POST
+    path: /saves
+    when:                       # fixtures のキーが既存の行と重複したら保存しない
+      - if: "body.fxkey == 'A-1001'"
+        status: 422
+        body: { message: fixtures のキー A-1001 が重複しています（orders） }
+    op: insert
+    table: saves
+    set: { message: 保存しました（docs/mocks/order/scenarios/BD-ORDER-SCREEN-P004.yaml・fixtures/default.yaml） }
+    status: 201

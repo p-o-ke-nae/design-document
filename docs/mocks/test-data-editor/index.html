@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>テストデータ編集（モック）</title>
+  <link rel="stylesheet" href="../../../apps/web/src/styles.css" />
+  <style>
+    .page { padding: 12px; display: grid; gap: 10px; }
+    .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    table { border-collapse: collapse; font-size: 13px; }
+    th, td { border: 1px solid #d0d7de; padding: 4px 8px; text-align: left; vertical-align: top; }
+    td.gen { color: #57606a; background: #f6f8fa; }
+    td input { width: 140px; }
+    .src { font-family: ui-monospace, monospace; font-size: 12px; background: #f6f8fa; padding: 6px; white-space: pre; }
+    .src .del { background: #ffebe9; }
+    .src .add { background: #e6ffec; }
+    .warn { color: #9a6700; }
+    .mockonly { border-style: dashed; }
+  </style>
+  <script type="module" src="../_ddv/mock-runtime.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <span class="brand">ddv</span>
+      <span class="muted">テストデータ</span>
+      <span class="spacer"></span>
+      <span class="muted">basic/order.md・BD-ORDER-SCREEN-P004</span>
+    </header>
+
+    <!-- シナリオ表示 -->
+    <section data-screen="View">
+      <div class="page">
+        <div class="row">
+          <strong>BD-ORDER-SCREEN-P004</strong>
+          <span class="muted">開始 → 注文一覧 → [新規] 注文入力 → [次へ [入力OK]] 確認</span>
+          <span class="spacer"></span>
+          <button>▶ 再生</button>
+          <button>E2E を実行</button>
+          <button class="primary" data-testid="edit" data-event="編集" data-goto="Editing">編集</button>
+        </div>
+        <table data-testid="steps-view">
+          <thead><tr><th>#</th><th>イベント</th><th>入力</th><th>期待</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>新規</td><td></td><td>画面 Input</td></tr>
+            <tr><td>2</td><td>次へ [入力OK]</td><td>customer：山田 太郎、quantity：3</td><td>画面 Confirm、total：合計 3,000 円</td></tr>
+          </tbody>
+        </table>
+        <h3>fixtures：default（orders）</h3>
+        <table data-testid="fixtures-view">
+          <thead><tr><th>id</th><th>customer</th><th>status</th></tr></thead>
+          <tbody><tr><td>A-1001</td><td>佐藤 花子</td><td>Submitted</td></tr></tbody>
+        </table>
+        <p class="muted" data-testid="saved" data-bind="/saves"><template><span>{{message}}</span></template></p>
+      </div>
+    </section>
+
+    <!-- 編集中 -->
+    <section data-screen="Editing" hidden>
+      <div class="page">
+        <div class="row">
+          <strong>BD-ORDER-SCREEN-P004</strong>
+          <span class="badge">編集中</span>
+          <span class="spacer"></span>
+          <button data-testid="preview" data-event="再生" data-goto="Previewing">▶ 再生（編集中のデータ）</button>
+        </div>
+        <table data-testid="steps-edit">
+          <thead><tr><th>#</th><th>イベント</th><th>入力</th><th>期待（画面）</th><th>期待（text）</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td class="gen">新規</td><td></td><td class="gen">Input</td><td></td></tr>
+            <tr>
+              <td>2</td><td class="gen">次へ [入力OK]</td>
+              <td>
+                <label>customer <input data-testid="in-customer" value="山田 太郎" data-sample="鈴木 一郎" /></label><br />
+                <label>quantity <input type="number" data-testid="in-quantity" min="1" max="99" value="3" data-sample="5" /></label>
+              </td>
+              <td class="gen">Confirm</td>
+              <td><label>total <input data-testid="ex-total" value="合計 3,000 円" data-sample="合計 5,000 円" /></label></td>
+            </tr>
+          </tbody>
+        </table>
+        <h3>fixtures：default（orders）</h3>
+        <table data-testid="fixtures-edit">
+          <thead><tr><th>id</th><th>customer</th><th>status</th></tr></thead>
+          <tbody>
+            <tr><td>A-1001</td><td>佐藤 花子</td><td>Submitted</td></tr>
+            <tr>
+              <td><input data-testid="fxkey" value="A-1002" data-sample="A-1002" /></td>
+              <td><input data-testid="fxcustomer" value="田中 次郎" data-sample="田中 次郎" /></td>
+              <td><input data-testid="fxstatus" value="Draft" data-sample="Draft" /></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="row"><button>＋ 行を追加</button></div>
+        <label>変わる行</label>
+        <div class="src" data-testid="diff"><span class="del">-      quantity: 3</span>
+<span class="add">+      quantity: 5</span></div>
+        <p class="warn" data-testid="warnings">警告：入力のキー gift はモックにありません</p>
+        <p class="error" data-testid="save-error" data-error hidden></p>
+        <div class="row">
+          <button class="mockonly" data-testid="change" data-event="値を変更" data-goto="Editing">（モック）値を変更</button>
+          <span class="spacer"></span>
+          <button data-testid="cancel" data-event="取消" data-goto="View">取消</button>
+          <button class="primary" data-testid="save" data-event="保存" data-submit="POST /saves" data-ok="View">保存</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 編集中の再生 -->
+    <section data-screen="Previewing" hidden>
+      <div class="page">
+        <div class="row">
+          <strong>BD-ORDER-SCREEN-P004</strong>
+          <span class="badge" data-testid="preview-badge">編集中のデータで再生中</span>
+        </div>
+        <div class="frame" style="border:1px solid #d0d7de;padding:12px;min-height:160px">
+          <h2>注文入力</h2>
+          <label>顧客名 <input value="鈴木 一郎" /></label>
+          <label>数量 <input type="number" value="5" /></label>
+          <p><button class="primary">次へ</button></p>
+        </div>
+        <p class="muted">ステップ 2 / 2</p>
+        <button class="mockonly" data-testid="preview-end" data-event="再生終了" data-goto="Editing">（モック）再生終了</button>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
