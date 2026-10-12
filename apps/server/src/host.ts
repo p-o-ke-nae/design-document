@@ -3,19 +3,23 @@ import path from 'node:path';
 import { Hono, type Context } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { GitHubError, type TokenResolver } from '@ddv/github';
-import { createApp, mimeOf, type ServerContext } from './app.ts';
+import { createApp, createContext, mimeOf, type ServerContext } from './app.ts';
 import { normalizePath } from '@ddv/core';
-import { guard } from './guard.ts';
+import { listDirs } from './folders.ts';
+import { guard, type SessionAuth } from './guard.ts';
+import { LocalError, LocalWorkspace, type LocalEvent } from './local.ts';
 import { DiffService } from './pr-diff.ts';
+import { RecentFolders } from './recent.ts';
 import { PendingStore, ReviewService } from './review.ts';
 import { ReviewError } from './review-error.ts';
 import { StatusCommitter } from './status-commit.ts';
 import { ThreadService } from './threads.ts';
 import { OpenRequestError, parseRepo, toPullInfo, WorkspaceError, type WorkspaceEvent, type WorkspaceManager } from './workspaces.ts';
+import type { RunRecord } from './runs.ts';
 
 export interface ServerAppOptions {
-  /** The local workspace (`serve --repo`); absent when only GitHub workspaces are served. */
-  local?: ServerContext;
+  /** The local workspace (one folder, chosen at start-up or in the viewer). Absent = an empty one with `<home>/recent.json`. */
+  local?: LocalWorkspace;
   manager: WorkspaceManager;
   tokens: TokenResolver;
   /** Port the server listens on (Host check). */
@@ -23,6 +27,14 @@ export interface ServerAppOptions {
   devOrigins?: string[];
   /** Built viewer (apps/web/dist) served for any other GET. */
   dist?: string;
+  /** Start token / session cookie check (`ddv serve`); absent = Host / Origin only. */
+  auth?: SessionAuth;
+}
+
+/** `<meta name="ddv-auth" content="required">` right after `<head>`: the viewer shows TokenRequired without calling the API. */
+export function markTokenRequired(html: string): string {
+  const meta = '<meta name="ddv-auth" content="required">';
+  return /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, (m) => `${m}${meta}`) : `${meta}${html}`;
 }
 
 /** POSTs that run code from the workspace; refused until the workspace is trusted. */
@@ -81,7 +93,8 @@ export function createServerApp(opts: ServerAppOptions): Hono {
   const { manager, tokens } = opts;
   const app = new Hono();
   const apps = new Map<string, { gen: number; app: Hono }>();
-  const local = opts.local ? createApp(opts.local) : null;
+  const local = opts.local ?? new LocalWorkspace({ recent: new RecentFolders(path.join(manager.home, 'recent.json')), createContext: (d) => createContext(d) });
+  const dist = opts.dist && existsSync(opts.dist) ? opts.dist : undefined;
   const diffs = new DiffService(manager.git);
   const threads = new ThreadService(manager.github);
   const review = new ReviewService({
@@ -94,9 +107,11 @@ export function createServerApp(opts: ServerAppOptions): Hono {
     onChange: (id) => threads.invalidate(id),
   });
 
-  app.use('*', guard({ port: opts.port, devOrigins: opts.devOrigins }));
+  const tokenPage = async () => (dist ? markTokenRequired(await fs.readFile(path.join(dist, 'index.html'), 'utf8').catch(() => '')) || null : null);
+  app.use('*', guard({ port: opts.port, devOrigins: opts.devOrigins, auth: opts.auth, tokenPage }));
 
   app.onError((err, c) => {
+    if (err instanceof LocalError) return c.json(err.toJSON(), err.status);
     if (err instanceof OpenRequestError) return c.json({ error: err.message, code: err.code, message: err.message }, 400);
     if (err instanceof WorkspaceError) return c.json({ error: err.message, code: err.code }, err.status);
     if (err instanceof GitHubError) return c.json({ error: err.message, code: `github-${err.kind}` }, GITHUB_STATUS[err.kind]);
@@ -118,6 +133,67 @@ export function createServerApp(opts: ServerAppOptions): Hono {
     return { ws, app: entry.app };
   };
 
+  // --- local workspace (LOCALF) ---
+  const pathBody = async (c: Context): Promise<string> => {
+    const b = (await c.req.json().catch(() => null)) as { path?: unknown } | null;
+    if (!b || typeof b !== 'object' || typeof b.path !== 'string') throw new LocalError(400, 'bad-request', 'path（文字列）を指定してください');
+    return b.path;
+  };
+
+  app.get('/api/local', async (c) => c.json(await local.info()));
+
+  app.post('/api/local/open', async (c) => c.json(await local.open(await pathBody(c))));
+
+  app.post('/api/local/close', async (c) => {
+    await local.close();
+    return c.json({ ok: true });
+  });
+
+  app.delete('/api/local/recent', async (c) => c.json({ recent: await local.removeRecent(await pathBody(c)) }));
+
+  app.get('/api/fs/dirs', async (c) => c.json(await listDirs(c.req.query('path'), local.env)));
+
+  // Change / run notifications of whichever folder is open; `local` when the folder is swapped or closed.
+  app.get('/api/events', (c) =>
+    streamSSE(c, async (stream) => {
+      await stream.writeSSE({ event: 'hello', data: '{}' });
+      await new Promise<void>((resolve) => {
+        let detach = () => {};
+        const attach = () => {
+          detach();
+          detach = () => {};
+          const ctx = local.ctx;
+          if (!ctx) return;
+          const onChange = (paths: string[]) => void stream.writeSSE({ event: 'change', data: JSON.stringify(paths) });
+          const onEnd = (id: string, run?: { kind?: string }) => void stream.writeSSE({ event: 'run-end', data: JSON.stringify({ id, kind: run?.kind ?? 'test' }) });
+          const onRun = (id: string, run: RunRecord) =>
+            void stream.writeSSE({ event: 'run', data: JSON.stringify({ id, kind: 'test', rerunOf: run.rerunOf, attempt: run.attempt, times: run.times }) });
+          ctx.events.on('change', onChange);
+          ctx.runs.on('end', onEnd);
+          ctx.runs.on('run', onRun);
+          detach = () => {
+            ctx.events.off('change', onChange);
+            ctx.runs.off('end', onEnd);
+            ctx.runs.off('run', onRun);
+          };
+        };
+        const onLocal = (ev: LocalEvent) => {
+          attach();
+          void stream.writeSSE({ event: 'local', data: JSON.stringify(ev) });
+        };
+        attach();
+        local.events.on('local', onLocal);
+        const ping = setInterval(() => void stream.writeSSE({ event: 'ping', data: '' }), 25000);
+        stream.onAbort(() => {
+          clearInterval(ping);
+          detach();
+          local.events.off('local', onLocal);
+          resolve();
+        });
+      });
+    }),
+  );
+
   // --- GitHub ---
   app.get('/api/github/auth', async (c) => c.json(await tokens.status()));
 
@@ -131,7 +207,7 @@ export function createServerApp(opts: ServerAppOptions): Hono {
   });
 
   // --- workspaces ---
-  app.get('/api/workspaces', (c) => c.json({ local: Boolean(local), workspaces: manager.list() }));
+  app.get('/api/workspaces', (c) => c.json({ local: local.ctx !== null, workspaces: manager.list() }));
 
   app.post('/api/workspaces', async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -327,21 +403,18 @@ export function createServerApp(opts: ServerAppOptions): Hono {
   });
 
   // --- local workspace ---
-  if (local) {
-    app.all('/api/*', (c) => local.fetch(c.req.raw));
-    app.get('/raw/*', (c) => local.fetch(c.req.raw));
-  } else {
-    app.all('/api/*', (c) => c.json({ error: '手元のワークスペースはありません（--repo を指定して起動してください）', code: 'no-local' }, 404));
-    app.get('/raw/*', (c) => c.json({ error: 'no local workspace', code: 'no-local' }, 404));
-  }
+  app.all('/api/*', (c) => local.fetch(c.req.raw));
+  app.get('/raw/*', (c) => local.fetch(c.req.raw));
 
-  const dist = opts.dist;
-  if (dist && existsSync(dist)) {
+  if (dist) {
     app.get('*', async (c) => {
       const rel = decodeURIComponent(c.req.path).replace(/^\/+/, '');
       let abs = path.resolve(dist, rel);
       if (!abs.startsWith(dist) || !(await fs.stat(abs).catch(() => null))?.isFile()) abs = path.join(dist, 'index.html');
-      return new Response(await fs.readFile(abs), { headers: { 'content-type': mimeOf(abs) } });
+      if (abs !== path.join(dist, 'index.html')) return new Response(await fs.readFile(abs), { headers: { 'content-type': mimeOf(abs) } });
+      const html = await fs.readFile(abs, 'utf8');
+      const session = opts.auth ? opts.auth.valid(c.req.header('cookie')) : true;
+      return new Response(session ? html : markTokenRequired(html), { headers: { 'content-type': mimeOf(abs), 'cache-control': 'no-store' } });
     });
   }
 

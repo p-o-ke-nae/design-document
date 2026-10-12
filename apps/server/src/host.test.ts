@@ -3,10 +3,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { GitHubClient, TokenResolver } from '@ddv/github';
-import { createContext, type ServerContext } from './app.ts';
+import { createContext } from './app.ts';
 import { GitCache } from './git.ts';
 import { createUpstream, fakeGitHub, fakeGitHubState, type FakeGitHubState, type Upstream } from './github-fixture.ts';
 import { createServerApp } from './host.ts';
+import type { SessionAuth } from './guard.ts';
+import { LocalWorkspace } from './local.ts';
+import { RecentFolders } from './recent.ts';
 import { WorkspaceManager } from './workspaces.ts';
 
 const PORT = 5178;
@@ -17,7 +20,7 @@ interface Env {
   up: Upstream;
   state: FakeGitHubState;
   manager: WorkspaceManager;
-  local?: ServerContext;
+  local: LocalWorkspace;
   bodies: string[];
   req: (p: string, init?: RequestInit) => Promise<Response>;
   json: <T = any>(p: string, init?: RequestInit) => Promise<{ status: number; body: T }>;
@@ -25,7 +28,7 @@ interface Env {
 
 const envs: Env[] = [];
 
-async function setup(opts: { local?: boolean; gh?: string | null; envToken?: string; dist?: boolean } = {}): Promise<Env> {
+async function setup(opts: { local?: boolean; gh?: string | null; envToken?: string; dist?: boolean; auth?: SessionAuth } = {}): Promise<Env> {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'ddv-host-'));
   const up = await createUpstream(path.join(tmp, 'up'));
   const mainSha = up.git('rev-parse', 'main');
@@ -46,14 +49,16 @@ async function setup(opts: { local?: boolean; gh?: string | null; envToken?: str
   const git = new GitCache(home, tokens, { remoteUrl: (o, r) => path.join(tmp, 'up', o, r) });
   const manager = new WorkspaceManager({ home, github: new GitHubClient(tokens, { fetch: f }), git, createContext: (d) => createContext(d, { watch: false }), pollSeconds: 0 });
   await manager.init();
-  const local = opts.local ? await createContext(path.join(tmp, 'up', 'acme', 'order-app'), { watch: false }) : undefined;
+  const initial = opts.local ? await createContext(path.join(tmp, 'up', 'acme', 'order-app'), { watch: false }) : undefined;
+  const recent = new RecentFolders(path.join(home, 'recent.json'), { warn: () => undefined });
+  const local = new LocalWorkspace({ recent, createContext: (d) => createContext(d, { watch: false }), initial });
   let dist: string | undefined;
   if (opts.dist) {
     dist = path.join(tmp, 'dist');
     await fs.mkdir(dist, { recursive: true });
     await fs.writeFile(path.join(dist, 'index.html'), '<!doctype html><div id="root"></div>');
   }
-  const app = createServerApp({ local, manager, tokens, port: PORT, dist });
+  const app = createServerApp({ local, manager, tokens, port: PORT, dist, auth: opts.auth });
   const bodies: string[] = [];
   const req = async (p: string, init: RequestInit = {}) => {
     const headers = new Headers(init.headers);
@@ -104,7 +109,7 @@ async function readEvents(res: Response, until: (ev: { event: string; data: any 
 afterEach(async () => {
   for (const e of envs.splice(0)) {
     e.manager.dispose();
-    e.local?.close();
+    e.local.dispose();
     await fs.rm(e.tmp, { recursive: true, force: true }).catch(() => undefined);
   }
 });
@@ -225,16 +230,16 @@ describe('ワークスペースの API とルーティング', () => {
     expect((await env.json(`/api/workspaces/${id}`)).body).toMatchObject({ state: 'Ready' });
   });
 
-  it('手元のワークスペースが無いとき既存の API は 404 no-local', async () => {
+  it('手元のフォルダが開かれていないとき既存の API は 409 no-folder', async () => {
     const env = await setup();
-    expect(await env.json('/api/config')).toMatchObject({ status: 404, body: { code: 'no-local' } });
+    expect(await env.json('/api/config')).toMatchObject({ status: 409, body: { code: 'no-folder', error: 'フォルダが開かれていません' } });
   });
 
-  it('未知の /api/* は画面の HTML でなく JSON の 404 を返す（エラー表示（共通））', async () => {
+  it('未知の /api/* は画面の HTML でなく JSON の 404 を返す（未選択は 409 no-folder）（エラー表示（共通））', async () => {
     for (const local of [true, false]) {
       const env = await setup({ local, dist: true });
       const res = await env.req('/api/no-such-api');
-      expect(res.status).toBe(404);
+      expect(res.status).toBe(local ? 404 : 409);
       expect(res.headers.get('content-type')).toMatch(/json/);
       expect(await res.json()).toHaveProperty('error');
       expect(await (await env.req('/some/page')).text()).toContain('<div id="root">');
