@@ -6,7 +6,8 @@ import { HEAD_SHA, OWNER, PAT_NOSCOPE, PAT_WRITE, PR, REPO } from './github-stub
 
 const LIST = `#/gh/${OWNER}/${REPO}/pr/${PR}/tests/actions`;
 const LIST_URL = new RegExp(`/design-document/${LIST.replace(/[/.]/g, '\\$&')}$`);
-const TEST_ID = 'BD-ORDER-SCREEN-T001';
+/** A test of the run's results (not an ID of this repository's documents). */
+const TEST_ID = 'order-confirm-back';
 /** The tracker finds the run every 2–3 s and polls it every 10 s. */
 const TRACK = { timeout: 40_000 };
 
@@ -40,12 +41,11 @@ test('PAT があれば Actionsで実行 → 起動中 → 実行中 → 実行�
   await expect(page.getByTestId('dispatch')).toBeEnabled();
   await expect(page.getByTestId('actions-list').getByTestId('disabled-reason')).toHaveCount(0);
 
-  await page.getByTestId('ids').fill(TEST_ID);
   await page.getByTestId('dispatch').click();
   await expect.poll(() => gh.actions.dispatches.length).toBe(1);
   const { ref, inputs } = gh.actions.dispatches[0];
   expect(ref).toBe('feature/confirm-back');
-  expect(inputs).toMatchObject({ mode: 'test', ids: TEST_ID, sha: HEAD_SHA, run: '' });
+  expect(inputs).toMatchObject({ mode: 'test', ids: '', sha: HEAD_SHA, run: '' });
   expect(inputs.request).toMatch(/^ddv-[0-9a-f]{8}$/);
   await expect(page).toHaveURL(new RegExp(`/tests/actions/requests/${inputs.request}$`));
   await expect(page.getByTestId('request')).toContainText(`依頼ID ${inputs.request}`);
