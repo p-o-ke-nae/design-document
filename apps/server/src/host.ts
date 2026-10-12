@@ -6,12 +6,13 @@ import { GitHubError, type TokenResolver } from '@ddv/github';
 import { createApp, mimeOf, type ServerContext } from './app.ts';
 import { normalizePath } from '@ddv/core';
 import { guard } from './guard.ts';
-import { DiffService } from './pr-diff.ts';
-import { PendingStore, ReviewService } from './review.ts';
-import { ReviewError } from './review-error.ts';
-import { StatusCommitter } from './status-commit.ts';
-import { ThreadService } from './threads.ts';
-import { OpenRequestError, parseRepo, toPullInfo, WorkspaceError, type WorkspaceEvent, type WorkspaceManager } from './workspaces.ts';
+import { DiffService, latestReviews, ReviewError, ReviewService, StatusCommitter, ThreadService, type PrContext, type RawReview, type ReviewerState } from '@ddv/services';
+import { gitChanges } from './pr-context.ts';
+import { ReaderFactory } from './readers.ts';
+import { PendingStore } from './review.ts';
+import { OpenRequestError, parseRepo, toPullInfo, WorkspaceError, type Workspace, type WorkspaceEvent, type WorkspaceManager } from './workspaces.ts';
+
+export { latestReviews, type ReviewerState } from '@ddv/services';
 
 export interface ServerAppOptions {
   /** The local workspace (`serve --repo`); absent when only GitHub workspaces are served. */
@@ -37,35 +38,6 @@ const GITHUB_STATUS: Record<GitHubError['kind'], 401 | 403 | 404 | 422 | 429 | 5
   network: 502,
 };
 
-interface RawReview {
-  user: { login: string } | null;
-  state: string;
-  submitted_at?: string;
-}
-
-export interface ReviewerState {
-  login: string;
-  state: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED';
-  submittedAt?: string;
-}
-
-/** Latest review state per reviewer; a later COMMENTED keeps an earlier APPROVED / CHANGES_REQUESTED (as on GitHub). */
-export function latestReviews(list: RawReview[]): ReviewerState[] {
-  const out = new Map<string, ReviewerState>();
-  for (const r of list) {
-    const login = r.user?.login;
-    if (!login || !['APPROVED', 'CHANGES_REQUESTED', 'COMMENTED', 'DISMISSED'].includes(r.state)) continue;
-    const prev = out.get(login);
-    if (r.state === 'DISMISSED') {
-      out.set(login, { login, state: 'COMMENTED', submittedAt: r.submitted_at });
-      continue;
-    }
-    if (r.state === 'COMMENTED' && prev && prev.state !== 'COMMENTED') continue;
-    out.set(login, { login, state: r.state as ReviewerState['state'], submittedAt: r.submitted_at });
-  }
-  return [...out.values()];
-}
-
 /** Rewrites the request URL path, keeping the query, method, headers and body. */
 function rewrite(req: Request, pathname: string): Request {
   const url = new URL(req.url);
@@ -82,12 +54,14 @@ export function createServerApp(opts: ServerAppOptions): Hono {
   const app = new Hono();
   const apps = new Map<string, { gen: number; app: Hono }>();
   const local = opts.local ? createApp(opts.local) : null;
-  const diffs = new DiffService(manager.git);
+  const readers = new ReaderFactory({ workspaces: manager, git: manager.git, local: opts.local ? { ctx: opts.local, generation: 0 } : null });
+  const changes = gitChanges(manager.git);
+  const diffs = new DiffService(changes);
   const threads = new ThreadService(manager.github);
   const review = new ReviewService({
     store: new PendingStore(manager.home),
     github: manager.github,
-    git: manager.git,
+    changes,
     committer: new StatusCommitter(manager.github),
     refresh: (id) => manager.refresh(id),
     pull: (id) => manager.pull(id),
@@ -104,13 +78,52 @@ export function createServerApp(opts: ServerAppOptions): Hono {
     return c.json({ error: err.message }, 500);
   });
 
+  /** A PR context that follows the workspace (head SHA / merge base change on refresh); readers come from the ReaderFactory. */
+  const live = new WeakMap<Workspace, PrContext>();
+  const prOf = (ws: Workspace): PrContext => {
+    let p = live.get(ws);
+    if (!p) {
+      p = {
+        get id() {
+          return ws.id;
+        },
+        get target() {
+          return ws.target;
+        },
+        get headSha() {
+          return ws.headSha;
+        },
+        get mergeBase() {
+          return ws.mergeBase;
+        },
+        get pr() {
+          return ws.pr ?? null;
+        },
+        get head() {
+          return readers.readerOf(ws, 'RIGHT')!;
+        },
+        get base() {
+          return readers.readerOf(ws, 'LEFT');
+        },
+      };
+      live.set(ws, p);
+    }
+    return p;
+  };
+  /** Validates the workspace (404 / 409) and returns its PR context. */
+  const prContext = (id: string) => {
+    const { ws, ctx } = manager.context(id);
+    readers.forWorkspace(id, 'RIGHT');
+    return { ws, ctx, pc: prOf(ws) };
+  };
+
   const appFor = (id: string) => {
     const { ws, ctx } = manager.context(id);
     let entry = apps.get(id);
     if (!entry || entry.gen !== ws.generation) {
       ctx.testData = () => {
         const cur = manager.context(id).ws;
-        return cur.target.pr ? { kind: 'pr', target: cur, review } : { kind: 'branch' };
+        return cur.target.pr ? { kind: 'pr', target: prOf(cur), review } : { kind: 'branch' };
       };
       entry = { gen: ws.generation, app: createApp(ctx) };
       apps.set(id, entry);
@@ -170,7 +183,7 @@ export function createServerApp(opts: ServerAppOptions): Hono {
     const ws = manager.get(id)!;
     void manager
       .refresh(id)
-      .then(() => (ws.state === 'Ready' && ws.target.pr ? review.relocate(ws).then(() => undefined) : undefined))
+      .then(() => (ws.state === 'Ready' && ws.target.pr ? review.relocate(prOf(ws)).then(() => undefined) : undefined))
       .catch(() => undefined);
     return c.json(manager.info(ws), 202);
   });
@@ -210,19 +223,19 @@ export function createServerApp(opts: ServerAppOptions): Hono {
   });
 
   app.get('/api/w/:ws/pr/files', async (c) => {
-    const { ws, ctx } = manager.context(c.req.param('ws'));
-    return c.json(await diffs.files(ws, ctx.config));
+    const { ctx, pc } = prContext(c.req.param('ws'));
+    return c.json(await diffs.files(pc, ctx.config));
   });
 
   app.get('/api/w/:ws/pr/diff', async (c) => {
-    const { ws, ctx } = manager.context(c.req.param('ws'));
-    return c.json(await diffs.docDiff(ws, ctx.config, normalizePath(c.req.query('path') ?? '')));
+    const { ctx, pc } = prContext(c.req.param('ws'));
+    return c.json(await diffs.docDiff(pc, ctx.config, normalizePath(c.req.query('path') ?? '')));
   });
 
   app.get('/api/w/:ws/pr/threads', async (c) => {
-    const { ws } = manager.context(c.req.param('ws'));
+    const { pc } = prContext(c.req.param('ws'));
     const p = c.req.query('path');
-    return c.json(await threads.list(ws, p ? normalizePath(p) : undefined));
+    return c.json(await threads.list(pc, p ? normalizePath(p) : undefined));
   });
 
   /*
@@ -260,51 +273,51 @@ export function createServerApp(opts: ServerAppOptions): Hono {
     return b as Record<string, unknown>;
   };
 
-  app.get('/api/w/:ws/review', (c) => guarded(c, async () => c.json(await review.get(manager.context(c.req.param('ws')).ws))));
+  app.get('/api/w/:ws/review', (c) => guarded(c, async () => c.json(await review.get(prContext(c.req.param('ws')).pc))));
 
   app.post('/api/w/:ws/review/comments', (c) =>
     guarded(c, async () => {
-      const { ws } = manager.context(c.req.param('ws'));
-      return c.json(await review.add(ws, await jsonBody(c)), 201);
+      const { pc } = prContext(c.req.param('ws'));
+      return c.json(await review.add(pc, await jsonBody(c)), 201);
     }),
   );
 
   app.patch('/api/w/:ws/review/comments/:id', (c) =>
     guarded(c, async () => {
-      const { ws } = manager.context(c.req.param('ws'));
-      return c.json(await review.update(ws, c.req.param('id'), await jsonBody(c)));
+      const { pc } = prContext(c.req.param('ws'));
+      return c.json(await review.update(pc, c.req.param('id'), await jsonBody(c)));
     }),
   );
 
   app.delete('/api/w/:ws/review/comments/:id', (c) =>
     guarded(c, async () => {
-      const { ws } = manager.context(c.req.param('ws'));
-      await review.remove(ws, c.req.param('id'));
+      const { pc } = prContext(c.req.param('ws'));
+      await review.remove(pc, c.req.param('id'));
       return c.json({ ok: true });
     }),
   );
 
   app.post('/api/w/:ws/review/submit', (c) =>
     guarded(c, async () => {
-      const { ws } = manager.context(c.req.param('ws'));
+      const { pc } = prContext(c.req.param('ws'));
       const b = await jsonBody(c);
-      return c.json(await review.submit(ws, b.event, b.body, b.approveDocs));
+      return c.json(await review.submit(pc, b.event, b.body, b.approveDocs));
     }),
   );
 
   app.post('/api/w/:ws/pr/threads/:id/replies', (c) =>
     guarded(c, async () => {
-      const { ws } = manager.context(c.req.param('ws'));
-      return c.json(await threads.reply(ws, c.req.param('id'), (await jsonBody(c)).body), 201);
+      const { pc } = prContext(c.req.param('ws'));
+      return c.json(await threads.reply(pc, c.req.param('id'), (await jsonBody(c)).body), 201);
     }),
   );
 
   app.post('/api/w/:ws/pr/threads/:id/resolve', (c) =>
     guarded(c, async () => {
-      const { ws } = manager.context(c.req.param('ws'));
+      const { pc } = prContext(c.req.param('ws'));
       const b = await jsonBody(c);
       if (typeof b.resolved !== 'boolean') throw new ReviewError(422, 'bad-request', 'resolved（真偽値）が必要です');
-      return c.json(await threads.resolve(ws, c.req.param('id'), b.resolved));
+      return c.json(await threads.resolve(pc, c.req.param('id'), b.resolved));
     }),
   );
 

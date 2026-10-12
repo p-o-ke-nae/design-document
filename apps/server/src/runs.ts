@@ -122,6 +122,17 @@ export class RunManager extends EventEmitter {
     return [...this.runs.values()].filter((r) => (r.kind ?? 'test') === 'test').sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   }
 
+  get(id: string): RunRecord | undefined {
+    return this.runs.get(id);
+  }
+
+  /** `LocalRuns.onEnd` (services): called when any run ends; returns the unsubscribe function. */
+  onEnd(listener: (id: string) => void): () => void {
+    const h = (id: string) => listener(id);
+    this.on('end', h);
+    return () => this.off('end', h);
+  }
+
   /** Latest result per test id (most recent run that produced a result for it). */
   latest(): Record<string, CaseResult & { runId: string; at: string }> {
     const out: Record<string, CaseResult & { runId: string; at: string }> = {};
