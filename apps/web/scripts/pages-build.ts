@@ -4,9 +4,10 @@ import { PagesConfigSchema, type PagesConfig } from '../../../packages/core/src/
 
 /** Build-time helpers of the Pages edition (pat.md「ビルドの版」). Node side: used by vite.config.ts only. */
 
-/** One line. Only the Pages edition's index.html gets it; the local edition's index.html is unchanged. */
+/** One line. Only the Pages edition's index.html gets it; the local edition's index.html is unchanged. The mock's srcdoc
+ * inherits it, so `script-src` has `data:` (embedded JS and runtime) and `base-uri` the virtual base (mockDocument `VIRTUAL_ORIGIN`). */
 export const PAGES_CSP =
-  "default-src 'self'; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline' blob: data:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com; img-src 'self' data: blob: https://*.githubusercontent.com; font-src 'self' data: blob:; media-src 'self' data: blob:; frame-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'";
+  "default-src 'self'; script-src 'self' 'unsafe-inline' blob: data:; style-src 'self' 'unsafe-inline' blob: data:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com; img-src 'self' data: blob: https://*.githubusercontent.com; font-src 'self' data: blob:; media-src 'self' data: blob:; frame-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self' https://mock.ddv.invalid; form-action 'none'";
 
 export const PAGES_CSP_META = `<meta http-equiv="Content-Security-Policy" content="${PAGES_CSP}">`;
 

@@ -450,13 +450,14 @@ export default defineConfig({
 Pages 版の `index.html` に付ける meta（1 行にまとめる）。基本設計の 3 つの指定に、モックの iframe（`srcdoc` は親の CSP を引き継ぐ）を動かすための指定と、既定の制限を足す。
 
 ```html
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline' blob: data:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com; img-src 'self' data: blob: https://*.githubusercontent.com; font-src 'self' data: blob:; media-src 'self' data: blob:; frame-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' blob: data:; style-src 'self' 'unsafe-inline' blob: data:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com; img-src 'self' data: blob: https://*.githubusercontent.com; font-src 'self' data: blob:; media-src 'self' data: blob:; frame-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self' https://mock.ddv.invalid; form-action 'none'">
 ```
 
 | 指定 | 理由 |
 |---|---|
 | `connect-src` / `img-src` / `frame-src` | 基本設計のとおり。GitHub 以外への `fetch`・画像による送信を止める |
-| `script-src 'unsafe-inline' blob:` | モックの HTML（利用者のインラインの JS）を `srcdoc` で動かすため。外部のスクリプトは読めない。PAT はモックから読めない（sandbox で親と別オリジン。:ref[../basic/hosted-viewer.md#モックの再生]） |
+| `script-src 'unsafe-inline' blob: data:` | モックの HTML（利用者のインラインの JS）を `srcdoc` で動かすため。`srcdoc` は親の CSP を継承し、モックの JS と同梱の runtime は `data:` の URL で埋め込む（:ref[mock-sandbox.md#js-と-runtime-の埋め込み]）ので `data:` が要る。外部のスクリプトは読めない。PAT はモックから読めない（sandbox で親と別オリジン。:ref[../basic/hosted-viewer.md#モックの再生]） |
+| `base-uri 'self' https://mock.ddv.invalid` | `srcdoc` に入れる仮想 base（:ref[mock-sandbox.md#仮想-base]）を許すため。`.invalid` は名前解決されないので、そこへの参照は通信にならない。それ以外の `<base>` は止める |
 | `style-src 'unsafe-inline'` | Mermaid の SVG とモックのインラインのスタイル |
 | `form-action 'none'` | フォームの送信で外部へ出さない（`PatForm` も送信しない） |
 | `frame-ancestors` | meta では効かないので書かない |

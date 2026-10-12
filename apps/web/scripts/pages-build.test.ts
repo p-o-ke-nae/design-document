@@ -42,6 +42,12 @@ describe('Pages 版のビルド（pat.md「ビルドの版」）', () => {
     expect(PAGES_CSP).not.toContain('\n');
   });
 
+  it('CSP はモックの srcdoc（親の CSP を継承）の data: の JS と仮想 base を許し、それ以外の base は止める', () => {
+    const directive = (name: string) => PAGES_CSP.split(';').map((d) => d.trim().split(/\s+/)).find(([n]) => n === name)?.slice(1);
+    expect(directive('script-src')).toEqual(["'self'", "'unsafe-inline'", 'blob:', 'data:']);
+    expect(directive('base-uri')).toEqual(["'self'", 'https://mock.ddv.invalid']);
+  });
+
   it('pages.config.json：既定のファイル・無いときは既定値・壊れていればビルドを止める', () => {
     expect(loadPagesConfig(path.join(import.meta.dirname, '..', 'pages.config.json'))).toEqual({ title: 'ddv', recentTargets: [] });
     expect(loadPagesConfig(file())).toEqual({ title: 'ddv', recentTargets: [] });
