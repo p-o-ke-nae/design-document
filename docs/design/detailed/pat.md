@@ -1,7 +1,7 @@
 ---
 id: PAT
 kind: detailed
-status: review
+status: approved
 title: PAT・権限・CSP・ビルド版・Pages デプロイ 詳細設計
 traces: [BD-HOSTV]
 ---
@@ -570,7 +570,7 @@ name: Pages
 
 on:
   push:
-    branches: [main]
+    branches: [master, main]
   workflow_dispatch:
 
 permissions:
@@ -631,7 +631,7 @@ jobs:
 
 - `pages: write`・`id-token: write` は `deploy` ジョブにだけ付ける（ビルド・テストは `contents: read`）
 - base は `configure-pages` の `base_path`（プロジェクトサイトは `/<repo>`、独自ドメイン・ユーザーサイトは空）に `/` を付けたもの。fork でリポジトリ名を変えても追従する
-- fork では管理者が Settings → Pages の Source を「GitHub Actions」にしてから `workflow_dispatch` で実行する。`main` が無いリポジトリは `workflow_dispatch` だけで動く
+- fork では管理者が Settings → Pages の Source を「GitHub Actions」にしてから `workflow_dispatch` で実行する。`master`・`main` のどちらも無いリポジトリは `workflow_dispatch` だけで動く
 - 既存の `ci.yml` は変えない（ローカル版のビルド・E2E のまま）
 
 `package.json`（ルート）に追加するスクリプト：

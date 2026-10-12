@@ -1,7 +1,7 @@
 ---
 id: ACTSVC
 kind: detailed
-status: review
+status: approved
 title: Actions での実行・結果の読み取り・履歴の統合 詳細設計
 traces: [BD-ACTRUN]
 ---

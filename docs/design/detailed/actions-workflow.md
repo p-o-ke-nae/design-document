@@ -1,7 +1,7 @@
 ---
 id: ACTWF
 kind: detailed
-status: review
+status: approved
 title: ddv ワークフロー雛形・ddv ci コマンド・結果ブランチ 詳細設計
 traces: [BD-ACTRUN]
 ---

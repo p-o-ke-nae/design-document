@@ -1,7 +1,7 @@
 ---
 id: PAGESV
 kind: detailed
-status: review
+status: approved
 title: Pages 版ビューア（対象の指定・URL・内容の取得・操作の可否）詳細設計
 traces: [BD-HOSTV]
 ---

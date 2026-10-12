@@ -1,7 +1,7 @@
 ---
 id: MOCKSB
 kind: detailed
-status: review
+status: approved
 title: Pages 版のモック再生（sandbox iframe・postMessage）詳細設計
 traces: [BD-HOSTV]
 ---

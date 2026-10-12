@@ -1,7 +1,7 @@
 ---
 id: LOCALF
 kind: detailed
-status: review
+status: approved
 title: 作業フォルダの選択・起動トークン 詳細設計
 traces: [BD-LOCAL]
 ---
