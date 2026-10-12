@@ -160,7 +160,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [runError, setRunError] = useState('');
   const [showMatrix, setShowMatrix] = useLocalStorage('ddv.showMatrix', true);
   const [history, setHistory] = useState<HistorySummary | null>(null);
-  const followRef = useRef<{ id: string; stop: () => void } | null>(null);
+  const followRef = useRef<{ id: string; rerunOf?: string; stop: () => void } | null>(null);
+  const followSeq = useRef(0);
 
   const refreshResults = useCallback(() => {
     api.latest().then(setLatest).catch(() => {});
@@ -170,6 +171,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const follow = useCallback(
     async (run: RunSummary) => {
       const id = run.id;
+      followSeq.current++;
       // Re-run attempts follow each other: drop the previous subscription so that its late result does not win.
       followRef.current?.stop();
       setRunLog([]);
@@ -182,6 +184,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
         followRef.current = {
           id,
+          rerunOf: run.rerunOf,
           stop: () => {
             stopped = true;
             unsubscribe();
@@ -262,6 +265,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async (times: number): Promise<string> => {
       setRunError('');
       let r: Awaited<ReturnType<typeof api.rerun>>;
+      const seq = followSeq.current;
       try {
         r = await api.rerun(times);
       } catch (e) {
@@ -270,6 +274,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         return (e as Error).message;
       }
+      // The `run` events of the attempts may arrive before this response: then they are already followed (and may be past attempt 1).
+      if (followSeq.current !== seq && followRef.current?.rerunOf === r.rerunOf) return '';
       void follow({ id: r.id, startedAt: new Date().toISOString(), status: 'running', request: {}, runners: [], results: {}, total: 0, rerunOf: r.rerunOf, attempt: r.attempt, times: r.times });
       return '';
     },
