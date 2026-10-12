@@ -34,6 +34,6 @@
       "@ddv/mock": ["./packages/mock/src/index.ts"]
     }
   },
-  "include": ["./packages/*/src", "apps/*/src", "e2e", "vitest.config.ts", "playwright.config.ts"]
+  "include": ["./packages/*/src", "apps/*/src", "apps/web/scripts", "e2e", "vitest.config.ts", "playwright.config.ts"]
 }
 
