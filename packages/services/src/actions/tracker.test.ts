@@ -300,26 +300,32 @@ describe('ActionsRunTracker', () => {
     expect(running.filter((c) => c.path.endsWith('/dispatches') || c.path.includes('/workflows/ddv-tests.yml/runs'))).toEqual([]);
   });
 
-  const terminal: Array<[TrackerState, Ev[], string]> = [
-    ['Completed', ['detected', 'done'], '[DD-ACTSVC-TRACK-X004][DD-ACTSVC-TRACK-X005][DD-ACTSVC-TRACK-X006][DD-ACTSVC-TRACK-X007]'],
-    ['Cancelled', ['detected', 'cancel'], '[DD-ACTSVC-TRACK-X008][DD-ACTSVC-TRACK-X009][DD-ACTSVC-TRACK-X010][DD-ACTSVC-TRACK-X011]'],
-    ['Failed', ['reject'], '[DD-ACTSVC-TRACK-X012][DD-ACTSVC-TRACK-X013][DD-ACTSVC-TRACK-X014][DD-ACTSVC-TRACK-X015]'],
-    ['Stopped', ['detected', 'stop'], '[DD-ACTSVC-TRACK-X016][DD-ACTSVC-TRACK-X017][DD-ACTSVC-TRACK-X018][DD-ACTSVC-TRACK-X019]'],
-  ];
-  for (const [state, events, ids] of terminal)
-    it(`${ids} ${state} の後は dispatch・検出の確認・状態の取得をせず、stop・2 回目の start / attach は効かない`, async () => {
-      const { tracker, calls, updates } = await play('start', events);
-      expect(tracker.state).toBe(state);
-      const n = calls.length;
-      const u = updates.length;
-      tracker.stop();
-      expect(tracker.state).toBe(state);
-      expect(() => tracker.start(async () => undefined, 'x')).toThrow('追跡はすでに始まっています');
-      expect(() => tracker.attach('42')).toThrow('追跡はすでに始まっています');
-      await new Promise((r) => setTimeout(r, 5));
-      expect(calls.length).toBe(n);
-      expect(updates.length).toBe(u);
-    });
+  async function expectTerminal(state: TrackerState, events: Ev[]): Promise<void> {
+    const { tracker, calls, updates } = await play('start', events);
+    expect(tracker.state).toBe(state);
+    const n = calls.length;
+    const u = updates.length;
+    tracker.stop();
+    expect(tracker.state).toBe(state);
+    expect(() => tracker.start(async () => undefined, 'x')).toThrow('追跡はすでに始まっています');
+    expect(() => tracker.attach('42')).toThrow('追跡はすでに始まっています');
+    await new Promise((r) => setTimeout(r, 5));
+    expect(calls.length).toBe(n);
+    expect(updates.length).toBe(u);
+  }
+
+  it('[DD-ACTSVC-TRACK-X004][DD-ACTSVC-TRACK-X005][DD-ACTSVC-TRACK-X006][DD-ACTSVC-TRACK-X007] 完了の後は dispatch・検出の確認・状態の取得をせず、stop・2 回目の start / attach は効かない', async () => {
+    await expectTerminal('Completed', ['detected', 'done']);
+  });
+  it('[DD-ACTSVC-TRACK-X008][DD-ACTSVC-TRACK-X009][DD-ACTSVC-TRACK-X010][DD-ACTSVC-TRACK-X011] キャンセルの後は dispatch・検出の確認・状態の取得をせず、stop・2 回目の start / attach は効かない', async () => {
+    await expectTerminal('Cancelled', ['detected', 'cancel']);
+  });
+  it('[DD-ACTSVC-TRACK-X012][DD-ACTSVC-TRACK-X013][DD-ACTSVC-TRACK-X014][DD-ACTSVC-TRACK-X015] 起動失敗の後は dispatch・検出の確認・状態の取得をせず、stop・2 回目の start / attach は効かない', async () => {
+    await expectTerminal('Failed', ['reject']);
+  });
+  it('[DD-ACTSVC-TRACK-X016][DD-ACTSVC-TRACK-X017][DD-ACTSVC-TRACK-X018][DD-ACTSVC-TRACK-X019] 停止の後は dispatch・検出の確認・状態の取得をせず、stop・2 回目の start / attach は効かない', async () => {
+    await expectTerminal('Stopped', ['detected', 'stop']);
+  });
 
   it('停止の後に届いた取得の結果は捨てる', async () => {
     let release!: () => void;
