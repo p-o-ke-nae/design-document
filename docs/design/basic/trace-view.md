@@ -1,7 +1,7 @@
 ---
 id: TRACE
 kind: basic
-status: review
+status: approved
 title: トレースビュー（シナリオ E2E のステップ記録）基本設計
 traces: [REQ-307, REQ-308, REQ-309]
 ---

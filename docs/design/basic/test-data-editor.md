@@ -1,7 +1,7 @@
 ---
 id: TDATA
 kind: basic
-status: review
+status: approved
 title: テストデータ編集（シナリオ・fixtures）基本設計
 traces: [REQ-304, REQ-305, REQ-306, REQ-309]
 ---

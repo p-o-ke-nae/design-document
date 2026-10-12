@@ -1,7 +1,7 @@
 ---
 id: TMON
 kind: basic
-status: review
+status: approved
 title: テスト監視（履歴・フレーキー・設計カバレッジ）基本設計
 traces: [REQ-301, REQ-302, REQ-303, REQ-308, REQ-309]
 ---
