@@ -3,12 +3,12 @@ import path from 'node:path';
 import { Hono, type Context } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { GitHubError, type TokenResolver } from '@ddv/github';
-import { createApp, mimeOf, type ServerContext } from './app.ts';
+import { createApp, mimeOf, serviceErrorBody, type ServerContext } from './app.ts';
 import { normalizePath } from '@ddv/core';
 import { guard } from './guard.ts';
-import { DiffService, latestReviews, ReviewError, ReviewService, StatusCommitter, ThreadService, type PrContext, type RawReview, type ReviewerState } from '@ddv/services';
+import { DiffService, latestReviews, ReviewError, ReviewService, ServiceError, StatusCommitter, ThreadService, type PrContext, type RawReview, type ReviewerState } from '@ddv/services';
 import { gitChanges } from './pr-context.ts';
-import { ReaderFactory } from './readers.ts';
+import { NoFolderError, ReaderFactory } from './readers.ts';
 import { PendingStore } from './review.ts';
 import { OpenRequestError, parseRepo, toPullInfo, WorkspaceError, type Workspace, type WorkspaceEvent, type WorkspaceManager } from './workspaces.ts';
 
@@ -74,6 +74,8 @@ export function createServerApp(opts: ServerAppOptions): Hono {
     if (err instanceof OpenRequestError) return c.json({ error: err.message, code: err.code, message: err.message }, 400);
     if (err instanceof WorkspaceError) return c.json({ error: err.message, code: err.code }, err.status);
     if (err instanceof GitHubError) return c.json({ error: err.message, code: `github-${err.kind}` }, GITHUB_STATUS[err.kind]);
+    if (err instanceof ServiceError) return c.json(serviceErrorBody(err), err.status as 400);
+    if (err instanceof NoFolderError) return c.json({ error: err.message, code: err.code }, err.status);
     console.error(err);
     return c.json({ error: err.message }, 500);
   });

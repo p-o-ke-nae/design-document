@@ -143,13 +143,16 @@ export async function createContext(repoRoot: string, opts: { watch?: boolean; s
   return ctx;
 }
 
+/** services.md「例外の写像」: `{ error, code, message, ...extra }`（code が無いものは `{ error }` だけ）。 */
+export const serviceErrorBody = (e: ServiceError): Record<string, unknown> => (e.code ? { error: e.message, code: e.code, message: e.message, ...e.extra } : { error: e.message });
+
 export function createApp(ctx: ServerContext): Hono {
   const app = new Hono();
   const root = ctx.repoRoot;
   const svc = () => ctx.services;
 
   app.onError((err, c) => {
-    if (err instanceof ServiceError) return c.json({ error: err.message }, err.status as 404);
+    if (err instanceof ServiceError) return c.json(serviceErrorBody(err), err.status as 404);
     const status = /escapes repository|ENOENT|not found/i.test(err.message) ? 404 : 500;
     return c.json({ error: err.message }, status);
   });

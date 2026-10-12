@@ -12,6 +12,8 @@ export default defineConfig({
     alias: {
       '@ddv/core': path.join(root, 'packages/core/src/index.ts'),
       '@ddv/graph': path.join(root, 'packages/graph/src/index.ts'),
+      // Browser entry: without the token resolver (node:child_process). pat.md
+      '@ddv/github': path.join(root, 'packages/github/src/browser.ts'),
       '@ddv/mock/tune-patch': path.join(root, 'packages/mock/src/tune-patch.ts'),
       '@ddv/mock/trace-format': path.join(root, 'packages/mock/src/trace-format.ts'),
     },

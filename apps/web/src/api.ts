@@ -2,6 +2,7 @@ import type { Graph, GraphDiff, StateEventTable, TestCase } from '@ddv/graph';
 import type { DdvConfig, DiagramBlock, DirectiveRef, DocElement, Heading, SourceBlock, TocEntry } from '@ddv/core';
 import type { ElementPatch } from '@ddv/mock/tune-patch';
 import type { TraceFile } from '@ddv/mock/trace-format';
+import { ApiError } from './backend/types.ts';
 
 export type { Graph, GraphDiff, StateEventTable, TestCase, DdvConfig, DiagramBlock, DocElement, Heading, SourceBlock, TocEntry };
 
@@ -273,17 +274,8 @@ export interface SnapshotInfo {
   steps: SnapshotStep[];
 }
 
-export class ApiError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-    readonly code?: string,
-    /** Response body of a refused request (test data save: errors / warnings). */
-    readonly body?: Record<string, unknown>,
-  ) {
-    super(message);
-  }
-}
+export { ApiError } from './backend/types.ts';
+
 
 // --- Test data editor (DD-TDEDIT) ---
 
