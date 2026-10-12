@@ -1,0 +1,144 @@
+# ddv ワークフロー（ddv actions init で配置。ビューアの「Actionsで実行」「基準画像を承認」から起動する）
+# 保持件数などは下の env を書き換える。書き換えた後に ddv actions init を実行すると差分を表示して止まる
+name: ddv tests
+run-name: "ddv ${{ inputs.mode }} ${{ inputs.request }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      request:
+        description: 依頼ID（ビューアが付ける。run-name に入れて実行を特定する）
+        type: string
+        default: ''
+      mode:
+        description: test はテストの実行、approve は基準画像の承認
+        type: choice
+        options: [test, approve]
+        default: test
+      ids:
+        description: テストID（カンマ区切り。空なら全件）
+        type: string
+        default: ''
+      runner:
+        description: ランナー名（空なら全ランナー）
+        type: string
+        default: ''
+      sha:
+        description: 実行するコミット（空ならブランチの先頭）
+        type: string
+        default: ''
+      run:
+        description: approve の対象の実行ID（結果ブランチの runs の下のディレクトリ名）
+        type: string
+        default: ''
+
+permissions:
+  contents: write       # 結果ブランチ・基準画像の push
+  actions: read
+  pull-requests: read   # 実行記録に PR の番号を入れる
+
+concurrency:
+  group: ddv-tests
+  cancel-in-progress: false
+
+env:
+  DDV_REPOSITORY: p-o-ke-nae/design-document   # ddv のリポジトリ
+  DDV_REF: v0.6.0                              # ddv のタグ
+  DDV_RESULTS_BRANCH: ddv-results
+  DDV_MAX_RUNS: '200'        # 保持する実行の数（0 で無制限）
+  DDV_MAX_DAYS: '90'         # 保持する日数（0 で無制限）
+  DDV_MAX_TRACE_RUNS: '20'   # トレース・スナップショットを残す実行の数（0 で無制限）
+  NODE_VERSION: '20'
+
+jobs:
+  test:
+    if: inputs.mode != 'approve'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      DDV_REQUEST: ${{ inputs.request }}
+      DDV_IDS: ${{ inputs.ids }}
+      DDV_RUNNER: ${{ inputs.runner }}
+      DDV_SHA: ${{ inputs.sha }}
+    steps:
+      - name: 対象のコミットを取得
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+          path: repo
+      - name: ddv を取得
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.DDV_REPOSITORY }}
+          ref: ${{ env.DDV_REF }}
+          path: ddv
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: ddv の依存を導入
+        working-directory: ddv
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: 対象の依存を導入
+        if: hashFiles('repo/package-lock.json') != ''
+        working-directory: repo
+        run: npm ci --no-audit --no-fund
+      - name: 対象のブラウザを導入
+        if: hashFiles('repo/node_modules/@playwright/test/package.json') != ''
+        working-directory: repo
+        run: npx playwright install --with-deps chromium
+      # .NET などの依存はここに追加する（例 actions/setup-dotnet）
+      - name: テストを実行（ddv ci run）
+        id: run
+        run: >-
+          npm --prefix ddv run --silent ddv -- ci run
+          --repo "$GITHUB_WORKSPACE/repo" --out "$RUNNER_TEMP/ddv-out"
+          --request "$DDV_REQUEST" --sha "$DDV_SHA" --ids "$DDV_IDS" --runner "$DDV_RUNNER"
+      - name: 結果ブランチへ保存（ddv ci publish）
+        if: ${{ !cancelled() && steps.run.outcome != 'skipped' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          npm --prefix ddv run --silent ddv -- ci publish
+          --repo "$GITHUB_WORKSPACE/repo" --out "$RUNNER_TEMP/ddv-out" --branch "$DDV_RESULTS_BRANCH"
+          --max-runs "$DDV_MAX_RUNS" --max-days "$DDV_MAX_DAYS" --max-trace-runs "$DDV_MAX_TRACE_RUNS"
+
+  approve:
+    if: inputs.mode == 'approve'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DDV_REQUEST: ${{ inputs.request }}
+      DDV_IDS: ${{ inputs.ids }}
+      DDV_RUN: ${{ inputs.run }}
+    steps:
+      - name: PR のブランチを取得
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref }}
+          path: repo
+          fetch-depth: 0
+          # 承認のコミットで PR の CI を動かしたいときは contents: write の PAT か GitHub App のトークンを secrets.DDV_PUSH_TOKEN に置く
+          token: ${{ secrets.DDV_PUSH_TOKEN || github.token }}
+      - name: ddv を取得
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.DDV_REPOSITORY }}
+          ref: ${{ env.DDV_REF }}
+          path: ddv
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: ddv の依存を導入
+        working-directory: ddv
+        run: npm ci --no-audit --no-fund
+      - name: 基準画像を承認（ddv ci approve）
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          npm --prefix ddv run --silent ddv -- ci approve
+          --repo "$GITHUB_WORKSPACE/repo" --branch "$DDV_RESULTS_BRANCH"
+          --run "$DDV_RUN" --ids "$DDV_IDS" --request "$DDV_REQUEST"

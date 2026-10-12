@@ -8,6 +8,7 @@ import { loadConfig } from '@ddv/core/node';
 import { GitHubClient, TokenResolver } from '@ddv/github';
 import { initMocks, scaffoldMock } from '@ddv/mock';
 import { createContext } from './app.ts';
+import { CI_HELP, CiCommand } from './ci/cli.ts';
 import { GitCache } from './git.ts';
 import { devOriginsFromEnv } from './guard.ts';
 import { createServerApp } from './host.ts';
@@ -38,7 +39,7 @@ const HELP = `ddv - Design Doc Viewer
       シナリオを再生して各ステップの画面を撮影し、基準画像と比較します（--id 省略時は全シナリオ）
       --approve: 今回の撮影結果を基準として承認します（.ddv/snapshots/baseline/ へコピー）
       ブラウザは mock.browser.channel（環境変数 DDV_BROWSER_CHANNEL で上書き可）
-
+      ${CI_HELP}
 環境変数:
   DDV_HOME          キャッシュ・ワークスペースの置き場所（既定: ~/.ddv）
   DDV_GITHUB_POLL   PR の更新検知の間隔（秒。既定 60、0 で無効）
@@ -181,6 +182,10 @@ async function main(argv: string[]) {
   }
   if (cmd === 'review') {
     await reviewCommand(argv.slice(1));
+    return;
+  }
+  if (cmd === 'actions' || cmd === 'ci') {
+    process.exitCode = await new CiCommand({ help: HELP }).main(argv);
     return;
   }
   if (cmd !== 'serve') {
