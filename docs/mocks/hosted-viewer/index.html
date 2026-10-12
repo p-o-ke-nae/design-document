@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>Pages 版ビューア（モック）</title>
+  <link rel="stylesheet" href="../../../apps/web/src/styles.css" />
+  <style>
+    .form { display: grid; gap: 6px; max-width: 520px; }
+    .form label { font-size: 13px; color: #57606a; }
+    .progress li.done::before { content: "✔ "; color: #1a7f37; }
+    .progress li.now::before { content: "… "; }
+    .mockonly { border-style: dashed; }
+    .edition { font-size: 12px; padding: 0 6px; border-radius: 10px; background: #ddf4ff; }
+    .disabled-reason { font-size: 12px; color: #57606a; }
+    .warn { background: #fff8c5; border: 1px solid #d4a72c; padding: 4px 8px; border-radius: 4px; }
+    .note { font-size: 12px; color: #57606a; }
+    .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .pat-menu { position: relative; }
+    .pat-menu summary { cursor: pointer; list-style: none; border: 1px solid #d0d7de; border-radius: 6px; padding: 2px 8px; }
+    .pat-menu .menu { position: absolute; right: 0; z-index: 10; background: #fff; border: 1px solid #d0d7de; border-radius: 6px; padding: 8px; display: grid; gap: 6px; width: 320px; }
+  </style>
+  <script type="module" src="../_ddv/mock-runtime.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <span class="brand">ddv</span>
+      <span class="edition" data-testid="edition" title="配信元：https://ddv-project.github.io/ddv/">Pages 版（公式）</span>
+      <span class="spacer"></span>
+      <span class="muted" data-testid="rate">API 残り 52 / 60</span>
+      <details class="pat-menu">
+        <summary data-testid="pat-menu">PAT：未設定</summary>
+        <div class="menu" data-testid="pat-menu-list">
+          <button data-testid="pat-menu-set">PAT を設定</button>
+          <button data-testid="pat-menu-persist" hidden>この端末に保存</button>
+          <button data-testid="pat-menu-unpersist" hidden>端末から消す</button>
+          <button data-testid="pat-menu-clear" disabled>PAT を消す</button>
+          <a data-testid="pat-menu-scopes" href="#pat-scopes">必要な権限</a>
+          <p class="note" data-testid="pat-menu-note">PAT は api.github.com への要求にだけ使い、URL・ログ・他のサイトには送りません</p>
+          <div class="note" data-testid="pat-dialog" hidden>
+            （PatForm のダイアログ：入力欄は「PAT が必要」の画面と同じ）
+            <button data-testid="pat-cancel">キャンセル</button>
+          </div>
+        </div>
+      </details>
+    </header>
+
+    <!-- 対象の指定 -->
+    <section data-screen="Open">
+      <main class="main doc">
+        <h2>開く対象</h2>
+        <div class="form">
+          <label for="repo">リポジトリ（owner/repo）</label>
+          <input id="repo" data-testid="repo" required maxlength="100" pattern="[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+" placeholder="owner/repo" data-sample="acme/order-app" />
+          <label for="kind">種類</label>
+          <select id="kind" data-testid="kind">
+            <option value="pr">PR</option>
+            <option value="ref">branch・tag</option>
+          </select>
+          <label for="target">PR 番号 または branch・tag 名（branch・tag は省略で既定ブランチ）</label>
+          <input id="target" data-testid="target" maxlength="100" placeholder="12 / main / v1.0" data-sample="12" />
+          <p class="error" data-testid="open-error" data-error hidden>owner/repo の形式で入力してください</p>
+          <p class="error" data-testid="fetch-error" hidden>取得できませんでした：GitHub API の利用上限に達しました（19:42 に再開）。PAT を設定すると上限が上がります</p>
+          <div>
+            <button class="primary" data-testid="open-submit" data-event="開く" data-validate data-goto="Loading">開く</button>
+          </div>
+        </div>
+        <h3>最近開いた対象</h3>
+        <ul data-testid="recent" data-bind="/recent">
+          <template><li><a href="#" data-testid="recent-item">{{repo}} {{label}}</a></li></template>
+        </ul>
+        <p class="note">URL に対象を含めて開くと、この画面を出さずに表示します（例：<code>#/gh/acme/order-app/pr/12/doc/basic/order.md</code>）。</p>
+      </main>
+    </section>
+
+    <!-- 取得中 -->
+    <section data-screen="Loading" hidden>
+      <main class="main doc">
+        <h2 data-testid="loading-target">acme/order-app #12 を取得中</h2>
+        <ul class="progress" data-testid="progress">
+          <li class="done">PR 情報</li>
+          <li class="done">ファイル一覧（Trees API）</li>
+          <li class="now">設計書・ロック・設定（raw・キャッシュ 18 / 24 件）</li>
+          <li>文書の組み立て</li>
+        </ul>
+        <p class="muted" data-testid="loading-rate">API 残り 52 / 60（19:42 にリセット）</p>
+        <p class="muted">モックでは取得の結果を下のボタンで選びます。</p>
+        <button class="mockonly" data-testid="loading-done" data-event="取得完了" data-goto="Doc">（モック）取得完了にする</button>
+        <button class="mockonly" data-testid="loading-need-pat" data-event="PATが必要" data-goto="Token">（モック）非公開で PAT が必要にする</button>
+        <button class="mockonly" data-testid="loading-fail" data-event="取得失敗" data-goto="Open">（モック）取得失敗にする</button>
+      </main>
+    </section>
+
+    <!-- PAT が必要 -->
+    <section data-screen="Token" hidden>
+      <main class="main doc">
+        <h2>acme/order-app を開くには PAT が必要です</h2>
+        <p data-testid="token-reason">非公開のリポジトリ、または見つからないリポジトリです。PAT を設定すると取得し直します。</p>
+        <div class="form">
+          <label for="pat">Personal Access Token</label>
+          <input id="pat" data-testid="pat" type="password" required pattern="(ghp_|github_pat_)[A-Za-z0-9_]+" data-sample="github_pat_mocktoken123" />
+          <label><input type="checkbox" data-testid="pat-store" /> この端末に保存（既定はタブを閉じると消えます）</label>
+          <p class="error" data-testid="pat-error" data-error hidden>ghp_ または github_pat_ で始まる PAT を入力してください</p>
+          <div>
+            <button data-testid="token-change" data-event="対象を変更" data-goto="Open">対象を変更</button>
+            <button class="primary" data-testid="pat-submit" data-event="設定" data-validate data-goto="Loading">設定</button>
+          </div>
+        </div>
+        <h3>必要な権限（fine-grained PAT）</h3>
+        <p><a data-testid="pat-create-link" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">PAT を作成する（GitHub）</a></p>
+        <ul id="pat-scopes" data-testid="scopes">
+          <li>閲覧：Contents: Read、Pull requests: Read</li>
+          <li>コメント・レビュー：Pull requests: Write</li>
+          <li>Approve の status 連動・Actions での実行：Contents: Write、Actions: Write</li>
+        </ul>
+        <p class="note" data-testid="pat-note">PAT は api.github.com への要求にだけ使い、URL・ログ・他のサイトには送りません。</p>
+      </main>
+    </section>
+
+    <!-- 文書 -->
+    <section data-screen="Doc" hidden>
+      <main class="main doc">
+        <div class="row">
+          <strong data-testid="doc-target">acme/order-app #12 注文確認画面に戻るボタンを追加</strong>
+          <span class="muted" data-testid="doc-head">main ← feature/confirm-back（a1b2c3d）</span>
+          <span class="muted" data-testid="doc-permission">読み取りのみ</span>
+          <span class="spacer"></span>
+          <button data-testid="doc-change" data-event="対象を変更" data-goto="Open">対象を変更</button>
+        </div>
+        <p class="warn" data-testid="lock-warning">テストIDのロックが図より古い（ddv-testid generate が未実行）：screen-flow に新しい経路が 2 件あります（仮IDで表示）</p>
+        <h1>注文画面 基本設計</h1>
+        <p>（既存の文書画面。図・マトリクス・TOC・参照・PR の差分とレビューはローカル版と同じ）</p>
+        <h3>使えない操作</h3>
+        <table data-testid="disabled-ops">
+          <thead><tr><th>操作</th><th>状態</th></tr></thead>
+          <tbody>
+            <tr><td><button disabled>テストID採番</button></td><td class="disabled-reason">手元の ddv で実行してください</td></tr>
+            <tr><td><button disabled>テストデータを保存</button></td><td class="disabled-reason">ファイルの保存はローカル版で行います。PR には suggestion として付けられます</td></tr>
+            <tr><td><button disabled>コメント</button></td><td class="disabled-reason">PAT を設定してください（Pull requests: Write）</td></tr>
+          </tbody>
+        </table>
+      </main>
+    </section>
+  </div>
+</body>
+</html>

@@ -1,0 +1,6 @@
+# 疑似 API（Pages 版ビューアのモック用）
+# recent：最近開いた対象（実装では localStorage の ddv.pages.recent。PAT は含めない。pages-viewer.md の「最近開いた対象」）
+tables:
+  - recent
+routes:
+  - { method: GET, path: /recent, op: list, table: recent }

@@ -1,0 +1,3 @@
+# ActionsRunRow（id は結果ID <actionsRunId>-<attempt>）
+actions_runs:
+  - { id: "123456789-1", actionsRunId: "123456789", request: ddv-7f3a9c1e, mode: test, commit: a1b2c3d4e5f60718293a4b5c6d7e8f9012345678, pr: 12, actor: reviewer, at: "2025-01-10T09:00:00Z", state: failed, counts: { passed: 40, failed: 2, skipped: 0, error: 0 }, approvals: 0, trimmed: false, warnings: [] }

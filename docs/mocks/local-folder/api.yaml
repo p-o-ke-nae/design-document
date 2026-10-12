@@ -1,0 +1,27 @@
+# 疑似 API（ローカル版の作業フォルダ選択のモック用。パスは詳細設計 local-folder.md の API にそろえる）
+tables:
+  - dirs
+  - recent
+  - opens
+  - closes
+routes:
+  - { method: GET, path: /fs/dirs, op: list, table: dirs }
+  - { method: GET, path: /local/recent, op: list, table: recent }   # 実 API では GET /api/local の recent
+  - method: POST
+    path: /local/open
+    when:                       # 無いパス・フォルダでないパスは開かない
+      - if: "body.path == ''"
+        status: 422
+        body: { error: パスを入力してください, code: path-empty, message: パスを入力してください }
+    op: insert
+    table: opens
+    status: 200
+  - method: POST
+    path: /local/close
+    when:                       # 手元の実行中は選び直さない
+      - if: "body.busy == 'running'"
+        status: 409
+        body: { error: テストの実行中は選び直せません。完了してから選び直してください, code: busy, message: テストの実行中は選び直せません。完了してから選び直してください }
+    op: insert
+    table: closes
+    status: 200

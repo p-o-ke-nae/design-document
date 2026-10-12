@@ -1,0 +1,15 @@
+# ddv mock scaffold が生成。event / click / expect.screen は再生成で更新、それ以外は保持
+
+id: BD-LOCAL-SCREEN-P003
+title: 開始 → フォルダの選択 → [開く [開ける]] 文書 → [フォルダを選び直す [実行中]] 文書 → 終了
+fixtures: [ default ]
+start: Picker
+steps:
+  - event: 開く [開ける]
+    input: { path: C:\Users\taro\source\order-app }
+    click: open
+    expect: { screen: Doc }
+  - event: フォルダを選び直す [実行中]
+    input: { busy: running }
+    click: reselect
+    expect: { screen: Doc, visible: [reselect-error] }

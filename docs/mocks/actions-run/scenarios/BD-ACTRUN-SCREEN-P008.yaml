@@ -1,0 +1,13 @@
+# ddv mock scaffold が生成。event / click / expect.screen は再生成で更新、それ以外は保持
+
+id: BD-ACTRUN-SCREEN-P008
+title: 開始 → Actions の実行一覧 → [実行を選ぶ] 実行の結果 → [一覧へ] Actions の実行一覧 → 終了
+fixtures: [ default ]
+start: List
+steps:
+  - event: 実行を選ぶ
+    click: run-open
+    expect: { screen: Detail }
+  - event: 一覧へ
+    click: detail-back
+    expect: { screen: List }

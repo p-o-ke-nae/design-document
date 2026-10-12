@@ -1,0 +1,17 @@
+# 疑似 API（Actions でのテスト実行のモック用）。実 API は /api/actions/runs（詳細設計 actions-run.md の API）
+tables:
+  - actions_runs
+routes:
+  - { method: GET, path: /actions/runs, op: list, table: actions_runs }
+  - method: POST
+    path: /actions/runs
+    when:                       # 実行できないときは起動しない（画面はボタンを無効にして理由を出す）
+      - if: "body.allowed == 'readonly'"
+        status: 403
+        body: { code: readonly, message: 書き込み権限が無いため実行できません。実行済みの結果だけを表示します }
+      - if: "body.allowed == 'fork'"
+        status: 403
+        body: { code: fork, message: fork からの PR は実行しません。PR の CI の結果を表示します }
+    op: insert
+    table: actions_runs
+    status: 202
