@@ -1,7 +1,9 @@
 // Browser-safe step interpreter shared by the player (DomDriver) and E2E (PlaywrightDriver). No Node imports.
 import type { FieldKind, Step, Value } from './types.ts';
+import type { ExpectObservation } from './trace-format.ts';
 
 export type { Expect, FieldKind, PathSpec, PathTransition, Scenario, Step, Value } from './types.ts';
+export type { ExpectObservation } from './trace-format.ts';
 export { resolveLocator, attrSelector } from './resolve.ts';
 export type { LocatorKind, LocatorTarget, ResolvedLocator } from './resolve.ts';
 
@@ -89,6 +91,37 @@ export async function checkExpect(driver: Driver, expect: Step['expect']): Promi
     if (n !== v) failures.push({ key: `count:${k}`, expected: v, actual: n });
   }
   return { screen, failures };
+}
+
+/** Evaluates every `expect` item once (no retry) for the trace. Items whose element cannot be resolved get `actual: null`. */
+export async function observeExpect(driver: Driver, expect: Step['expect']): Promise<ExpectObservation[]> {
+  const out: ExpectObservation[] = [];
+  const safe = async <T>(f: () => Awaitable<T>): Promise<T | null> => {
+    try {
+      return await f();
+    } catch {
+      return null;
+    }
+  };
+  const screen = await safe(() => driver.screen());
+  out.push({ kind: 'screen', key: '', expected: expect.screen, actual: screen, ok: screen === expect.screen });
+  for (const k of expect.visible ?? []) {
+    const v = await safe(() => driver.isVisible(k));
+    out.push({ kind: 'visible', key: k, expected: true, actual: v, ok: v === true });
+  }
+  for (const k of expect.hidden ?? []) {
+    const v = await safe(() => driver.isVisible(k));
+    out.push({ kind: 'hidden', key: k, expected: false, actual: v, ok: v === false });
+  }
+  for (const [k, v] of Object.entries(expect.text ?? {})) {
+    const t = await safe(() => driver.text(k));
+    out.push({ kind: 'text', key: k, expected: v, actual: t, ok: t !== null && ws(t) === ws(v) });
+  }
+  for (const [k, v] of Object.entries(expect.count ?? {})) {
+    const n = await safe(() => driver.count(k));
+    out.push({ kind: 'count', key: k, expected: v, actual: n, ok: n === v });
+  }
+  return out;
 }
 
 /** Executes one step (input → do → click → wait → expect). Throws `StepError` on failure. */

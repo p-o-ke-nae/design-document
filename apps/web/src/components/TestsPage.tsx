@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, type RunSummary, type TestsResponse } from '../api.ts';
-import { docHref, flakyHref, historyHref, useApp, useLocalStorage } from '../state.tsx';
+import { docHref, flakyHref, historyHref, traceHref, useApp, useLocalStorage } from '../state.tsx';
+import { scenarioLinked } from '../trace-view.ts';
 import { StatusBadge } from './StatusBadge.tsx';
 import { FlakyMark, RecentDots, RerunPanel, formatCommit } from './TestHistory.tsx';
 
@@ -227,6 +228,11 @@ export function TestsPage() {
                       <button type="button" className="run" disabled={!c.links.length || running} onClick={() => runTests({ ids: [c.id] })}>
                         ▶
                       </button>
+                      {r?.runId && scenarioLinked(c.links) && (
+                        <button type="button" className="run" onClick={() => (location.hash = traceHref(r.runId!, c.id))} data-testid="test-trace" title="直近の実行のトレース（ステップごとの記録）">
+                          トレース
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

@@ -309,3 +309,60 @@ describe('ハイライト指定', () => {
     expect(validHighlight({ holdMs: 'x' })).toBeNull();
   });
 });
+describe('ddv:step の trace（DD-TRREC ライブ表示）', () => {
+  function traced() {
+    const t = setup();
+    const log: string[] = [];
+    const engine = (t.bridge as unknown as { engine: BridgeEngine }).engine;
+    engine.traceBegin = () => void log.push('begin');
+    engine.traceTake = () => {
+      log.push('take');
+      return { calls: [{ method: 'POST', path: '/api/orders', status: 201, durationMs: 1 }], db: [] };
+    };
+    engine.observe = async (s) => {
+      log.push('observe');
+      return [{ kind: 'screen', key: '', expected: s.expect.screen, actual: 'S', ok: s.expect.screen === 'S' }];
+    };
+    return { ...t, log };
+  }
+
+  it('trace: true なら exec の前後で begin・take し、observe の結果と実行前の画面を ddv:result に付ける', async () => {
+    const t = traced();
+    await ready(t);
+    const p = t.bridge.step(step('Confirm'), 3, null, true);
+    expect(t.log).toEqual(['begin']);
+    t.execs[0].d.resolve({ ok: false, screen: 'S', failures: [], error: { kind: 'expect', message: 'NG' } });
+    await p;
+    expect(t.log).toEqual(['begin', 'take', 'observe']);
+    expect(t.posted.at(-1)).toEqual({
+      type: 'ddv:result',
+      index: 3,
+      ok: false,
+      screen: 'S',
+      failures: [],
+      message: 'NG',
+      trace: { screenBefore: 'S', calls: [{ method: 'POST', path: '/api/orders', status: 201, durationMs: 1 }], db: [], expects: [{ kind: 'screen', key: '', expected: 'Confirm', actual: 'S', ok: false }] },
+    });
+  });
+
+  it('trace なし・記録に対応しない runtime・実行しなかったステップ（起動中）には trace を付けない', async () => {
+    const t = traced();
+    const booting = await t.bridge.step(step('A'), 1, null, true);
+    expect(booting.ok).toBe(false);
+    expect(t.posted.at(-1)).not.toHaveProperty('trace');
+    await ready(t);
+    const p = t.bridge.step(step('A'), 2);
+    t.execs[0].d.resolve(t.ok('A'));
+    await p;
+    expect(t.posted.at(-1)).not.toHaveProperty('trace');
+    expect(t.log).toEqual([]);
+
+    const old = setup();
+    await ready(old);
+    const q = old.bridge.step(step('A'), 1, null, true);
+    old.execs[0].d.resolve(old.ok('A'));
+    await q;
+    expect(old.posted.at(-1)).toMatchObject({ type: 'ddv:result', index: 1, ok: true });
+    expect(old.posted.at(-1)).not.toHaveProperty('trace');
+  });
+});

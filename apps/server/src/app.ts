@@ -12,6 +12,8 @@ import { build as buildSuggestion, locate as locateMockElement, NO_SOURCE_MESSAG
 import { validatePatch } from '@ddv/mock/tune-patch';
 import { RerunError, RunManager, RUNS_DIR, type RunEvent, type RunRecord } from './runs.ts';
 import { HistoryError, HistoryService } from './history.ts';
+import { TRACES_DIR } from './prune.ts';
+import { NO_TRACE_MESSAGE, TraceError, TraceStore } from './traces.ts';
 import { checkDeps, installDeps } from './deps.ts';
 import { listScenarios, recordPlay, scenarioDetail } from './scenarios.ts';
 import { checkId, SnapshotError, SnapshotService, SNAPSHOTS_DIR, type SnapKind } from './snapshots.ts';
@@ -44,6 +46,7 @@ export interface ServerContext {
   config: DdvConfig;
   runs: RunManager;
   history: HistoryService;
+  traces: TraceStore;
   snapshots: SnapshotService;
   events: EventEmitter;
   /** GitHub workspaces: refuse test runs (409 deps-missing) until the runners' packages are installed. */
@@ -59,6 +62,7 @@ export async function createContext(repoRoot: string, opts: { watch?: boolean; s
     config: await loadConfig(root),
     runs: undefined as unknown as RunManager,
     history: undefined as unknown as HistoryService,
+    traces: undefined as unknown as TraceStore,
     snapshots: undefined as unknown as SnapshotService,
     events: new EventEmitter(),
     close: () => {},
@@ -67,6 +71,7 @@ export async function createContext(repoRoot: string, opts: { watch?: boolean; s
   ctx.runs = new RunManager(root, () => ctx.config);
   ctx.runs.setMaxListeners(100);
   ctx.history = new HistoryService(ctx.runs, root, () => ctx.config);
+  ctx.traces = new TraceStore(root, ctx.runs, () => ctx.config);
   ctx.snapshots = new SnapshotService(root, () => ctx.config, opts.snapshots);
   await ctx.runs.load();
   await ctx.runs.prune();
@@ -78,7 +83,7 @@ export async function createContext(repoRoot: string, opts: { watch?: boolean; s
       watcher = watch(root, { recursive: true }, (_ev, file) => {
         if (!file) return;
         const rel = toPosix(file.toString());
-        if (/(^|\/)(node_modules|\.git|bin|obj|dist|test-results|playwright-report)(\/|$)/.test(rel) || rel.startsWith(RUNS_DIR) || rel.startsWith(SNAPSHOTS_DIR)) return;
+        if (/(^|\/)(node_modules|\.git|bin|obj|dist|test-results|playwright-report)(\/|$)/.test(rel) || rel.startsWith(RUNS_DIR) || rel.startsWith(SNAPSHOTS_DIR) || rel.startsWith(TRACES_DIR)) return;
         pending.add(rel);
         if (timer) clearTimeout(timer);
         timer = setTimeout(async () => {
@@ -305,7 +310,32 @@ export function createApp(ctx: ServerContext): Hono {
 
   app.get('/api/runs/:id', (c) => {
     const r = ctx.runs.runs.get(c.req.param('id'));
-    return r ? c.json(r) : c.json({ error: 'not found' }, 404);
+    if (!r) return c.json({ error: 'not found' }, 404);
+    const traceOf: Record<string, boolean> = {};
+    for (const id of r.traces ?? []) traceOf[id] = ctx.traces.exists(r.id, id);
+    return c.json({ ...r, traceOf });
+  });
+
+  app.get('/api/traces/:runId/:testId/steps/:file', async (c) => {
+    const m = /^(\d+)\.png$/.exec(c.req.param('file'));
+    try {
+      const p = m ? await ctx.traces.screenshot(c.req.param('runId'), c.req.param('testId'), Number(m[1])) : null;
+      if (!p) return c.json({ error: 'スクリーンショットはありません' }, 404);
+      return new Response(new Uint8Array(await fs.readFile(p)), { headers: { 'content-type': 'image/png', 'cache-control': 'private, max-age=86400' } });
+    } catch (e) {
+      if (e instanceof TraceError) return c.json({ code: e.code, error: e.message }, e.status);
+      throw e;
+    }
+  });
+
+  app.get('/api/traces/:runId/:testId', async (c) => {
+    try {
+      const r = await ctx.traces.read(c.req.param('runId'), c.req.param('testId'));
+      return r.ok ? c.json(r.trace) : c.json({ code: r.reason, error: NO_TRACE_MESSAGE[r.reason] }, 404);
+    } catch (e) {
+      if (e instanceof TraceError) return c.json({ code: e.code, error: e.message }, e.status);
+      throw e;
+    }
   });
 
   app.get('/api/runs/:id/events', (c) => {
@@ -340,7 +370,11 @@ export function createApp(ctx: ServerContext): Hono {
     });
   });
 
-  app.get('/api/results/latest', (c) => c.json(ctx.runs.latest()));
+  app.get('/api/results/latest', (c) => {
+    const out: Record<string, ReturnType<RunManager['latest']>[string] & { trace: boolean }> = {};
+    for (const [id, res] of Object.entries(ctx.runs.latest())) out[id] = { ...res, trace: !!ctx.runs.runs.get(res.runId)?.traces?.includes(id) && ctx.traces.exists(res.runId, id) };
+    return c.json(out);
+  });
 
   app.get('/api/events', (c) =>
     streamSSE(c, async (stream) => {

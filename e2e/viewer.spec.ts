@@ -188,6 +188,13 @@ test('[BD-VIEWER-RUN-T002] テストタブで一括実行し監視できる', as
   await expect(page.getByTestId('run-all')).toBeEnabled();
   const row = page.locator('[data-testid=test-row][data-test-id=DD-ORDER-STATUS-T001]');
   await expect(row.getByTestId('status-badge')).toHaveAttribute('data-status', 'passed');
+  // scenario tests run through the server record their traces (DDV_TRACE_DIR)
+  const scenarioId = ['BD', 'ORDER', 'SCREEN', 'P001'].join('-');
+  const latest = (await (await page.request.get('/api/results/latest')).json()) as Record<string, { runId?: string; trace?: boolean }>;
+  expect(latest[scenarioId]?.trace).toBe(true);
+  const trace = (await (await page.request.get(`/api/traces/${latest[scenarioId].runId}/${scenarioId}`)).json()) as { status?: string; steps?: unknown[] };
+  expect(trace.status).toBe('passed');
+  expect(trace.steps?.length).toBe(5);
 });
 
 interface ScenarioInfo {

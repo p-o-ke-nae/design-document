@@ -1822,3 +1822,133 @@ svg path.ddv-cov-unlinked {
   stroke: #f97316 !important;
   stroke-dasharray: 5 3;
 }
+/* trace view (DD-TRVIEW) */
+.notice.error {
+  background: var(--ng-bg);
+  color: var(--ng);
+  white-space: pre-wrap;
+}
+.trace-head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.trace-header {
+  display: inline-flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.trace-title {
+  margin: 4px 0;
+}
+.trace-split {
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) 1fr;
+  gap: 12px;
+  margin-top: 8px;
+  align-items: start;
+}
+.trace-side {
+  display: grid;
+  gap: 6px;
+}
+.trace-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.trace-timeline li {
+  border: 1px solid var(--border, #d0d7de);
+  border-radius: 6px;
+}
+.trace-timeline li.ng {
+  border-color: var(--ng);
+  color: var(--ng);
+}
+.trace-timeline li.sel {
+  background: var(--accent-weak);
+}
+.trace-timeline button {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 8px;
+  text-align: left;
+  color: inherit;
+}
+.trace-timeline .ts-event {
+  flex: 1;
+}
+.trace-timeline .ts-time {
+  color: var(--muted);
+  font-size: 12px;
+}
+.trace-detail h4 {
+  margin: 10px 0 4px;
+}
+.trace-shot {
+  max-width: 100%;
+  border: 1px solid var(--border, #d0d7de);
+  border-radius: 4px;
+}
+.trace-shot.empty {
+  display: grid;
+  place-items: center;
+  height: 100px;
+  background: #f6f8fa;
+}
+.trace-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  margin: 4px 0;
+}
+.trace-table caption {
+  text-align: left;
+  font-weight: 600;
+}
+.trace-table th,
+.trace-table td {
+  border: 1px solid var(--border, #d0d7de);
+  padding: 3px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.trace-table tr.ng td {
+  color: var(--ng);
+}
+.trace-table tr.clickable {
+  cursor: pointer;
+}
+.trace-body pre {
+  margin: 2px 0 6px;
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.db-field {
+  display: inline-block;
+  margin-right: 10px;
+}
+.db-field.changed {
+  background: var(--warn-bg);
+  font-weight: 600;
+}
+.db-added {
+  color: var(--ok);
+}
+.db-removed {
+  color: var(--ng);
+}
+.trace-live {
+  border-top: 1px solid var(--border, #d0d7de);
+  padding: 8px;
+}
+.trace-live-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}

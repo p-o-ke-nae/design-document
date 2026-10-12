@@ -239,7 +239,7 @@ export class RunManager extends EventEmitter {
           if (!ids.length) continue;
         }
         this.log(run, `── ${r.name} (${r.type}, ${r.level}) ──`);
-        const res = await executeRunner(this.repoRoot, r, ids, links, idRe, (l) => this.log(run, l));
+        const res = await executeRunner(this.repoRoot, r, ids, links, idRe, (l) => this.log(run, l), run.id);
         run.runners.push({ name: r.name, command: res.command, exitCode: res.exitCode, error: res.error });
         if (res.error) this.log(run, `! ${res.error}`);
         Object.assign(run.results, res.results);
@@ -273,6 +273,8 @@ export class RunManager extends EventEmitter {
   /** Lists the run's traces, saves, prunes, then hands over to the next re-run attempt or releases `active`. */
   private async finish(run: RunRecord) {
     try {
+      // Always set for test runs (also when empty) so that a missing trace reads as "not recorded" rather than "before traces existed".
+      if ((run.kind ?? 'test') === 'test') run.traces = [];
       const dir = safeJoin(this.repoRoot, `${TRACES_DIR}/${run.id}`);
       if (existsSync(dir)) {
         const ids = (await fs.readdir(dir)).filter((f) => f.endsWith('.json')).map((f) => f.slice(0, -'.json'.length));

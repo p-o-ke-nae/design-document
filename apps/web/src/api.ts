@@ -1,6 +1,7 @@
 import type { Graph, GraphDiff, StateEventTable, TestCase } from '@ddv/graph';
 import type { DdvConfig, DiagramBlock, DirectiveRef, DocElement, Heading, SourceBlock, TocEntry } from '@ddv/core';
 import type { ElementPatch } from '@ddv/mock/tune-patch';
+import type { TraceFile } from '@ddv/mock/trace-format';
 
 export type { Graph, GraphDiff, StateEventTable, TestCase, DdvConfig, DiagramBlock, DocElement, Heading, SourceBlock, TocEntry };
 
@@ -23,7 +24,12 @@ export interface CaseResult {
   test: string;
   runId?: string;
   at?: string;
+  /** `/api/results/latest`: the trace of that run is still there. */
+  trace?: boolean;
 }
+
+/** `GET /api/traces/{runId}/{testId}`: the trace plus the run's commit. */
+export type TraceResponse = TraceFile & { commit?: string; dirty?: boolean };
 
 export interface MatrixCase extends TestCase {
   id: string;
@@ -116,6 +122,8 @@ export interface RunSummary {
   attempt?: number;
   times?: number;
   traces?: string[];
+  /** `/api/runs/{id}`: whether each trace file still exists. */
+  traceOf?: Record<string, boolean>;
 }
 
 export type RecentMark = TestStatus | 'none';
@@ -349,6 +357,8 @@ export function createApi(ws: string) {
     historySummary: () => get<HistorySummary>('/api/history/summary'),
     historyTest: (id: string) => get<TestHistory>(`/api/history/tests/${encodeURIComponent(id)}`),
     flaky: () => get<FlakyEntry[]>('/api/history/flaky'),
+    trace: (runId: string, id: string) => get<TraceResponse>(`/api/traces/${encodeURIComponent(runId)}/${encodeURIComponent(id)}`),
+    traceShot: (runId: string, id: string, n: number) => A(`/api/traces/${encodeURIComponent(runId)}/${encodeURIComponent(id)}/steps/${n}.png`),
     coverage: (path: string) => get<DocCoverage>(`/api/coverage?path=${encodeURIComponent(path)}`),
     deps: () => get<DepsStatus>('/api/deps'),
     installDeps: () => post(A('/api/deps/install')).then((r) => json<{ runId: string; deps: DepsStatus }>(r)),

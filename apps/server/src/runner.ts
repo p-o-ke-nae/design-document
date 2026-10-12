@@ -5,7 +5,9 @@ import os from 'node:os';
 import path from 'node:path';
 import type { RunnerConfig } from '@ddv/core';
 import { safeJoin } from '@ddv/core/node';
+import { TRACE_DIR_ENV } from '@ddv/mock/trace-format';
 import type { TestLink } from '@ddv/testid';
+import { TRACES_DIR } from './prune.ts';
 
 export type TestStatus = 'passed' | 'failed' | 'skipped' | 'error';
 
@@ -100,7 +102,8 @@ export interface RunnerInvocation {
   env?: Record<string, string>;
 }
 
-export function buildInvocation(repoRoot: string, runner: RunnerConfig, ids: string[] | null, reportDir: string, links: TestLink[] = []): RunnerInvocation {
+/** `runId` given: a playwright runner with `scenarios: true` records traces into `.ddv/traces/<runId>` (DD-TRREC-ENABLE). */
+export function buildInvocation(repoRoot: string, runner: RunnerConfig, ids: string[] | null, reportDir: string, links: TestLink[] = [], runId?: string): RunnerInvocation {
   const cwd = safeJoin(repoRoot, runner.cwd);
   const pattern = ids?.length ? ids.join('|') : '';
   switch (runner.type) {
@@ -114,7 +117,9 @@ export function buildInvocation(repoRoot: string, runner: RunnerConfig, ids: str
       const reportPath = path.join(reportDir, `${runner.name}.junit.xml`);
       const args = [resolveBin(cwd, '@playwright/test', 'playwright'), 'test', '--reporter=line,junit'];
       if (pattern) args.push('--grep', pattern);
-      return { command: process.execPath, args, shell: false, reportPath, reportType: 'junit', env: { PLAYWRIGHT_JUNIT_OUTPUT_FILE: reportPath, PLAYWRIGHT_JUNIT_OUTPUT_NAME: reportPath } };
+      const env: Record<string, string> = { PLAYWRIGHT_JUNIT_OUTPUT_FILE: reportPath, PLAYWRIGHT_JUNIT_OUTPUT_NAME: reportPath };
+      if (runner.scenarios && runId) env[TRACE_DIR_ENV] = path.join(repoRoot, TRACES_DIR, runId);
+      return { command: process.execPath, args, shell: false, reportPath, reportType: 'junit', env };
     }
     case 'dotnet': {
       const reportPath = path.join(reportDir, `${runner.name}.trx`);
@@ -171,11 +176,12 @@ export async function executeRunner(
   links: TestLink[],
   idRe: RegExp,
   onLog: (line: string) => void,
+  runId?: string,
 ): Promise<ExecOutcome> {
   const reportDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ddv-run-'));
   let inv: RunnerInvocation;
   try {
-    inv = buildInvocation(repoRoot, runner, ids, reportDir, links);
+    inv = buildInvocation(repoRoot, runner, ids, reportDir, links, runId);
   } catch (e) {
     return { exitCode: null, results: {}, command: '', error: (e as Error).message };
   }
@@ -185,7 +191,7 @@ export async function executeRunner(
     const child = spawn(inv.command, inv.args, {
       cwd: safeJoin(repoRoot, runner.cwd),
       shell: inv.shell,
-      env: { ...process.env, ...inv.env, FORCE_COLOR: '0', NO_COLOR: '1', DOTNET_CLI_UI_LANGUAGE: process.env.DOTNET_CLI_UI_LANGUAGE ?? 'ja' },
+      env: { ...process.env, [TRACE_DIR_ENV]: undefined, ...inv.env, FORCE_COLOR: '0', NO_COLOR: '1', DOTNET_CLI_UI_LANGUAGE: process.env.DOTNET_CLI_UI_LANGUAGE ?? 'ja' },
       windowsHide: true,
     });
     const pipe = (buf: Buffer) => buf.toString('utf8').split(/\r?\n/).filter((l) => l.length).forEach(onLog);

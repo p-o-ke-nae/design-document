@@ -8,6 +8,7 @@ import { ScreenMapSchema } from './map.ts';
 import { runScenario } from './run-scenario.ts';
 import { startStaticServer, type StaticServer } from './static-server.ts';
 import { StepError } from './step.ts';
+import { TraceRecorder, type TraceFile } from './trace.ts';
 import type { Scenario } from './types.ts';
 
 const MOCK = `<!doctype html><html><body>
@@ -39,6 +40,24 @@ window.addEventListener('hashchange', render); render();
 document.getElementById('go').onclick = () => { document.getElementById('title').textContent = '完了:' + document.getElementById('name').value; history.replaceState(null, '', '#/done'); };
 </script></body></html>`;
 
+// Mock whose runtime exposes a fake `__ddv.trace` (begin / take).
+const TRACED = MOCK.replace(
+  'window.__ddv = {',
+  'window.__ddv = { trace: { begin() { window.__began = (window.__began || 0) + 1; }, take() { return { calls: [{ method: "POST", path: "/api/orders", status: 201, durationMs: 1 }], db: [{ table: "orders", kind: "added", key: "1", after: { id: 1 } }] }; } },',
+);
+
+// Real app that calls fetch: same-origin JSON, a failing request and one that never finishes.
+const FETCHING = `<!doctype html><html><body><h1 id="title">一覧</h1><button id="load">読込</button>
+<script>
+document.getElementById('load').onclick = async () => {
+  fetch('http://127.0.0.1:1/down').catch(() => {});
+  fetch('slow?x=1');
+  await fetch('post-me', { method: 'POST', body: '{"q":1}' });
+  const d = await (await fetch('data.json?q=1')).json();
+  document.getElementById('title').textContent = '読込:' + d.name;
+};
+</script></body></html>`;
+
 let dir = '';
 let server: StaticServer;
 let browser: Browser;
@@ -49,6 +68,10 @@ beforeAll(async () => {
   await fs.mkdir(path.join(dir, 'demo'), { recursive: true });
   await fs.writeFile(path.join(dir, 'demo/index.html'), MOCK);
   await fs.writeFile(path.join(dir, 'app.html'), APP);
+  await fs.mkdir(path.join(dir, 'traced'), { recursive: true });
+  await fs.writeFile(path.join(dir, 'traced/index.html'), TRACED);
+  await fs.writeFile(path.join(dir, 'fetching.html'), FETCHING);
+  await fs.writeFile(path.join(dir, 'data.json'), '{"name":"太郎"}');
   server = await startStaticServer(dir);
   browser = await new BrowserLauncher(undefined, { env: {} }).launch();
   page = await browser.newPage();
@@ -119,5 +142,75 @@ describe('runScenario / PlaywrightDriver', () => {
     const missing: Scenario = { ...s, steps: [{ event: '削除', click: 'del', expect: { screen: 'List' } }] };
     const err = await runScenario(page, missing, { kind: 'app', url: `${server.url}app.html`, map }, { timeout: 200 }).catch((e) => e);
     expect(err.message).toContain('対応表（_map.yaml）にイベント 削除 がありません');
+  });
+});
+
+describe('runScenario のトレース記録（DD-TRREC）', () => {
+  const readTrace = async (d: string, id: string) => JSON.parse(await fs.readFile(path.join(d, `${id}.json`), 'utf8')) as TraceFile;
+  const meta = (id: string, target: 'mock' | 'app') => ({ runId: 'r1', testId: id, title: 't', mock: 'demo', target });
+
+  it('モック: 失敗したステップまで記録し、window.__ddv.trace の通信・DB・スクリーンショット・期待の観測を書いてから既存の文言で投げる', async () => {
+    const out = path.join(dir, 'traces', 'r1');
+    const s: Scenario = {
+      id: 'BD-X-Y-P002',
+      title: 't',
+      fixtures: [],
+      start: 'List',
+      steps: [
+        { event: '新規', click: 'new', expect: { screen: 'Input' } },
+        { event: '次へ [入力NG]', input: { customer: '' }, click: 'next', expect: { screen: 'Confirm', text: { out: '山田' } } },
+        { event: '戻る', click: 'back', expect: { screen: 'List' } },
+      ],
+    };
+    const rec = new TraceRecorder(out, meta(s.id, 'mock'));
+    const err = await runScenario(page, s, { kind: 'mock', url: `${server.url}traced/index.html` }, { timeout: 200, trace: rec }).catch((e) => e);
+    expect(err).toBeInstanceOf(StepError);
+    expect(err.message).toMatch(/^ステップ 2（次へ \[入力NG\]）: 期待値と一致しません/);
+    expect(await page.evaluate(() => (window as any).__began)).toBe(2);
+    const t = await readTrace(out, s.id);
+    expect(t).toMatchObject({ status: 'failed', failedStep: 2, error: err.message, target: 'mock' });
+    expect(t.steps).toHaveLength(2);
+    expect(t.steps[0]).toMatchObject({ index: 1, event: '新規', click: 'new', screenBefore: 'List', screenAfter: 'Input', ok: true, calls: [{ method: 'POST', path: '/api/orders', status: 201 }], db: [{ kind: 'added' }], screenshot: `${s.id}/1.png` });
+    expect(t.steps[1]).toMatchObject({ index: 2, input: { customer: '' }, screenBefore: 'Input', screenAfter: 'Input', ok: false, error: err.message });
+    expect(t.steps[1].expects).toEqual([
+      { kind: 'screen', key: '', expected: 'Confirm', actual: 'Input', ok: false },
+      { kind: 'text', key: 'out', expected: '山田', actual: '', ok: false },
+    ]);
+    expect((await fs.stat(path.join(out, s.id, '2.png'))).size).toBeGreaterThan(0);
+  });
+
+  it('実アプリ: fetch・xhr の通信を記録し（同じオリジンはパスとクエリ、失敗は 0、未完了は -1）、db は null', async () => {
+    const out = path.join(dir, 'traces', 'r2');
+    await page.route('**/slow*', () => {});
+    await page.route('**/post-me', (r) => r.fulfill({ status: 409, contentType: 'application/json', body: '{"message":"在庫が不足しています"}' }));
+    try {
+      const map = ScreenMapSchema.parse({ screens: { List: { selector: "h1:text-is('一覧')" }, Loaded: { selector: "h1:has-text('読込:')" } }, events: { 読込: '#load' }, fields: { title: '#title' } });
+      const s: Scenario = { id: 'BD-X-Y-P003', title: 't', fixtures: [], start: 'List', steps: [{ event: '読込', click: 'load', expect: { screen: 'Loaded', text: { title: '読込:太郎' } } }] };
+      const rec = new TraceRecorder(out, meta(s.id, 'app'));
+      await runScenario(page, s, { kind: 'app', url: `${server.url}fetching.html`, map }, { timeout: 2000, trace: rec });
+      const t = await readTrace(out, s.id);
+      expect(t.status).toBe('passed');
+      const [st] = t.steps;
+      expect(st).toMatchObject({ index: 1, screenBefore: 'List', screenAfter: 'Loaded', ok: true, db: null });
+      const byPath = Object.fromEntries(st.calls.map((c) => [c.path, c]));
+      expect(byPath['/data.json?q=1']).toMatchObject({ method: 'GET', status: 200, responseBody: '{"name":"太郎"}' });
+      expect(byPath['/post-me']).toMatchObject({ method: 'POST', status: 409, requestBody: '{"q":1}', responseBody: '{"message":"在庫が不足しています"}' });
+      expect(byPath['/slow?x=1']).toMatchObject({ status: -1 });
+      expect(byPath['http://127.0.0.1:1/down']).toMatchObject({ status: 0 });
+      expect(byPath['http://127.0.0.1:1/down'].responseBody).toBeTruthy();
+    } finally {
+      await page.unroute('**/slow*');
+      await page.unroute('**/post-me');
+    }
+  });
+
+  it('ステップの前の失敗は failedStep 0・steps 空を書いてから投げる', async () => {
+    const out = path.join(dir, 'traces', 'r3');
+    const map = ScreenMapSchema.parse({});
+    const rec = new TraceRecorder(out, meta('BD-X-Y-P004', 'app'));
+    const s: Scenario = { id: 'BD-X-Y-P004', title: 't', fixtures: ['default'], start: 'List', steps: [{ event: '新規', click: 'new', expect: { screen: 'Input' } }] };
+    const hooks = { seed: () => { throw new Error('seed に失敗'); } };
+    await expect(runScenario(page, s, { kind: 'app', url: `${server.url}app.html`, map, hooks }, { trace: rec })).rejects.toThrow('seed に失敗');
+    expect(await readTrace(out, s.id)).toMatchObject({ status: 'failed', failedStep: 0, error: 'seed に失敗', steps: [] });
   });
 });

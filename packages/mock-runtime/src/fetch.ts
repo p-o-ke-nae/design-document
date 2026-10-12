@@ -1,4 +1,5 @@
 import type { ApiRouter } from './router.ts';
+import type { RawCall } from './trace-tap.ts';
 
 type FetchFn = typeof fetch;
 
@@ -6,6 +7,8 @@ type FetchFn = typeof fetch;
 export class FetchInterceptor {
   private original: FetchFn | null = null;
   private raw: FetchFn | null = null;
+  /** Called with each request answered by the router (TraceTap.record). */
+  onCall: ((call: RawCall) => void) | null = null;
 
   constructor(private readonly win: Window & typeof globalThis) {}
 
@@ -38,10 +41,12 @@ export class FetchInterceptor {
           body = text;
         }
       }
+      const t0 = performance.now();
       const query: Record<string, string> = {};
       url.searchParams.forEach((v, k) => (query[k] = v));
       const res = await router.handle({ method, path: url.pathname.slice(prefix.length) || '/', query, body });
       const empty = res.status === 204 || res.status === 304 || res.body === undefined;
+      this.onCall?.({ method, path: url.pathname + url.search, status: res.status, requestBody: text, responseBody: res.body === undefined ? null : JSON.stringify(res.body), durationMs: Math.round(performance.now() - t0) });
       return new Response(empty ? null : JSON.stringify(res.body), {
         status: res.status,
         headers: empty ? {} : { 'content-type': 'application/json; charset=utf-8' },

@@ -9,7 +9,9 @@
     "./step": "./src/step.ts",
     "./playwright": "./src/playwright.ts",
     "./tune": "./src/tune.ts",
-    "./tune-patch": "./src/tune-patch.ts"
+    "./tune-patch": "./src/tune-patch.ts",
+    "./trace": "./src/trace.ts",
+    "./trace-format": "./src/trace-format.ts"
   },
   "dependencies": {
     "@ddv/core": "*",

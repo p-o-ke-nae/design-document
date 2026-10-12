@@ -6,6 +6,7 @@ import { DocPage } from './components/DocPage.tsx';
 import { TestsPage } from './components/TestsPage.tsx';
 import { TestHistoryView } from './components/TestHistory.tsx';
 import { FlakyList } from './components/FlakyList.tsx';
+import { TraceView } from './components/TraceView.tsx';
 import { StatusBadge } from './components/StatusBadge.tsx';
 import { DepsDialog, LoadingPage, OpenPage, PrBar, TopBar, TrustDialog, WorkspaceBar, WorkspaceProvider, useWorkspaces } from './components/Workspace.tsx';
 import { PrProvider } from './components/Pr.tsx';
@@ -67,6 +68,8 @@ function ShellBody() {
             {route.view === 'tests' ? (
               route.sub === 'history' ? (
                 <TestHistoryView id={route.testId ?? ''} />
+              ) : route.sub === 'trace' ? (
+                <TraceView runId={route.runId ?? ''} testId={route.testId ?? ''} />
               ) : route.sub === 'flaky' ? (
                 <FlakyList />
               ) : (

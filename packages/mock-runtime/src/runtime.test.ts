@@ -286,3 +286,46 @@ describe('操作のハイライト', () => {
     expect(log).toEqual([]);
   });
 });
+
+describe('TraceTap（DD-TRREC mock-runtime の記録）', () => {
+  it('begin から take までの API 呼び出し（本文付き）と DB の変化を返し、begin していなければ記録しない', async () => {
+    const r = await boot();
+    await click(r, 'new');
+    val('customer', '山田');
+    val('sku', 'A-100');
+    val('quantity', '2');
+    await click(r, 'next');
+    expect(r.trace.recording).toBe(false);
+    expect(r.trace.take().calls).toEqual([]);
+
+    await click(r, 'back');
+    await click(r, 'new');
+    val('customer', '佐藤');
+    val('sku', 'A-100');
+    val('quantity', '1');
+    r.trace.begin();
+    expect(r.trace.recording).toBe(true);
+    await click(r, 'next');
+    const t = r.trace.take();
+    expect(r.trace.recording).toBe(false);
+    const post = t.calls.find((c) => c.method === 'POST')!;
+    expect(post).toMatchObject({ path: '/api/orders', status: 201 });
+    expect(JSON.parse(post.requestBody!)).toMatchObject({ customer: '佐藤', quantity: 1 });
+    expect(JSON.parse(post.responseBody!)).toMatchObject({ id: 3, status: 'Submitted' });
+    expect(post.durationMs).toBeGreaterThanOrEqual(0);
+    expect(t.db).toEqual([{ table: 'orders', kind: 'added', key: '3', after: expect.objectContaining({ id: 3, customer: '佐藤' }) }]);
+  });
+
+  it('BridgeEngine の traceBegin / traceTake / observe（ライブ表示）', async () => {
+    const r = await boot();
+    const s: Step = { event: '新規', click: 'new', expect: { screen: 'Input', visible: ['customer'] } };
+    r.traceBegin();
+    const res = await r.exec(s);
+    expect(res.ok).toBe(true);
+    expect(r.traceTake()).toEqual({ calls: [], db: [] });
+    expect(await r.observe(s)).toEqual([
+      { kind: 'screen', key: '', expected: 'Input', actual: 'Input', ok: true },
+      { kind: 'visible', key: 'customer', expected: true, actual: true, ok: true },
+    ]);
+  });
+});

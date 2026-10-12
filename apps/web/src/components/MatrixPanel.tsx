@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { api, type CoverageClass, type Matrix, type MatrixCase, type TestSummary } from '../api.ts';
-import { historyHref, useApp } from '../state.tsx';
+import { historyHref, traceHref, useApp } from '../state.tsx';
+import { scenarioLinked } from '../trace-view.ts';
 import { useCoverage } from './CoverageBadge.tsx';
 import { FlakyMark } from './TestHistory.tsx';
 import { useMockHub } from '../mockHub.tsx';
@@ -167,7 +168,7 @@ function MatrixRow({
   checked: boolean;
   onCheck(): void;
   onSelect(): void;
-  result?: { status: string; message?: string; durationMs: number };
+  result?: { status: string; message?: string; durationMs: number; runId?: string };
   running: boolean;
   onRun(): void;
   onPlayMock?: () => void;
@@ -225,6 +226,11 @@ function MatrixRow({
         <button type="button" className="run" disabled={!executed} onClick={() => (location.hash = historyHref(c.id))} data-testid="matrix-history" title={executed ? 'このテストIDの履歴' : 'まだ実行していません'}>
           履歴
         </button>
+        {result?.runId && scenarioLinked(c.links) && (
+          <button type="button" className="run" onClick={() => (location.hash = traceHref(result.runId!, c.id))} data-testid="trace-open" title="直近の実行のトレース（ステップごとの記録）">
+            トレース
+          </button>
+        )}
         <CommentGutter inline path={doc} element={{ kind: 'matrixRow', key: c.id, label: c.title }} />
       </td>
     </tr>

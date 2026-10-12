@@ -5796,6 +5796,66 @@ async function checkExpect(driver, expect) {
 		failures
 	};
 }
+/** Evaluates every `expect` item once (no retry) for the trace. Items whose element cannot be resolved get `actual: null`. */
+async function observeExpect(driver, expect) {
+	const out = [];
+	const safe = async (f) => {
+		try {
+			return await f();
+		} catch {
+			return null;
+		}
+	};
+	const screen = await safe(() => driver.screen());
+	out.push({
+		kind: "screen",
+		key: "",
+		expected: expect.screen,
+		actual: screen,
+		ok: screen === expect.screen
+	});
+	for (const k of expect.visible ?? []) {
+		const v = await safe(() => driver.isVisible(k));
+		out.push({
+			kind: "visible",
+			key: k,
+			expected: true,
+			actual: v,
+			ok: v === true
+		});
+	}
+	for (const k of expect.hidden ?? []) {
+		const v = await safe(() => driver.isVisible(k));
+		out.push({
+			kind: "hidden",
+			key: k,
+			expected: false,
+			actual: v,
+			ok: v === false
+		});
+	}
+	for (const [k, v] of Object.entries(expect.text ?? {})) {
+		const t = await safe(() => driver.text(k));
+		out.push({
+			kind: "text",
+			key: k,
+			expected: v,
+			actual: t,
+			ok: t !== null && ws(t) === ws(v)
+		});
+	}
+	for (const [k, v] of Object.entries(expect.count ?? {})) {
+		const n = await safe(() => driver.count(k));
+		out.push({
+			kind: "count",
+			key: k,
+			expected: v,
+			actual: n,
+			ok: n === v
+		});
+	}
+	return out;
+}
 /** Executes one step (input → do → click → wait → expect). Throws `StepError` on failure. */
 async function executeStep(driver, step, opts = {}) {
 	const timeoutMs = opts.timeoutMs ?? 5e3;
@@ -6186,7 +6246,7 @@ var HostBridge = class {
 		const m = e.data;
 		if (!m || typeof m !== "object") return;
 		if (m.type === "ddv:reset") this.reset(Array.isArray(m.fixtures) ? m.fixtures : [], m.start).catch(() => {});
-		else if (m.type === "ddv:step" && typeof m.index === "number" && m.step && typeof m.step === "object") this.step(m.step, m.index, validHighlight(m.highlight));
+		else if (m.type === "ddv:step" && typeof m.index === "number" && m.step && typeof m.step === "object") this.step(m.step, m.index, validHighlight(m.highlight), m.trace === true);
 		else if (m.type === "ddv:tune" && typeof m.on === "boolean") this.engine.tune?.(m.on);
 		else if (m.type === "ddv:patch" && Array.isArray(m.path) && m.path.every((i) => Number.isInteger(i) && i >= 0)) {
 			const issues = this.engine.patch?.(m.path, m.patch && typeof m.patch === "object" ? m.patch : null) ?? [];
@@ -6249,7 +6309,7 @@ var HostBridge = class {
 		}
 	}
 	/** Runs a step (queued while another runs). `index` given = came from postMessage, so the result is posted back. */
-	step(step, index, highlight) {
+	step(step, index, highlight, trace = false) {
 		if (this.state === "Booting" || this.state === "Broken" || this.engine.tuning) {
 			const message = this.engine.tuning ? TUNING_MESSAGE : this.state === "Booting" ? "モックを起動中のため実行できません" : "モックの読込に失敗しているため実行できません（リセットしてください）";
 			const r = {
@@ -6269,6 +6329,7 @@ var HostBridge = class {
 				step,
 				index,
 				highlight,
+				trace,
 				resolve
 			});
 			if (this.state === "Ready") {
@@ -6277,7 +6338,7 @@ var HostBridge = class {
 			}
 		});
 	}
-	post(index, r) {
+	post(index, r, trace) {
 		if (index === void 0) return;
 		this.notify({
 			type: "ddv:result",
@@ -6285,14 +6346,21 @@ var HostBridge = class {
 			ok: r.ok,
 			screen: r.screen,
 			failures: r.failures,
-			...r.error ? { message: r.error.message } : {}
+			...r.error ? { message: r.error.message } : {},
+			...trace ? { trace } : {}
 		});
+	}
+	get canTrace() {
+		return !!(this.engine.traceBegin && this.engine.traceTake && this.engine.observe);
 	}
 	async pump() {
 		const g = this.gen;
 		while (this.queue.length) {
 			const item = this.queue.shift();
 			this.current = item;
+			const tracing = item.trace === true && item.index !== void 0 && this.canTrace;
+			const screenBefore = tracing ? this.engine.screen() : null;
+			if (tracing) this.engine.traceBegin();
 			let r;
 			try {
 				r = await this.engine.exec(item.step, item.highlight ? { highlight: item.highlight } : void 0);
@@ -6307,9 +6375,23 @@ var HostBridge = class {
 					}
 				};
 			}
+			let trace;
+			if (tracing) {
+				const tap = this.engine.traceTake();
+				let expects = [];
+				try {
+					expects = await this.engine.observe(item.step);
+				} catch {}
+				trace = {
+					screenBefore,
+					calls: tap.calls,
+					db: tap.db,
+					expects
+				};
+			}
 			if (g !== this.gen) return;
 			this.current = null;
-			this.post(item.index, r);
+			this.post(item.index, r, trace);
 			item.resolve(r);
 		}
 		this.fire("done");
@@ -6350,6 +6432,10 @@ var MemoryDb = class {
 	}
 	table(name) {
 		return this.tables.get(name);
+	}
+	/** All tables (live objects; callers must copy rows they keep). */
+	all() {
+		return [...this.tables.values()];
 	}
 	/** Creates the table (key `id`) when it does not exist. */
 	ensure(name, key = "id") {
@@ -6547,6 +6633,8 @@ var FetchInterceptor = class {
 	win;
 	original = null;
 	raw = null;
+	/** Called with each request answered by the router (TraceTap.record). */
+	onCall = null;
 	constructor(win) {
 		this.win = win;
 	}
@@ -6575,6 +6663,7 @@ var FetchInterceptor = class {
 			} catch {
 				body = text;
 			}
+			const t0 = performance.now();
 			const query = {};
 			url.searchParams.forEach((v, k) => query[k] = v);
 			const res = await router.handle({
@@ -6584,6 +6673,14 @@ var FetchInterceptor = class {
 				body
 			});
 			const empty = res.status === 204 || res.status === 304 || res.body === void 0;
+			this.onCall?.({
+				method,
+				path: url.pathname + url.search,
+				status: res.status,
+				requestBody: text,
+				responseBody: res.body === void 0 ? null : JSON.stringify(res.body),
+				durationMs: Math.round(performance.now() - t0)
+			});
 			return new Response(empty ? null : JSON.stringify(res.body), {
 				status: res.status,
 				headers: empty ? {} : { "content-type": "application/json; charset=utf-8" }
@@ -7063,6 +7160,131 @@ var ScreenController = class {
 	}
 };
 //#endregion
+//#region ../mock/src/trace-format.ts
+/** Request / response bodies are clipped to this many UTF-8 bytes. */
+var BODY_LIMIT = 65536;
+var utf8 = new TextEncoder();
+/** Clips `text` to `limit` UTF-8 bytes at a character boundary (detailed design: 本文の切り詰め). */
+function clipBody(text, limit = BODY_LIMIT) {
+	if (text === void 0 || text === null) return void 0;
+	if (utf8.encode(text).length <= limit) return { body: text };
+	let bytes = 0;
+	let out = "";
+	for (const ch of text) {
+		const n = utf8.encode(ch).length;
+		if (bytes + n > limit) break;
+		bytes += n;
+		out += ch;
+	}
+	return {
+		body: out,
+		truncated: true
+	};
+}
+function keyed(rows, key) {
+	const m = /* @__PURE__ */ new Map();
+	rows.forEach((r, i) => {
+		const v = r?.[key];
+		m.set(v === void 0 || v === null ? `#${i}` : String(v), r);
+	});
+	return m;
+}
+var cmp = (a, b) => a < b ? -1 : a > b ? 1 : 0;
+/** Row-level differences between two DB snapshots (detailed design: DB の変化). */
+function diffTables(before, after, keys = {}) {
+	const out = [];
+	const tables = [.../* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)])].sort(cmp);
+	for (const table of tables) {
+		const key = keys[table] ?? "id";
+		const b = keyed(before[table] ?? [], key);
+		const a = keyed(after[table] ?? [], key);
+		const added = [];
+		const changed = [];
+		const removed = [];
+		for (const [k, row] of a) {
+			const prev = b.get(k);
+			if (!prev) added.push({
+				table,
+				kind: "added",
+				key: k,
+				after: row
+			});
+			else if (JSON.stringify(prev) !== JSON.stringify(row)) changed.push({
+				table,
+				kind: "changed",
+				key: k,
+				before: prev,
+				after: row
+			});
+		}
+		for (const [k, row] of b) if (!a.has(k)) removed.push({
+			table,
+			kind: "removed",
+			key: k,
+			before: row
+		});
+		for (const g of [
+			added,
+			changed,
+			removed
+		]) out.push(...g.sort((x, y) => cmp(x.key, y.key)));
+	}
+	return out;
+}
+//#endregion
+//#region src/trace-tap.ts
+/** Records the API calls and DB changes of one step (detailed design: mock-runtime の記録). */
+var TraceTap = class {
+	defaultDb;
+	calls = [];
+	snapshot = null;
+	/** `defaultDb` lets `window.__ddv.trace.begin()` be called without arguments (from Playwright). */
+	constructor(defaultDb) {
+		this.defaultDb = defaultDb;
+	}
+	get recording() {
+		return this.snapshot !== null;
+	}
+	begin(db = this.defaultDb?.()) {
+		if (!db) return;
+		this.calls = [];
+		this.snapshot = new Map(db.all().map((t) => [t.name, structuredClone(t.rows)]));
+	}
+	record(call) {
+		if (!this.snapshot) return;
+		const out = {
+			method: call.method,
+			path: call.path,
+			status: call.status,
+			durationMs: call.durationMs
+		};
+		const req = clipBody(call.requestBody);
+		const res = clipBody(call.responseBody);
+		if (req) out.requestBody = req.body;
+		if (res) out.responseBody = res.body;
+		if (req?.truncated || res?.truncated) out.truncated = true;
+		this.calls.push(out);
+	}
+	/** Returns what was recorded since `begin` and stops recording. */
+	take(db = this.defaultDb?.()) {
+		if (!db) return {
+			calls: [],
+			db: []
+		};
+		const before = Object.fromEntries(this.snapshot ?? []);
+		const tables = db.all();
+		const after = Object.fromEntries(tables.map((t) => [t.name, structuredClone(t.rows)]));
+		const keys = Object.fromEntries(tables.map((t) => [t.name, t.key]));
+		const r = {
+			calls: this.calls,
+			db: this.snapshot ? diffTables(before, after, keys) : []
+		};
+		this.calls = [];
+		this.snapshot = null;
+		return r;
+	}
+};
+//#endregion
 //#region ../mock/src/tune-patch.ts
 var TEXT_ATTRS = [
 	"placeholder",
@@ -7538,7 +7760,9 @@ var RUNTIME_VERSION = {
 		"./step": "./src/step.ts",
 		"./playwright": "./src/playwright.ts",
 		"./tune": "./src/tune.ts",
-		"./tune-patch": "./src/tune-patch.ts"
+		"./tune-patch": "./src/tune-patch.ts",
+		"./trace": "./src/trace.ts",
+		"./trace-format": "./src/trace-format.ts"
 	},
 	dependencies: {
 		"@ddv/core": "*",
@@ -7568,6 +7792,8 @@ var MockRuntime = class {
 	driver;
 	bridge;
 	tuner;
+	/** API / DB recording of a step (window.__ddv.trace). */
+	trace = new TraceTap(() => this.db);
 	spec = {
 		base: "/api",
 		tables: [],
@@ -7584,6 +7810,7 @@ var MockRuntime = class {
 		this.stepTimeoutMs = opts.stepTimeoutMs ?? 0;
 		this.router = new ApiRouter(this.db, (m) => this.reportError(m));
 		this.interceptor = new FetchInterceptor(this.win);
+		this.interceptor.onCall = (c) => this.trace.record(c);
 		this.screens = new ScreenController(this.doc);
 		this.binder = new DeclarativeBinder({
 			win: this.win,
@@ -7706,6 +7933,15 @@ var MockRuntime = class {
 	}
 	cancel() {
 		this.binder.cancel();
+	}
+	traceBegin() {
+		this.trace.begin(this.db);
+	}
+	traceTake() {
+		return this.trace.take(this.db);
+	}
+	observe(step) {
+		return observeExpect(this.driver, step.expect);
 	}
 	screen() {
 		return this.screens.current;

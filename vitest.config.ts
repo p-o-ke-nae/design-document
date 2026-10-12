@@ -15,6 +15,8 @@ export default defineConfig({
       '@ddv/mock/playwright': r('./packages/mock/src/playwright.ts'),
       '@ddv/mock/tune': r('./packages/mock/src/tune.ts'),
       '@ddv/mock/tune-patch': r('./packages/mock/src/tune-patch.ts'),
+      '@ddv/mock/trace-format': r('./packages/mock/src/trace-format.ts'),
+      '@ddv/mock/trace': r('./packages/mock/src/trace.ts'),
       '@ddv/mock-runtime': r('./packages/mock-runtime/src/index.ts'),
       '@ddv/mock': r('./packages/mock/src/index.ts'),
     },

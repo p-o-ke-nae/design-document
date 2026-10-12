@@ -6,6 +6,7 @@ import { PlayerController, SPEEDS, STATE_LABEL, createFrameTransport, type Frame
 import type { PickedElement } from '@ddv/mock/tune-patch';
 import { SnapshotPanel } from './SnapshotPanel.tsx';
 import { TunePanel } from './TunePanel.tsx';
+import { LiveTracePanel } from './LiveTracePanel.tsx';
 
 const SIZES: Array<[string, number | null]> = [
   ['可変', null],
@@ -40,6 +41,7 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
   const [loadedSeq, setLoadedSeq] = useState(-1);
   const transport = useRef<FrameTransport | null>(null);
   const [tuning, setTuning] = useState(false);
+  const [traceOpen, setTraceOpen] = useState(false);
   const [picked, setPicked] = useState<{ el: PickedElement; seq: number } | null>(null);
   const sendTune = useCallback((m: TuneMessage) => transport.current?.send(m), []);
 
@@ -243,6 +245,9 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
             <input type="checkbox" data-testid="player-highlight" checked={opHighlight} onChange={(e) => setOpHighlight(e.target.checked)} />
             操作をハイライト
           </label>
+          <button type="button" data-testid="trace-live-toggle" className={traceOpen ? 'is-active' : ''} aria-pressed={traceOpen} onClick={() => setTraceOpen((v) => !v)} title="再生中のステップの記録（API・DB の変化など）を表示">
+            トレース
+          </button>
           <span className="player-progress" data-testid="player-progress">
             {cursor} / {total}
           </span>
@@ -318,6 +323,7 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
           </ol>
         )}
       </div>
+      {hasPlayer && traceOpen && ctl && <LiveTracePanel live={ctl.liveTrace} />}
       {hasPlayer && <SnapshotPanel scenarioId={request.id} />}
     </div>
   );

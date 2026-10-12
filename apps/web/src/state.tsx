@@ -7,13 +7,15 @@ export interface Route {
   view: 'doc' | 'tests' | 'open' | 'review' | 'done';
   path: string;
   heading: string;
-  /** Tests tab: '' = list, 'history' = one test id's history, 'flaky' = flaky tests. */
-  sub?: '' | 'history' | 'flaky';
-  /** Tests tab, `history`: the test id. */
+  /** Tests tab: '' = list, 'history' = one test id's history, 'flaky' = flaky tests, 'trace' = one test id's trace in one run. */
+  sub?: '' | 'history' | 'flaky' | 'trace';
+  /** Tests tab, `history` / `trace`: the test id. */
   testId?: string;
+  /** Tests tab, `trace`: the run id. */
+  runId?: string;
 }
 
-/** `#/doc?path=…` / `#/tests` / `#/tests/history/<id>` / `#/tests/flaky` / `#/open`, and the same under `#/w/<ws>` for a GitHub workspace (+ `#/w/<ws>/review` / `#/w/<ws>/review/done`). */
+/** `#/doc?path=…` / `#/tests` / `#/tests/history/<id>` / `#/tests/trace/<run>/<id>` / `#/tests/flaky` / `#/open`, and the same under `#/w/<ws>` for a GitHub workspace (+ `#/w/<ws>/review` / `#/w/<ws>/review/done`). */
 export function parseHash(hash: string): Route {
   let h = hash.replace(/^#/, '');
   let ws = '';
@@ -29,6 +31,8 @@ export function parseHash(hash: string): Route {
   if (p === '/tests/flaky') return { ws, view: 'tests', path: '', heading: '', sub: 'flaky' };
   const hm = /^\/tests\/history\/([^/]+)$/.exec(p);
   if (hm) return { ws, view: 'tests', path: '', heading: '', sub: 'history', testId: decodeURIComponent(hm[1]) };
+  const tm = /^\/tests\/trace\/([^/]+)\/([^/]+)$/.exec(p);
+  if (tm) return { ws, view: 'tests', path: '', heading: '', sub: 'trace', runId: decodeURIComponent(tm[1]), testId: decodeURIComponent(tm[2]) };
   if (ws && p === '/review') return { ws, view: 'review', path: '', heading: '' };
   if (ws && p === '/review/done') return { ws, view: 'done', path: '', heading: '' };
   return { ws, view: 'doc', path: params.get('path') ?? '', heading: params.get('h') ?? '' };
@@ -57,7 +61,7 @@ export function flakyHref(): string {
   return `${wsBase()}/tests/flaky`;
 }
 
-/** Trace view of one test id in one run (the screen itself comes with the trace viewer). */
+/** Trace view of one test id in one run. */
 export function traceHref(runId: string, id: string): string {
   return `${wsBase()}/tests/trace/${encodeURIComponent(runId)}/${encodeURIComponent(id)}`;
 }
