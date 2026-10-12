@@ -266,7 +266,7 @@ worker-src 'none'; form-action 'none'
 | PAT・親の DOM・storage の読み取り | `sandbox` に `allow-same-origin` が無い（不透明オリジン。`localStorage` 等は例外になる） |
 | 他のサイトへの遷移・ポップアップ・フォーム送信 | `sandbox`（`allow-top-navigation`・`allow-popups`・`allow-forms` なし）と親の `frame-src 'self' blob:`（iframe の遷移先を制限） |
 
-- 親の CSP に `script-src`・`style-src`・`default-src` を足すと srcdoc に継承され、モックのインラインのスクリプトが動かなくなる。足すときは `'unsafe-inline' data:` を含める必要がある
+- 親の CSP に `script-src`・`style-src`・`default-src` を足すと srcdoc に継承され、モックのインラインのスクリプトが動かなくなる。足すときは `'unsafe-inline' data:` を含める必要がある。`base-uri` も継承されるので、親の `base-uri` には仮想 base のオリジン `https://mock.ddv.invalid` を含める（:ref[pat.md#csp]。含めないと `<base>` が無視され、モックの相対の参照が Pages のオリジンに解決される）
 - `srcdoc` モードの runtime は `securitypolicyviolation` を受けて `ddv:error { message: 'Pages 版では読み込めない参照です: <blockedURI>' }` を送る（同じ URI は 1 回だけ）
 - モックの JS が `localStorage`・`sessionStorage`・`document.cookie` を使うと Pages 版だけ例外になる。runtime は使っていない
 

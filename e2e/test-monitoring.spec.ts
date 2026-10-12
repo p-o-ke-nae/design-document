@@ -141,6 +141,19 @@ test('[BD-TMON-SCREEN-P004] [BD-TMON-SCREEN-T007] [BD-TMON-SCREEN-T009] [BD-TMON
   const subscribed = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/events');
   await page.goto('/#/tests');
   await subscribed;
+  // The rerun response may come after the attempts' `run` events (slow CI): it must not take the page back to attempt 1.
+  const before = new Set(((await (await request.get('/api/runs')).json()) as Array<{ id: string }>).map((r) => r.id));
+  let replied!: () => void;
+  const rerunReplied = new Promise<void>((resolve) => (replied = resolve));
+  await page.route(/\/api\/tests\/rerun$/, async (route) => {
+    const response = await route.fetch();
+    await expect
+      .poll(async () => ((await (await request.get('/api/runs')).json()) as Array<{ id: string; rerunOf?: string; attempt?: number }>).some((r) => !before.has(r.id) && r.rerunOf && r.attempt === 2), { timeout: 30000 })
+      .toBe(true);
+    await new Promise((r) => setTimeout(r, 300));
+    await route.fulfill({ response });
+    replied();
+  });
   await page.getByTestId('rerun-times').selectOption('2');
   const rerun = page.getByTestId('rerun');
   await expect(rerun).toBeEnabled();
@@ -164,6 +177,7 @@ test('[BD-TMON-SCREEN-P004] [BD-TMON-SCREEN-T007] [BD-TMON-SCREEN-T009] [BD-TMON
   await expect(attempt).toBeVisible();
 
   await waitIdle(request);
+  await rerunReplied;
   await expect(attempt).toHaveText('2 / 2 回目');
   release();
   await expect(attempt).toHaveCount(0);
