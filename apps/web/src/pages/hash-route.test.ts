@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { HrefView } from '../route.ts';
+import { parseHash } from '../state.tsx';
 import { formatHostedHash, parseHostedHash, PATH_MESSAGE, PR_MESSAGE, REF_MESSAGE, REPO_MESSAGE, targetKey, targetWs, URL_MESSAGE, validateTarget, type HostedTarget } from './hash-route.ts';
 
 const NONE = {};
@@ -172,6 +173,26 @@ describe('formatHostedHash・targetKey', () => {
     expect(formatHostedHash(PR, { view: 'doc', path: 'a.md', heading: '', diff: true })).toBe('#/gh/octo/app/pr/12/doc/a.md?view=diff');
     expect(formatHostedHash(DEF)).toBe('#/gh/octo/app');
     expect(formatHostedHash(REF, { view: 'doc', path: 'a.md', heading: '', diff: true })).toBe('#/gh/octo/app/ref/feature%2Fx/doc/a.md');
+  });
+
+  it('Actions タブ：#/…/tests/actions/<part> は手元の parseHash と同じ（セグメントごとにエンコードしたまま）の actions になり、往復する', () => {
+    const parts = ['', 'setup', 'requests/ddv-1a2b3c4d', 'runs/123-1', 'runs/123-1/trace/BD-ORDER-SCREEN-P001', `runs/123-1/trace/${encodeURIComponent('A/B C')}`];
+    for (const t of [PR, REF, DEF]) {
+      for (const part of parts) {
+        const v: Partial<HrefView> = { view: 'tests', path: '', heading: '', sub: 'actions', actions: part };
+        const h = formatHostedHash(t, v);
+        expect(h.endsWith(part ? `/tests/actions/${part}` : '/tests/actions')).toBe(true);
+        const r = parseHostedHash(h, NONE);
+        expect(r.target).toEqual(t);
+        expect(r.route).toEqual({ ws: targetWs(t), ...v });
+        expect(r.route.actions).toBe(parseHash(`#/w/x/tests/actions${part ? `/${part}` : ''}`).actions);
+      }
+    }
+    expect(formatHostedHash(PR, { view: 'tests', path: '', heading: '', sub: 'actions', actions: 'runs/1-1' })).toBe('#/gh/octo/app/pr/12/tests/actions/runs/1-1');
+    // 末尾の / や、エンコードしなくてよい文字のエンコードは ActionsPanel が同じ意味に読む形にそろう
+    expect(parseHostedHash('#/gh/octo/app/pr/12/tests/actions/', NONE).route.actions).toBe('');
+    expect(parseHostedHash('#/gh/octo/app/pr/12/tests/actions/requests/ddv%2D1', NONE).route.actions).toBe('requests/ddv-1');
+    expect(parseHostedHash('#/gh/octo/app/tests/actions/runs/1-1/trace/A%2FB', NONE).route).toMatchObject({ ws: 'gh~octo~app~default', sub: 'actions', actions: 'runs/1-1/trace/A%2FB' });
   });
 
   it('targetKey と Route.ws', () => {
