@@ -38,6 +38,11 @@ export class MemoryDb {
     return this.tables.get(name);
   }
 
+  /** All tables (live objects; callers must copy rows they keep). */
+  all(): Table[] {
+    return [...this.tables.values()];
+  }
+
   /** Creates the table (key `id`) when it does not exist. */
   ensure(name: string, key = 'id'): Table {
     let t = this.tables.get(name);

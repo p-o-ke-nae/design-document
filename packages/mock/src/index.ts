@@ -19,3 +19,5 @@ export * from './run-scenario.ts';
 export * from './init.ts';
 export { executeStep, runStep, checkExpect, eventOf, StepError, DEFAULT_STEP_TIMEOUT_MS } from './step.ts';
 export type { Driver, ExpectFailure, StepErrorKind, StepOptions, StepResult } from './step.ts';
+export { observeExpect } from './step.ts';
+export * from './trace.ts';

@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, type DocResponse } from '../api.ts';
 import { docHref, useApp } from '../state.tsx';
-import { MockHubProvider } from '../mockHub.tsx';
+import { MockHubProvider, useMockHub } from '../mockHub.tsx';
+import { TestDataEditor } from './TestDataEditor.tsx';
 import { Markdown } from './Markdown.tsx';
 import { Toc } from './Toc.tsx';
 import { MermaidView } from './MermaidView.tsx';
 import { ChangeMark, ThreadView, usePr } from './Pr.tsx';
 import type { ReviewMarks } from '../remark-review.ts';
+import { CoverageProvider, DocCoverageBadge } from './CoverageBadge.tsx';
 
 const KIND: Record<string, string> = { requirements: '要件定義', basic: '基本設計', detailed: '詳細設計', other: 'ドキュメント' };
 
@@ -59,6 +61,7 @@ export function DocPage() {
   const errors = doc.issues.filter((i) => i.severity === 'error').length;
 
   return (
+    <MockHubProvider key={doc.path} version={version}>
     <div className="doc-layout">
       <div
         className="doc-scroll"
@@ -67,12 +70,14 @@ export function DocPage() {
           if (el !== root) setRoot(el);
         }}
       >
+        <CoverageProvider path={doc.path}>
         <article className="doc" data-testid="doc">
           <div className="doc-meta">
             <span className="chip">{KIND[doc.kind] ?? doc.kind}</span>
             <code>{doc.id}</code>
             <span className={`status st-doc-${doc.status}`}>{doc.status}</span>
             <span className="muted">{doc.path}</span>
+            <DocCoverageBadge />
             {doc.traces.length > 0 && (
               <span className="traces" data-testid="traces">
                 トレース:{' '}
@@ -112,15 +117,27 @@ export function DocPage() {
               ))}
             </section>
           )}
-          <MockHubProvider key={doc.path} version={version}>
-            <Markdown text={doc.text} basePath={doc.path} doc={doc} review={review} />
-          </MockHubProvider>
+          <Markdown text={doc.text} basePath={doc.path} doc={doc} review={review} />
         </article>
+        </CoverageProvider>
       </div>
+      <TestDataSide />
       <aside className="side">
         <Toc headings={doc.headings} scrollRoot={root} />
       </aside>
     </div>
+    </MockHubProvider>
+  );
+}
+
+/** テストデータの編集パネル（文書の右側。ハッシュは変えない）. */
+function TestDataSide() {
+  const hub = useMockHub();
+  if (!hub?.testData) return null;
+  return (
+    <aside className="td-side" data-testid="td-panel">
+      <TestDataEditor key={hub.testData.id} scenarioId={hub.testData.id} />
+    </aside>
   );
 }
 

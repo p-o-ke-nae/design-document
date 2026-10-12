@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, type RunSummary, type TestsResponse } from '../api.ts';
-import { docHref, useApp } from '../state.tsx';
+import { docHref, flakyHref, historyHref, traceHref, useApp, useLocalStorage } from '../state.tsx';
+import { scenarioLinked } from '../trace-view.ts';
 import { StatusBadge } from './StatusBadge.tsx';
+import { FlakyMark, RecentDots, RerunPanel, formatCommit } from './TestHistory.tsx';
 
 type Filter = 'all' | 'linked' | 'unlinked' | 'failed' | 'passed' | 'never';
 
 export function TestsPage() {
-  const { version, latest, runTests, activeRun, runLog, runError } = useApp();
+  const { version, latest, runTests, rerunTests, history, activeRun, runLog, runError } = useApp();
   const [data, setData] = useState<TestsResponse | null>(null);
   const [runs, setRuns] = useState<RunSummary[]>([]);
   const [q, setQ] = useState('');
@@ -14,6 +16,8 @@ export function TestsPage() {
   const [level, setLevel] = useState('');
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [viewRun, setViewRun] = useState<RunSummary | null>(null);
+  const [rerunTimes, setRerunTimes] = useLocalStorage('ddv.rerunTimes', 2);
+  const [rerunError, setRerunError] = useState('');
   const logRef = useRef<HTMLPreElement>(null);
   const running = activeRun?.status === 'running';
 
@@ -68,7 +72,9 @@ export function TestsPage() {
   if (!data) return <div className="empty muted">読み込み中…</div>;
   const runnable = (ids: string[]) => ids.filter((id) => data.cases.find((c) => c.id === id)?.links.length);
   const allChecked = rows.length > 0 && rows.every((r) => checked.has(r.id));
-  const failedIds = data.cases.filter((c) => c.links.length && ['failed', 'error'].includes(latest[c.id]?.status ?? '')).map((c) => c.id);
+  const rerunnable = history?.rerunnable ?? 0;
+  const rerunBlocked = running ? 'テストの実行中は再実行できません' : !rerunnable ? '直近の実行に失敗したテストはありません' : '';
+  const rerunning = !!activeRun?.rerunOf && (running || (activeRun.attempt ?? 0) < (activeRun.times ?? 0));
 
   return (
     <div className="tests-page" data-testid="tests-page">
@@ -100,8 +106,24 @@ export function TestsPage() {
         <button type="button" disabled={running || !runnable([...checked]).length} onClick={() => runTests({ ids: runnable([...checked]) })} data-testid="run-selected">
           選択を実行 ({runnable([...checked]).length})
         </button>
-        <button type="button" disabled={running || !failedIds.length} onClick={() => runTests({ ids: failedIds })}>
-          失敗を再実行 ({failedIds.length})
+        <button type="button" disabled={rerunning} title={rerunning ? '失敗の再実行中は開けません' : undefined} onClick={() => (location.hash = flakyHref())} data-testid="flaky-open">
+          フレーキー（{history?.flakyCount ?? 0}）
+        </button>
+        <select value={rerunTimes} onChange={(e) => setRerunTimes(Number(e.target.value))} aria-label="再実行の回数" data-testid="rerun-times">
+          {[1, 2, 3, 5].map((n) => (
+            <option key={n} value={n}>
+              {n} 回
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          disabled={!!rerunBlocked}
+          title={rerunBlocked || `直近の実行で失敗した ${rerunnable} 件を ${rerunTimes} 回続けて実行します`}
+          onClick={async () => setRerunError(await rerunTests(rerunTimes))}
+          data-testid="rerun"
+        >
+          失敗を再実行 ({rerunnable})
         </button>
         {data.runners.map((r) => (
           <button key={r.name} type="button" disabled={running} onClick={() => runTests({ runner: r.name })} title={`${r.type} @ ${r.cwd}`}>
@@ -114,6 +136,12 @@ export function TestsPage() {
       </section>
 
       {runError && <div className="notice warn">{runError}</div>}
+      {rerunError && (
+        <div className="notice warn" data-testid="rerun-error">
+          {rerunError}
+        </div>
+      )}
+      {rerunning && activeRun && <RerunPanel run={activeRun} log={runLog} />}
       {data.unknown.length > 0 && (
         <details className="notice warn">
           <summary>設計に存在しないテストIDの参照 {data.unknown.length} 件</summary>
@@ -129,7 +157,7 @@ export function TestsPage() {
 
       <div className="tests-grid">
         <div className="table-wrap">
-          <table className="tests-table">
+          <table className="tests-table" data-testid="test-list">
             <thead>
               <tr>
                 <th>
@@ -145,6 +173,7 @@ export function TestsPage() {
                 <th>設計</th>
                 <th>実装</th>
                 <th>最新結果</th>
+                <th>直近 10 回</th>
                 <th>時間</th>
                 <th />
               </tr>
@@ -167,7 +196,17 @@ export function TestsPage() {
                       />
                     </td>
                     <td className="nowrap">
-                      <code className="test-id">{c.id}</code>
+                      {/* The re-run stays on the list until it ends (BD-TMON-SCREEN: no transition from 再実行中 but 実行完了). */}
+                      {rerunning ? (
+                        <code className="test-id" title="失敗の再実行中は開けません">
+                          {c.id}
+                        </code>
+                      ) : (
+                        <a href={historyHref(c.id)} data-testid="test-open">
+                          <code className="test-id">{c.id}</code>
+                        </a>
+                      )}
+                      {history?.tests[c.id]?.flaky && <FlakyMark commits={history.tests[c.id].flakyCommits} />}
                     </td>
                     <td>{c.title}</td>
                     <td>
@@ -188,11 +227,19 @@ export function TestsPage() {
                       {r ? <StatusBadge status={r.status} title={r.message} /> : <span className="muted">-</span>}
                       {r?.message && r.status !== 'passed' && <div className="fail-msg">{r.message.split('\n')[0]}</div>}
                     </td>
+                    <td>
+                      <RecentDots summary={history?.tests[c.id]} />
+                    </td>
                     <td className="num">{r ? `${r.durationMs}ms` : ''}</td>
                     <td>
                       <button type="button" className="run" disabled={!c.links.length || running} onClick={() => runTests({ ids: [c.id] })}>
                         ▶
                       </button>
+                      {r?.runId && scenarioLinked(c.links) && (
+                        <button type="button" className="run" onClick={() => (location.hash = traceHref(r.runId!, c.id))} data-testid="test-trace" title="直近の実行のトレース（ステップごとの記録）">
+                          トレース
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -220,7 +267,7 @@ export function TestsPage() {
                     {new Date(r.startedAt).toLocaleString()}
                   </button>{' '}
                   <StatusBadge status={r.status} /> <span className="ok">{ok}</span>/<span className="ng">{ng}</span>/{vals.length}
-                  <span className="muted"> {r.request.ids ? `${r.request.ids.length}件指定` : r.request.runner ?? '全件'}</span>
+                  <span className="muted"> {r.request.ids ? `${r.request.ids.length}件指定` : r.request.runner ?? '全件'}（{formatCommit(r)}）</span>
                 </li>
               );
             })}

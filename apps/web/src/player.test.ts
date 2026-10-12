@@ -31,18 +31,18 @@ const NG: StepResult = { ok: false, screen: 'Input', failures: [{ key: 'screen',
 
 /** Steps resolve automatically from `results` unless `manual` is set. */
 class FakeTransport implements PlayerTransport {
-  resets: Array<{ fixtures: string[]; start?: string }> = [];
-  steps: Array<{ index: number; d: Deferred<StepResult>; highlight?: { holdMs: number } }> = [];
+  resets: Array<{ fixtures: string[]; start?: string; data?: unknown }> = [];
+  steps: Array<{ index: number; d: Deferred<StepResult>; highlight?: { holdMs: number }; trace?: boolean }> = [];
   manual = false;
   hangReset = false;
   results: (i: number) => StepResult = (i) => OK(SCENARIO.steps[i].expect.screen);
-  reset(fixtures: string[], start?: string) {
-    this.resets.push({ fixtures, start });
+  reset(fixtures: string[], start?: string, data?: unknown) {
+    this.resets.push({ fixtures, start, ...(data ? { data } : {}) });
     return this.hangReset ? new Promise<{ screen: string | null }>(() => {}) : Promise.resolve({ screen: start ?? null });
   }
-  step(index: number, _step: Step, highlight?: { holdMs: number }) {
+  step(index: number, _step: Step, highlight?: { holdMs: number }, trace?: boolean) {
     const d = deferred<StepResult>();
-    this.steps.push({ index, d, highlight });
+    this.steps.push({ index, d, highlight, trace });
     if (!this.manual) d.resolve(this.results(index));
     return d.promise;
   }
@@ -428,5 +428,139 @@ describe('速度とハイライト（設定）', () => {
     await flush();
     // step('新規') has a click only → 1 operation × 400ms
     expect(t.timer.waits.at(-1)).toBe(10_400);
+  });
+});
+
+describe('ライブ表示（LiveTrace）', () => {
+  const TRACE = (i: number) => ({ screenBefore: i ? SCENARIO.steps[i - 1].expect.screen : 'List', calls: [{ method: 'GET', path: '/api/x', status: 200, durationMs: 1 }], db: [], expects: [{ kind: 'screen' as const, key: '', expected: SCENARIO.steps[i].expect.screen, actual: SCENARIO.steps[i].expect.screen, ok: true }] });
+
+  it('各ステップを trace: true で送り、結果から TraceStep を作る（screenAfter = screen、error = message）', async () => {
+    const t = setup();
+    t.transport.results = (i) => (i === 1 ? { ...NG, message: '期待と違います', trace: { ...TRACE(1), expects: [] } } : { ...OK(SCENARIO.steps[i].expect.screen), trace: TRACE(i) });
+    t.c.play();
+    await flush();
+    expect(t.transport.steps.every((s) => s.trace === true)).toBe(true);
+    const lt = t.c.liveTrace;
+    expect(lt.supported).toBe(true);
+    expect(lt.steps.map((s) => [s.index, s.event, s.ok])).toEqual([
+      [1, '新規', true],
+      [2, '次へ', false],
+    ]);
+    expect(lt.steps[0]).toMatchObject({ click: '新規', screenBefore: 'List', screenAfter: 'Input', calls: [{ path: '/api/x' }], db: [], expects: [{ kind: 'screen', ok: true }] });
+    expect(lt.steps[1]).toMatchObject({ screenAfter: 'Input', error: '期待と違います' });
+    expect(lt.steps[1].screenshot).toBeUndefined();
+  });
+
+  it('trace の無い結果（古い runtime）なら supported = false。応答なしでは変えない', async () => {
+    const t = setup();
+    t.c.play();
+    await flush();
+    expect(t.c.liveTrace.steps).toHaveLength(3);
+    expect(t.c.liveTrace.supported).toBe(false);
+    expect(t.c.liveTrace.steps[0].db).toBeNull();
+
+    const u = setup({ manual: true });
+    u.c.play();
+    await flush();
+    await u.timer.advance(10_000);
+    expect(u.c.liveTrace.steps).toMatchObject([{ index: 1, ok: false, error: NO_RESPONSE }]);
+    expect(u.c.liveTrace.supported).toBe(true);
+  });
+
+  it('リセット・シナリオの切り替え・巻き戻しで消え、巻き戻しの再実行の結果も同じ index で入る', async () => {
+    const t = setup();
+    t.transport.results = (i) => ({ ...OK(SCENARIO.steps[i].expect.screen), trace: TRACE(i) });
+    t.c.play();
+    await flush();
+    expect(t.c.liveTrace.steps).toHaveLength(3);
+    let notified = 0;
+    t.c.liveTrace.subscribe(() => notified++);
+    t.c.rewind(2);
+    await flush();
+    expect(t.c.liveTrace.steps.map((s) => s.index)).toEqual([1, 2]);
+    expect(notified).toBeGreaterThan(0);
+    t.c.reset();
+    expect(t.c.liveTrace.steps).toEqual([]);
+    t.c.step();
+    await flush();
+    t.c.step();
+    await flush();
+    expect(t.c.liveTrace.steps).toHaveLength(1);
+    t.c.load(SCENARIO);
+    expect(t.c.liveTrace.getSnapshot()).toEqual({ steps: [], supported: true, draft: false });
+  });
+
+  it('リセット後に遅れて届いた結果は記録しない。所要時間はビューアで計る', async () => {
+    let now = 0;
+    const transport = new FakeTransport();
+    transport.manual = true;
+    const c = new PlayerController(transport, { timer: new FakeTimer(), speed: 0, now: () => now });
+    c.load(SCENARIO);
+    c.step();
+    await flush();
+    c.step();
+    await flush();
+    now = 25;
+    transport.steps[0].d.resolve({ ...OK('Input'), trace: TRACE(0) });
+    await flush();
+    expect(c.liveTrace.steps).toMatchObject([{ index: 1, durationMs: 25 }]);
+    c.step();
+    await flush();
+    c.reset();
+    transport.steps[1].d.resolve({ ...OK('Confirm'), trace: TRACE(1) });
+    await flush();
+    expect(c.liveTrace.steps).toEqual([]);
+  });
+
+  it('clear(true) は編集中のデータの再生（draft）として始める', () => {
+    const c = new PlayerController(new FakeTransport());
+    c.liveTrace.clear(true);
+    expect(c.liveTrace.draft).toBe(true);
+    c.liveTrace.clear();
+    expect(c.liveTrace.draft).toBe(false);
+  });
+});
+
+describe('編集中の再生（playDraft・DD-TDEDIT）', () => {
+  const DATA = { default: { orders: [{ id: 'A-1', customer: '編集中' }] } };
+
+  it('ddv:reset に data を付けて先頭から再生し、ライブ表示を「編集中」にする。完了は onDraftFinish（played に送らない）', async () => {
+    const transport = new FakeTransport();
+    const timer = new FakeTimer();
+    const finished: string[] = [];
+    const drafts: Array<{ id: string; ok: boolean }> = [];
+    const c = new PlayerController(transport, { timer, speed: 0, onFinish: (r) => finished.push(r.id), onDraftFinish: (r) => drafts.push({ id: r.id, ok: r.ok }) });
+    c.load(SCENARIO);
+    expect(c.playDraft(SCENARIO, DATA)).toBe(true);
+    expect(c.getSnapshot()).toMatchObject({ state: 'Playing', draft: true });
+    expect(c.liveTrace.draft).toBe(true);
+    await flush();
+    expect(transport.resets).toEqual([{ fixtures: ['default'], start: 'List', data: DATA }]);
+    expect(transport.steps.every((s) => s.trace)).toBe(true);
+    expect(c.getSnapshot().state).toBe('Done');
+    expect(c.liveTrace.draft).toBe(true);
+    expect(c.liveTrace.steps).toHaveLength(3);
+    expect(drafts).toEqual([{ id: SCENARIO.id, ok: true }]);
+    expect(finished).toEqual([]);
+  });
+
+  it('失敗も onDraftFinish に渡し、load で通常の再生（data なし・onFinish）に戻る', async () => {
+    const transport = new FakeTransport();
+    transport.results = (i) => (i === 1 ? NG : OK(SCENARIO.steps[i].expect.screen));
+    const finished: boolean[] = [];
+    const drafts: Array<{ ok: boolean; keys: string[] }> = [];
+    const c = new PlayerController(transport, { timer: new FakeTimer(), speed: 0, onFinish: (r) => finished.push(r.ok), onDraftFinish: (r) => drafts.push({ ok: r.ok, keys: r.failures.map((f) => f.key) }) });
+    c.playDraft(SCENARIO, DATA);
+    await flush();
+    expect(c.getSnapshot()).toMatchObject({ state: 'Failed', draft: true, failure: { index: 1 } });
+    expect(drafts).toEqual([{ ok: false, keys: ['screen'] }]);
+    c.load(SCENARIO);
+    expect(c.getSnapshot().draft).toBe(false);
+    expect(c.liveTrace.draft).toBe(false);
+    transport.results = (i) => OK(SCENARIO.steps[i].expect.screen);
+    c.play();
+    await flush();
+    expect(transport.resets.at(-1)).toEqual({ fixtures: ['default'], start: 'List' });
+    expect(finished).toEqual([true]);
   });
 });

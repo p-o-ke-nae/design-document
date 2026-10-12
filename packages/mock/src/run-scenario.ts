@@ -1,8 +1,10 @@
-import type { Locator, Page } from '@playwright/test';
+import type { Locator, Page, Request } from '@playwright/test';
 import type { ScreenMap } from './map.ts';
 import { resolveLocator, type LocatorKind, type LocatorTarget } from './resolve.ts';
-import { DEFAULT_STEP_TIMEOUT_MS, executeStep, StepError, type Driver } from './step.ts';
-import type { FieldKind, Scenario } from './types.ts';
+import { DEFAULT_STEP_TIMEOUT_MS, executeStep, observeExpect, StepError, type Driver } from './step.ts';
+import { clipBody, type ApiCall, type DbChange, type TapResult } from './trace-format.ts';
+import type { TraceRecorder } from './trace.ts';
+import type { FieldKind, Scenario, Step } from './types.ts';
 
 export type StepHook = (page: Page) => Promise<void> | void;
 
@@ -29,6 +31,8 @@ export interface RunScenarioOptions {
   onStep?: (index: number) => Promise<void> | void;
   /** Expect retry timeout per step (ms). */
   timeout?: number;
+  /** Records every step (including the failing one) into a trace file. */
+  trace?: TraceRecorder;
 }
 
 /** `Driver` over a Playwright page (detailed design: 要素の解決). */
@@ -159,12 +163,174 @@ export class PlaywrightDriver implements Driver {
 }
 
 interface DdvWindow {
-  __ddv?: { ready: Promise<void>; reset(fixtures: string[], start?: string): Promise<{ screen: string }> };
+  __ddv?: {
+    ready: Promise<void>;
+    reset(fixtures: string[], start?: string): Promise<{ screen: string }>;
+    trace?: { begin(): void; take(): TapResult | null };
+  };
+}
+
+const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const warnTrace = (what: string, e: unknown) => console.warn(`トレースの記録に失敗しました（${what}）: ${errText(e)}`);
+
+interface Capture {
+  take(): Promise<{ calls: ApiCall[]; db: DbChange[] | null }>;
+}
+
+/** Starts recording the mock runtime's API calls and DB (window.__ddv.trace). */
+async function captureMock(page: Page): Promise<Capture> {
+  const ok = await page.evaluate(() => {
+    const t = (window as unknown as DdvWindow).__ddv?.trace;
+    if (!t) return false;
+    t.begin();
+    return true;
+  });
+  if (!ok) throw new Error('この runtime は記録に対応していません（ddv mock init で更新してください）');
+  return {
+    async take() {
+      const r = await page.evaluate(() => (window as unknown as DdvWindow).__ddv?.trace?.take() ?? null);
+      return r ?? { calls: [], db: [] };
+    },
+  };
+}
+
+/** Real-app network capture: fetch / xhr requests started during the step (detailed design: 実アプリの通信の記録). */
+function captureApp(page: Page, baseURL: string): Capture {
+  let origin = '';
+  try {
+    origin = new URL(baseURL).origin;
+  } catch {
+    /* keep empty */
+  }
+  const pathOf = (url: string) => {
+    try {
+      const u = new URL(url);
+      return u.origin === origin ? u.pathname + u.search : url;
+    } catch {
+      return url;
+    }
+  };
+  type Entry = { call: ApiCall; start: number; done: boolean };
+  const entries = new Map<Request, Entry>();
+  const pending: Promise<void>[] = [];
+  const onRequest = (req: Request) => {
+    const kind = req.resourceType();
+    if (kind !== 'fetch' && kind !== 'xhr') return;
+    const call: ApiCall = { method: req.method(), path: pathOf(req.url()), status: -1, durationMs: 0 };
+    const body = clipBody(req.postData());
+    if (body) {
+      call.requestBody = body.body;
+      if (body.truncated) call.truncated = true;
+    }
+    entries.set(req, { call, start: Date.now(), done: false });
+  };
+  const onFinished = (req: Request) => {
+    const e = entries.get(req);
+    if (!e) return;
+    e.done = true;
+    e.call.durationMs = Date.now() - e.start;
+    pending.push(
+      (async () => {
+        const res = await req.response().catch(() => null);
+        e.call.status = res?.status() ?? 0;
+        const text = res ? await res.text().catch(() => undefined) : undefined;
+        const body = clipBody(text);
+        if (body) {
+          e.call.responseBody = body.body;
+          if (body.truncated) e.call.truncated = true;
+        }
+      })(),
+    );
+  };
+  const onFailed = (req: Request) => {
+    const e = entries.get(req);
+    if (!e) return;
+    e.done = true;
+    e.call.durationMs = Date.now() - e.start;
+    e.call.status = 0;
+    e.call.responseBody = req.failure()?.errorText ?? '失敗';
+  };
+  page.on('request', onRequest);
+  page.on('requestfinished', onFinished);
+  page.on('requestfailed', onFailed);
+  return {
+    async take() {
+      page.off('request', onRequest);
+      page.off('requestfinished', onFinished);
+      page.off('requestfailed', onFailed);
+      await Promise.all(pending);
+      return { calls: [...entries.values()].map((e) => e.call), db: null };
+    },
+  };
 }
 
 /** Opens the target, loads fixtures and executes all steps (throws `StepError` with the step number on failure). */
 export async function runScenario(page: Page, scenario: Scenario, target: ScenarioTarget, opts: RunScenarioOptions = {}): Promise<void> {
   const timeout = opts.timeout ?? DEFAULT_STEP_TIMEOUT_MS;
+  const rec = opts.trace;
+  try {
+    await openTarget(page, scenario, target, timeout);
+  } catch (e) {
+    if (rec) await rec.fail(errText(e)).catch((w) => warnTrace('書き込み', w));
+    throw e;
+  }
+  const driver = new PlaywrightDriver(page, target.kind, target.kind === 'app' ? target.map : undefined, target.hooks, timeout);
+  const hasOp = (name: string) => !!target.hooks?.steps?.[name];
+  let startWarned = false;
+  for (let i = 0; i < scenario.steps.length; i++) {
+    const step = scenario.steps[i];
+    let capture: Capture | null = null;
+    if (rec) {
+      try {
+        rec.beginStep(i + 1, step, await driver.screen().catch(() => null));
+        capture = target.kind === 'mock' ? await captureMock(page) : captureApp(page, target.url);
+      } catch (e) {
+        if (!startWarned) warnTrace('開始', e);
+        startWarned = true;
+      }
+    }
+    const t0 = Date.now();
+    let failure: Error | null = null;
+    try {
+      await executeStep(driver, step, { timeoutMs: timeout, hasOp });
+    } catch (e) {
+      const msg = `ステップ ${i + 1}（${step.event}）: ${errText(e)}`;
+      failure = e instanceof StepError ? new StepError(e.kind, msg, { key: e.key, failures: e.failures, screen: e.screen }) : new Error(msg, { cause: e });
+    }
+    if (rec) await recordStep(rec, page, driver, step, i + 1, Date.now() - t0, failure, capture, target.kind);
+    if (failure) throw failure;
+    await opts.onStep?.(i);
+  }
+  if (rec) await rec.write().catch((w) => warnTrace('書き込み', w));
+}
+
+async function recordStep(rec: TraceRecorder, page: Page, driver: PlaywrightDriver, step: Step, index: number, durationMs: number, failure: Error | null, capture: Capture | null, kind: ScenarioTarget['kind']) {
+  try {
+    const expects = await observeExpect(driver, step.expect);
+    const screenAfter = await driver.screen().catch(() => null);
+    let taken: { calls: ApiCall[]; db: DbChange[] | null } = { calls: [], db: kind === 'mock' ? [] : null };
+    if (capture) {
+      try {
+        taken = await capture.take();
+      } catch (e) {
+        warnTrace('通信・DB', e);
+      }
+    }
+    let screenshot: string | undefined;
+    const shot = rec.screenshotOf(index);
+    try {
+      await page.screenshot({ path: shot.abs });
+      screenshot = shot.rel;
+    } catch (e) {
+      warnTrace('スクリーンショット', e);
+    }
+    await rec.endStep({ screenAfter, expects, ok: !failure, ...(failure ? { error: failure.message } : {}), durationMs, calls: taken.calls, db: taken.db, ...(screenshot ? { screenshot } : {}) });
+  } catch (e) {
+    warnTrace('ステップ', e);
+  }
+}
+
+async function openTarget(page: Page, scenario: Scenario, target: ScenarioTarget, timeout: number): Promise<void> {
   await page.goto(target.url);
   if (target.kind === 'mock') {
     try {
@@ -182,18 +348,5 @@ export async function runScenario(page: Page, scenario: Scenario, target: Scenar
     );
   } else if (target.hooks?.seed) {
     await target.hooks.seed(scenario.fixtures ?? [], { page, scenario, mock: target.mock ?? '', baseURL: target.url });
-  }
-  const driver = new PlaywrightDriver(page, target.kind, target.kind === 'app' ? target.map : undefined, target.hooks, timeout);
-  const hasOp = (name: string) => !!target.hooks?.steps?.[name];
-  for (let i = 0; i < scenario.steps.length; i++) {
-    const step = scenario.steps[i];
-    try {
-      await executeStep(driver, step, { timeoutMs: timeout, hasOp });
-    } catch (e) {
-      const msg = `ステップ ${i + 1}（${step.event}）: ${e instanceof Error ? e.message : String(e)}`;
-      if (e instanceof StepError) throw new StepError(e.kind, msg, { key: e.key, failures: e.failures, screen: e.screen });
-      throw new Error(msg, { cause: e });
-    }
-    await opts.onStep?.(i);
   }
 }

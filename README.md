@@ -61,10 +61,18 @@ runners:
   - { name: dotnet, type: dotnet,     cwd: dotnet, level: unit }
   # - { name: x, type: command, cwd: ., command: "make test FILTER={pattern} JUNIT={junit}" }   # {pattern} {ids} {junit}
     # - { name: e2e, type: playwright, cwd: ., level: integration, scenarios: true }   # シナリオ YAML の id でも紐づける
+  history: { maxRuns: 200, maxTraceRuns: 20 }   # 実行記録・トレースを残す件数（超えた古いものから削除）
   mock:
     browser: { channel: chromium }    # E2E・スナップショットのブラウザ（DDV_BROWSER_CHANNEL で上書き可）
     snapshot: { threshold: 0.001, viewport: { width: 1280, height: 800 } }
   ```
+
+### テストの監視・トレース・テストデータ編集
+
+- テスト一覧には、テストIDごとの直近の結果の推移、フレーキー（同じコミットで成功と失敗の両方がある）の印、「失敗を再実行」が出ます。テストIDを選ぶと履歴と失敗し始めた実行を、マトリクス・図ではカバレッジ（成功・失敗・未実行・未紐づけ）を色で表示します
+- 実行記録（`.ddv/runs/`）には、実行時のコミットと未コミットの変更の有無を残します
+- シナリオの E2E は、ステップごとの画面・API 呼び出し・DB の差分・期待の判定をトレース（`.ddv/traces/`）に残します。結果の「トレース」で開き、←→ でステップを移れます。プレイヤーでの再生中も同じ内容をライブ表示できます
+- マトリクスの行・プレイヤーの「テストデータ」で、シナリオの入力値・期待値と fixtures を編集できます。手元では元の YAML の書式を保ったまま保存し、PR では該当行への suggestion として保留中のレビューに入れます。保存前に編集中のデータで再生できます
 
 ### GitHub の PR・branch を表示する
 
@@ -192,7 +200,7 @@ npm run ddv -- serve --repo .   # ddv 自身の設計書を表示し、ビュー
 | 1' | プラグイン最小版（要件/基本/詳細のスキルとテンプレート、`ddv-lint`） | ✅ |
 | 2 | モック runtime（疑似 BE/DB）、シナリオ DSL＋データ分離（骨組み自動生成）、プレイヤー（巻き戻し/速度）、シナリオの E2E 実行（データ駆動）、スナップショット | ✅（[要件](docs/design/requirements/mock.md) / [基本設計](docs/design/basic/mock-player.md) / 詳細設計：[シナリオ](docs/design/detailed/scenario.md)・[runtime](docs/design/detailed/mock-runtime.md)・[スナップショット](docs/design/detailed/snapshot.md)） |
 | 3 | GitHub repo/branch 指定、PR 行コメント・Approve 連携、モックのレビュー調整 → suggestion | 実装済み・実 GitHub での受入待ち（[受入チェックリスト](docs/acceptance/phase3-github.md)）：ワークスペース（PR・branch の取得と表示）、PR の差分・レビュースレッドの表示、コメント・送信・Approve＋status 連動・スレッド返信/解決、モックの調整 → suggestion、`ddv review comments`・`ddv-review-response` スキル（[要件](docs/design/requirements/github.md) / [基本設計](docs/design/basic/github-review.md) / 詳細設計：[ワークスペース](docs/design/detailed/workspace.md) / [レビューコメント](docs/design/detailed/review-comment.md) / [モック調整](docs/design/detailed/mock-tune.md)） |
-| 4 | テスト監視（履歴・フレーキー・カバレッジ）、テストデータ編集（シナリオの入力値・fixtures・期待値をビューアで編集）、トレースビュー | 設計中：[要件定義](docs/design/requirements/testops.md) ✅ → 基本設計（[テスト監視](docs/design/basic/test-monitoring.md)・[テストデータ編集](docs/design/basic/test-data-editor.md)・[トレースビュー](docs/design/basic/trace-view.md)、レビュー待ち）→ 承認後に詳細設計 |
+| 4 | テスト監視（履歴・フレーキー・カバレッジ）、テストデータ編集（シナリオの入力値・fixtures・期待値をビューアで編集）、トレースビュー | 設計中：[要件定義](docs/design/requirements/testops.md) ✅ → 基本設計（[テスト監視](docs/design/basic/test-monitoring.md)・[テストデータ編集](docs/design/basic/test-data-editor.md)・[トレースビュー](docs/design/basic/trace-view.md)）✅ → 詳細設計（[実行記録](docs/design/detailed/run-record.md)・[テスト履歴](docs/design/detailed/test-history.md)・[テストデータ編集](docs/design/detailed/test-data.md)・[トレース記録](docs/design/detailed/trace-recorder.md)・[トレース表示](docs/design/detailed/trace.md)）✅ → 実装済み ✅ |
 | 5 | .NET デスクトップ（XAML → CSS トークン、FlaUI エクスポート） | 未着手 |
 | 6 | ホスト型（GitHub Pages + API + Actions） | 未着手 |
 | 7 | 品質ゲート（描画検査・改ざん検出・CI テンプレート）、プラグイン eval | 未着手 |

@@ -12,3 +12,4 @@ playwright-report/
 *.log
 references/explainer-main.zip
 references/explainer-main/
+**/.ddv/traces/

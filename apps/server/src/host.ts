@@ -26,7 +26,7 @@ export interface ServerAppOptions {
 }
 
 /** POSTs that run code from the workspace; refused until the workspace is trusted. */
-const EXEC_PATHS = new Set(['/api/tests/run', '/api/snapshots/run', '/api/deps/install']);
+const EXEC_PATHS = new Set(['/api/tests/run', '/api/tests/rerun', '/api/snapshots/run', '/api/deps/install']);
 
 const GITHUB_STATUS: Record<GitHubError['kind'], 401 | 403 | 404 | 422 | 429 | 502> = {
   auth: 401,
@@ -108,6 +108,10 @@ export function createServerApp(opts: ServerAppOptions): Hono {
     const { ws, ctx } = manager.context(id);
     let entry = apps.get(id);
     if (!entry || entry.gen !== ws.generation) {
+      ctx.testData = () => {
+        const cur = manager.context(id).ws;
+        return cur.target.pr ? { kind: 'pr', target: cur, review } : { kind: 'branch' };
+      };
       entry = { gen: ws.generation, app: createApp(ctx) };
       apps.set(id, entry);
     }

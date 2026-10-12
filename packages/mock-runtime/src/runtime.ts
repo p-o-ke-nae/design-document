@@ -1,12 +1,14 @@
 import { parse as parseYaml } from 'yaml';
-import { runStep, type Step, type StepResult } from '@ddv/mock/step';
+import { observeExpect, runStep, type ExpectObservation, type Step, type StepResult } from '@ddv/mock/step';
+import type { TapResult } from '@ddv/mock/trace-format';
 import { DeclarativeBinder } from './binder.ts';
-import { HostBridge, type BridgeEngine, type BridgeState } from './bridge.ts';
+import { HostBridge, type BridgeEngine, type BridgeState, type FixtureData } from './bridge.ts';
 import { MemoryDb, type Row } from './db.ts';
 import { DomDriver, type ExecOptions } from './driver.ts';
 import { FetchInterceptor } from './fetch.ts';
 import { ApiRouter, parseApiSpec, type ApiSpec, type RouteHandler } from './router.ts';
 import { ScreenController } from './screen.ts';
+import { TraceTap } from './trace-tap.ts';
 import { Tuner } from './tuner.ts';
 import type { ElementPatch, PatchIssue } from '@ddv/mock/tune-patch';
 import { Validator } from './validator.ts';
@@ -46,6 +48,8 @@ export class MockRuntime implements BridgeEngine {
   readonly driver: DomDriver;
   readonly bridge: HostBridge;
   readonly tuner: Tuner;
+  /** API / DB recording of a step (window.__ddv.trace). */
+  readonly trace = new TraceTap(() => this.db);
   private spec: ApiSpec = { base: '/api', tables: [], routes: [] };
   private readonly hooks = new Map<string, Set<ScreenHandler>>();
   private readonly ops = new Map<string, OpHandler>();
@@ -59,6 +63,7 @@ export class MockRuntime implements BridgeEngine {
     this.stepTimeoutMs = opts.stepTimeoutMs ?? 0;
     this.router = new ApiRouter(this.db, (m) => this.reportError(m));
     this.interceptor = new FetchInterceptor(this.win);
+    this.interceptor.onCall = (c) => this.trace.record(c);
     this.screens = new ScreenController(this.doc);
     this.binder = new DeclarativeBinder({
       win: this.win,
@@ -118,9 +123,9 @@ export class MockRuntime implements BridgeEngine {
   }
 
   /** Re-initializes the DB with the fixtures (layered in order) and shows `start` (default: first data-screen). */
-  reset(fixtures: string[] = [], start?: string): Promise<{ screen: string | null }> {
+  reset(fixtures: string[] = [], start?: string, data?: FixtureData): Promise<{ screen: string | null }> {
     this.install();
-    return this.bridge.reset(fixtures, start);
+    return this.bridge.reset(fixtures, start, data);
   }
 
   step(step: Step): Promise<StepResult> {
@@ -147,7 +152,7 @@ export class MockRuntime implements BridgeEngine {
 
   // ---- BridgeEngine ----
 
-  async boot(fixtures: string[] | null, start?: string): Promise<{ screen: string | null }> {
+  async boot(fixtures: string[] | null, start?: string, given?: FixtureData): Promise<{ screen: string | null }> {
     this.binder.cancel();
     const apiText = await this.load('api.yaml');
     const { spec, errors } = parseApiSpec(apiText === null ? null : parseYaml(apiText));
@@ -158,6 +163,11 @@ export class MockRuntime implements BridgeEngine {
 
     const rows: Array<Record<string, Row[]>> = [];
     for (const name of fixtures ?? ['default']) {
+      const draft = given?.[name];
+      if (draft) {
+        rows.push(draft as Record<string, Row[]>);
+        continue;
+      }
       const text = await this.load(`fixtures/${name}.yaml`);
       if (text === null) {
         if (fixtures === null) continue;
@@ -186,6 +196,18 @@ export class MockRuntime implements BridgeEngine {
 
   cancel(): void {
     this.binder.cancel();
+  }
+
+  traceBegin(): void {
+    this.trace.begin(this.db);
+  }
+
+  traceTake(): TapResult {
+    return this.trace.take(this.db);
+  }
+
+  observe(step: Step): Promise<ExpectObservation[]> {
+    return observeExpect(this.driver, step.expect);
   }
 
   screen(): string | null {

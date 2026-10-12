@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, type ScenarioSummary } from './api.ts';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { api, type ScenarioSummary, type TdScenario } from './api.ts';
+import type { DraftData, PlayerFailure } from './player.ts';
 
 /** Edges/nodes to emphasise on a diagram of the current doc while a mock scenario plays. */
 export interface PlayHighlight {
@@ -21,6 +22,30 @@ export interface MockHub {
   requestPlay(id: string): void;
   /** Whether a mock shown in this doc has a playable scenario with the test ID. */
   hasScenario(id: string): boolean;
+  /** Test data editor panel (DD-TDEDIT): the scenario shown, or null when closed. */
+  testData: { id: string; seq: number } | null;
+  /** Opens the editor (asks the open editor first when it has unsaved changes). */
+  openTestData(id: string | null): void;
+  /** The open editor registers whether leaving it needs confirmation (他へ移る). */
+  setLeaveGuard(guard: (() => boolean) | null): void;
+  /** Preview (編集中の再生) asked by the editor, handled by the MockFrame owning the scenario. */
+  preview: PreviewRequest | null;
+  startPreview(id: string, scenario: TdScenario, data: DraftData): number;
+  previewResult: PreviewResult | null;
+  endPreview(r: PreviewResult): void;
+}
+
+export interface PreviewRequest {
+  id: string;
+  scenario: TdScenario;
+  data: DraftData;
+  seq: number;
+}
+
+export interface PreviewResult {
+  seq: number;
+  ok: boolean;
+  failure: PlayerFailure | null;
 }
 
 const Ctx = createContext<MockHub | null>(null);
@@ -78,12 +103,29 @@ export function MockHubProvider({ version, children }: { version: number; childr
 
   const requestPlay = useCallback((id: string) => setPlayRequest((r) => ({ id, seq: (r?.seq ?? 0) + 1 })), []);
 
+  const [testData, setTestData] = useState<{ id: string; seq: number } | null>(null);
+  const leaveGuard = useRef<(() => boolean) | null>(null);
+  const setLeaveGuard = useCallback((g: (() => boolean) | null) => void (leaveGuard.current = g), []);
+  const openTestData = useCallback((id: string | null) => {
+    if (leaveGuard.current && !leaveGuard.current()) return;
+    setTestData((t) => (id === null ? null : { id, seq: (t?.seq ?? 0) + 1 }));
+  }, []);
+  const [preview, setPreview] = useState<PreviewRequest | null>(null);
+  const [previewResult, setPreviewResult] = useState<PreviewResult | null>(null);
+  const previewSeq = useRef(0);
+  const startPreview = useCallback((id: string, scenario: TdScenario, data: DraftData) => {
+    const seq = ++previewSeq.current;
+    setPreview({ id, scenario, data, seq });
+    return seq;
+  }, []);
+  const endPreview = useCallback((r: PreviewResult) => setPreviewResult((cur) => (cur?.seq === r.seq ? cur : r)), []);
+
   const playable = useMemo(() => new Set(mocks.flatMap((m) => playableScenarios(scenarios, m).map((s) => s.id))), [mocks, scenarios]);
   const hasScenario = useCallback((id: string) => playable.has(id), [playable]);
 
   const value = useMemo<MockHub>(
-    () => ({ scenarios, refreshScenarios, mocks, registerMock, highlights, setHighlight, playRequest, requestPlay, hasScenario }),
-    [scenarios, refreshScenarios, mocks, registerMock, highlights, setHighlight, playRequest, requestPlay, hasScenario],
+    () => ({ scenarios, refreshScenarios, mocks, registerMock, highlights, setHighlight, playRequest, requestPlay, hasScenario, testData, openTestData, setLeaveGuard, preview, startPreview, previewResult, endPreview }),
+    [scenarios, refreshScenarios, mocks, registerMock, highlights, setHighlight, playRequest, requestPlay, hasScenario, testData, openTestData, setLeaveGuard, preview, startPreview, previewResult, endPreview],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

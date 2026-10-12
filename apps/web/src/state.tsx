@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { api, apiUrl, ApiError, workspace, type CaseResult, type DdvConfig, type DepsMissingDetail, type RunSummary } from './api.ts';
+import { api, apiUrl, ApiError, workspace, type CaseResult, type DdvConfig, type DepsMissingDetail, type HistorySummary, type RunSummary } from './api.ts';
 
 export interface Route {
   /** Workspace id ('' = local). */
@@ -7,9 +7,15 @@ export interface Route {
   view: 'doc' | 'tests' | 'open' | 'review' | 'done';
   path: string;
   heading: string;
+  /** Tests tab: '' = list, 'history' = one test id's history, 'flaky' = flaky tests, 'trace' = one test id's trace in one run. */
+  sub?: '' | 'history' | 'flaky' | 'trace';
+  /** Tests tab, `history` / `trace`: the test id. */
+  testId?: string;
+  /** Tests tab, `trace`: the run id. */
+  runId?: string;
 }
 
-/** `#/doc?path=…` / `#/tests` / `#/open`, and `#/w/<ws>/doc?path=…` / `#/w/<ws>/tests` / `#/w/<ws>/review` / `#/w/<ws>/review/done` for a GitHub workspace. */
+/** `#/doc?path=…` / `#/tests` / `#/tests/history/<id>` / `#/tests/trace/<run>/<id>` / `#/tests/flaky` / `#/open`, and the same under `#/w/<ws>` for a GitHub workspace (+ `#/w/<ws>/review` / `#/w/<ws>/review/done`). */
 export function parseHash(hash: string): Route {
   let h = hash.replace(/^#/, '');
   let ws = '';
@@ -22,6 +28,11 @@ export function parseHash(hash: string): Route {
   const params = new URLSearchParams(q);
   if (p === '/open') return { ws: '', view: 'open', path: '', heading: '' };
   if (p === '/tests') return { ws, view: 'tests', path: '', heading: '' };
+  if (p === '/tests/flaky') return { ws, view: 'tests', path: '', heading: '', sub: 'flaky' };
+  const hm = /^\/tests\/history\/([^/]+)$/.exec(p);
+  if (hm) return { ws, view: 'tests', path: '', heading: '', sub: 'history', testId: decodeURIComponent(hm[1]) };
+  const tm = /^\/tests\/trace\/([^/]+)\/([^/]+)$/.exec(p);
+  if (tm) return { ws, view: 'tests', path: '', heading: '', sub: 'trace', runId: decodeURIComponent(tm[1]), testId: decodeURIComponent(tm[2]) };
   if (ws && p === '/review') return { ws, view: 'review', path: '', heading: '' };
   if (ws && p === '/review/done') return { ws, view: 'done', path: '', heading: '' };
   return { ws, view: 'doc', path: params.get('path') ?? '', heading: params.get('h') ?? '' };
@@ -40,6 +51,19 @@ export function docHref(path: string, heading = ''): string {
 
 export function viewHref(view: 'tests' | 'root'): string {
   return `${wsBase()}/${view === 'tests' ? 'tests' : ''}`;
+}
+
+export function historyHref(id: string): string {
+  return `${wsBase()}/tests/history/${encodeURIComponent(id)}`;
+}
+
+export function flakyHref(): string {
+  return `${wsBase()}/tests/flaky`;
+}
+
+/** Trace view of one test id in one run. */
+export function traceHref(runId: string, id: string): string {
+  return `${wsBase()}/tests/trace/${encodeURIComponent(runId)}/${encodeURIComponent(id)}`;
 }
 
 export function useLocalStorage<T>(key: string, initial: T): [T, (v: T) => void] {
@@ -72,6 +96,10 @@ interface AppState {
   runLog: string[];
   runError: string;
   runTests(body: { ids?: string[]; runner?: string }): Promise<void>;
+  /** Re-runs the failures of the latest run `times` times. Resolves to the error text ('' = started). */
+  rerunTests(times: number): Promise<string>;
+  /** Trend / flaky summary (refetched on file changes and at the end of each run). */
+  history: HistorySummary | null;
   showMatrix: boolean;
   setShowMatrix(v: boolean): void;
   refreshResults(): void;
@@ -95,11 +123,53 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [runLog, setRunLog] = useState<string[]>([]);
   const [runError, setRunError] = useState('');
   const [showMatrix, setShowMatrix] = useLocalStorage('ddv.showMatrix', true);
+  const [history, setHistory] = useState<HistorySummary | null>(null);
   const esRef = useRef<EventSource | null>(null);
+  const followRef = useRef<{ id: string; stop: () => void } | null>(null);
 
   const refreshResults = useCallback(() => {
     api.latest().then(setLatest).catch(() => {});
+    api.historySummary().then(setHistory).catch(() => {});
   }, []);
+
+  const follow = useCallback(
+    async (run: RunSummary) => {
+      const id = run.id;
+      // Re-run attempts follow each other: drop the previous subscription so that its late result does not win.
+      followRef.current?.stop();
+      setRunLog([]);
+      setActiveRun(run);
+      esRef.current?.close();
+      let stopped = false;
+      await new Promise<void>((resolve) => {
+        const es = new EventSource(apiUrl(`/api/runs/${id}/events`));
+        esRef.current = es;
+        followRef.current = {
+          id,
+          stop: () => {
+            stopped = true;
+            es.close();
+            resolve();
+          },
+        };
+        es.addEventListener('log', (e) => setRunLog((l) => [...l, (e as MessageEvent).data]));
+        es.addEventListener('end', () => {
+          es.close();
+          resolve();
+        });
+        es.onerror = () => {
+          es.close();
+          resolve();
+        };
+      });
+      if (stopped) return;
+      const done = await api.run(id);
+      if (followRef.current?.id !== id) return;
+      setActiveRun({ ...done, total: Object.keys(done.results).length });
+      refreshResults();
+    },
+    [refreshResults],
+  );
 
   useEffect(() => {
     api.config().then((c) => {
@@ -113,37 +183,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const es = new EventSource(apiUrl('/api/events'));
     es.addEventListener('change', () => setVersion((v) => v + 1));
     es.addEventListener('run-end', () => refreshResults());
+    es.addEventListener('run', (e) => {
+      try {
+        const r = JSON.parse((e as MessageEvent).data) as { id: string; rerunOf?: string; attempt?: number; times?: number };
+        void follow({ id: r.id, startedAt: new Date().toISOString(), status: 'running', request: {}, runners: [], results: {}, total: 0, rerunOf: r.rerunOf, attempt: r.attempt, times: r.times });
+      } catch {
+        /* ignore */
+      }
+    });
     return () => {
       window.removeEventListener('hashchange', onHash);
       es.close();
     };
-  }, [refreshResults]);
-
-  const follow = useCallback(
-    async (run: RunSummary) => {
-      const id = run.id;
-      setRunLog([]);
-      setActiveRun(run);
-      esRef.current?.close();
-      await new Promise<void>((resolve) => {
-        const es = new EventSource(apiUrl(`/api/runs/${id}/events`));
-        esRef.current = es;
-        es.addEventListener('log', (e) => setRunLog((l) => [...l, (e as MessageEvent).data]));
-        es.addEventListener('end', () => {
-          es.close();
-          resolve();
-        });
-        es.onerror = () => {
-          es.close();
-          resolve();
-        };
-      });
-      const done = await api.run(id);
-      setActiveRun({ ...done, total: Object.keys(done.results).length });
-      refreshResults();
-    },
-    [refreshResults],
-  );
+  }, [refreshResults, follow]);
 
   // Attach to a run already in progress on the server (e.g. started from another tab).
   useEffect(() => {
@@ -176,9 +228,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const runTestsRef = useRef(runTests);
   runTestsRef.current = runTests;
 
+  const rerunTests = useCallback(
+    async (times: number): Promise<string> => {
+      setRunError('');
+      let r: Awaited<ReturnType<typeof api.rerun>>;
+      try {
+        r = await api.rerun(times);
+      } catch (e) {
+        if (e instanceof ApiError && e.code === 'deps-missing') {
+          window.dispatchEvent(new CustomEvent<DepsMissingDetail>('ddv-deps-missing', { detail: { retry: () => void rerunRef.current(times) } }));
+        }
+        return (e as Error).message;
+      }
+      void follow({ id: r.id, startedAt: new Date().toISOString(), status: 'running', request: {}, runners: [], results: {}, total: 0, rerunOf: r.rerunOf, attempt: r.attempt, times: r.times });
+      return '';
+    },
+    [follow],
+  );
+  const rerunRef = useRef(rerunTests);
+  rerunRef.current = rerunTests;
+
+  useEffect(() => {
+    if (version) api.historySummary().then(setHistory).catch(() => {});
+  }, [version]);
+
   const value = useMemo<AppState>(
-    () => ({ config, repoName, route, version, latest, activeRun, runLog, runError, runTests, showMatrix, setShowMatrix, refreshResults }),
-    [config, repoName, route, version, latest, activeRun, runLog, runError, runTests, showMatrix, setShowMatrix, refreshResults],
+    () => ({ config, repoName, route, version, latest, activeRun, runLog, runError, runTests, rerunTests, history, showMatrix, setShowMatrix, refreshResults }),
+    [config, repoName, route, version, latest, activeRun, runLog, runError, runTests, rerunTests, history, showMatrix, setShowMatrix, refreshResults],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

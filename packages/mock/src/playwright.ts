@@ -9,6 +9,7 @@ import { runScenario, type ScenarioHooks, type ScenarioTarget } from './run-scen
 import { findScenarioFiles, loadConfigSync, mocksRootOf, scenarioIdOf } from './scenario-files.ts';
 import { parseScenarioFile } from './scenario.ts';
 import { startStaticServer, type StaticServer } from './static-server.ts';
+import { recorderFor, traceDirOf } from './trace.ts';
 
 export { runScenario, PlaywrightDriver } from './run-scenario.ts';
 export type { RunScenarioOptions, ScenarioHooks, ScenarioTarget, SeedContext, StepHook } from './run-scenario.ts';
@@ -78,6 +79,7 @@ export function defineScenarioTests(opts: ScenarioTestOptions): void {
   const mocksRoot = mocksRootOf(config);
   const baseURL = process.env[BASE_URL_ENV]?.trim() || '';
   const hooksFile = path.resolve(repoRoot, opts.hooks ?? DEFAULT_HOOKS);
+  const traceDir = traceDirOf(process.env);
   let server: StaticServer | null = null;
   let hooks: ScenarioHooks = {};
 
@@ -108,7 +110,9 @@ export function defineScenarioTests(opts: ScenarioTestOptions): void {
         if (!server) throw new Error('モックの静的配信が開始されていません');
         target = { kind: 'mock', url: new URL(`${entry.mock}/index.html`, server.url).href, mock: entry.mock };
       }
-      await runScenario(page, scenario, target, { timeout: opts.timeout });
+      const trace = traceDir ? recorderFor(traceDir, test.info().title, entry.mock, target.kind) : undefined;
+      await runScenario(page, scenario, target, { timeout: opts.timeout, trace });
     });
   }
 }
+

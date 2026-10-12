@@ -23,6 +23,9 @@
       "@ddv/mock/playwright": ["./packages/mock/src/playwright.ts"],
       "@ddv/mock/tune": ["./packages/mock/src/tune.ts"],
       "@ddv/mock/tune-patch": ["./packages/mock/src/tune-patch.ts"],
+      "@ddv/mock/yaml-patch": ["./packages/mock/src/yaml-patch.ts"],
+      "@ddv/mock/trace-format": ["./packages/mock/src/trace-format.ts"],
+      "@ddv/mock/trace": ["./packages/mock/src/trace.ts"],
       "@ddv/mock-runtime": ["./packages/mock-runtime/src/index.ts"],
       "@ddv/mock": ["./packages/mock/src/index.ts"]
     }

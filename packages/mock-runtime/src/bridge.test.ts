@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Step, StepResult } from '@ddv/mock/step';
-import { bridgeTransition, HostBridge, validHighlight, SupersededError, type BridgeEngine, type OutMessage } from './bridge.ts';
+import { bridgeTransition, HostBridge, validData, validHighlight, SupersededError, type BridgeEngine, type OutMessage } from './bridge.ts';
 
 function deferred<T>() {
   let resolve!: (v: T) => void;
@@ -23,9 +23,11 @@ function setup() {
   const boots: Array<ReturnType<typeof deferred<{ screen: string | null }>>> = [];
   const execs: Array<{ step: Step; opts?: { highlight?: { holdMs: number } | null }; d: ReturnType<typeof deferred<StepResult>> }> = [];
   let cancelled = 0;
+  const bootArgs: unknown[][] = [];
   const engine: BridgeEngine = {
     version: '9.9.9',
-    boot: () => {
+    boot: (...args) => {
+      bootArgs.push(args);
       const d = deferred<{ screen: string | null }>();
       boots.push(d);
       return d.promise;
@@ -40,7 +42,7 @@ function setup() {
   };
   const bridge = new HostBridge(win, engine);
   const ok = (screen: string): StepResult => ({ ok: true, screen, failures: [] });
-  return { bridge, posted, boots, execs, ok, parent, win, cancelled: () => cancelled };
+  return { bridge, posted, boots, bootArgs, execs, ok, parent, win, cancelled: () => cancelled };
 }
 
 async function ready(t: ReturnType<typeof setup>) {
@@ -268,6 +270,15 @@ describe('HostBridge', () => {
     }
   });
 
+  it('ddv:reset の data（fixtures の内容）を boot に渡す。形の合わない部分は捨てる', async () => {
+    const t = setup();
+    await ready(t);
+    const data = { default: { orders: [{ id: 1 }, 'x'], bad: 1 }, junk: [] };
+    t.bridge.onMessage({ origin: 'http://localhost', source: t.parent, data: { type: 'ddv:reset', fixtures: ['default'], start: 'List', data } } as unknown as MessageEvent);
+    expect(t.bootArgs.at(-1)).toEqual([['default'], 'List', { default: { orders: [{ id: 1 }] } }]);
+    expect(validData(null)).toBeUndefined();
+  });
+
   it('origin と source が親でないメッセージは無視し、親が自分なら送らない', async () => {
     const t = setup();
     await ready(t);
@@ -307,5 +318,62 @@ describe('ハイライト指定', () => {
     expect(t.execs.map((e) => e.opts?.highlight ?? null)).toEqual([{ holdMs: 400 }, null, null]);
     expect(validHighlight({ holdMs: 99_999 })).toEqual({ holdMs: 10_000 });
     expect(validHighlight({ holdMs: 'x' })).toBeNull();
+  });
+});
+describe('ddv:step の trace（DD-TRREC ライブ表示）', () => {
+  function traced() {
+    const t = setup();
+    const log: string[] = [];
+    const engine = (t.bridge as unknown as { engine: BridgeEngine }).engine;
+    engine.traceBegin = () => void log.push('begin');
+    engine.traceTake = () => {
+      log.push('take');
+      return { calls: [{ method: 'POST', path: '/api/orders', status: 201, durationMs: 1 }], db: [] };
+    };
+    engine.observe = async (s) => {
+      log.push('observe');
+      return [{ kind: 'screen', key: '', expected: s.expect.screen, actual: 'S', ok: s.expect.screen === 'S' }];
+    };
+    return { ...t, log };
+  }
+
+  it('trace: true なら exec の前後で begin・take し、observe の結果と実行前の画面を ddv:result に付ける', async () => {
+    const t = traced();
+    await ready(t);
+    const p = t.bridge.step(step('Confirm'), 3, null, true);
+    expect(t.log).toEqual(['begin']);
+    t.execs[0].d.resolve({ ok: false, screen: 'S', failures: [], error: { kind: 'expect', message: 'NG' } });
+    await p;
+    expect(t.log).toEqual(['begin', 'take', 'observe']);
+    expect(t.posted.at(-1)).toEqual({
+      type: 'ddv:result',
+      index: 3,
+      ok: false,
+      screen: 'S',
+      failures: [],
+      message: 'NG',
+      trace: { screenBefore: 'S', calls: [{ method: 'POST', path: '/api/orders', status: 201, durationMs: 1 }], db: [], expects: [{ kind: 'screen', key: '', expected: 'Confirm', actual: 'S', ok: false }] },
+    });
+  });
+
+  it('trace なし・記録に対応しない runtime・実行しなかったステップ（起動中）には trace を付けない', async () => {
+    const t = traced();
+    const booting = await t.bridge.step(step('A'), 1, null, true);
+    expect(booting.ok).toBe(false);
+    expect(t.posted.at(-1)).not.toHaveProperty('trace');
+    await ready(t);
+    const p = t.bridge.step(step('A'), 2);
+    t.execs[0].d.resolve(t.ok('A'));
+    await p;
+    expect(t.posted.at(-1)).not.toHaveProperty('trace');
+    expect(t.log).toEqual([]);
+
+    const old = setup();
+    await ready(old);
+    const q = old.bridge.step(step('A'), 1, null, true);
+    old.execs[0].d.resolve(old.ok('A'));
+    await q;
+    expect(old.posted.at(-1)).toMatchObject({ type: 'ddv:result', index: 1, ok: true });
+    expect(old.posted.at(-1)).not.toHaveProperty('trace');
   });
 });

@@ -229,6 +229,14 @@ describe('MockRuntime + DomDriver', () => {
     expect(r.state).toBe('Broken');
   });
 
+  it('reset の data は fixtures のファイルを読まずにその内容を使う（編集中の再生・DD-TDEDIT）', async () => {
+    const r = await boot({ 'api.yaml': API, 'fixtures/default.yaml': FIXTURE, 'fixtures/more.yaml': 'orders:\n  - { id: 2, customer: 追加 }\n' });
+    expect(await r.reset(['default', 'more'], undefined, { default: { orders: [{ id: 7, customer: '編集中' }] } })).toEqual({ screen: 'List' });
+    expect(r.db.list('orders').map((o) => o.customer)).toEqual(['編集中', '追加']);
+    expect(await r.reset(['draft-only'], undefined, { 'draft-only': { orders: [] } })).toEqual({ screen: 'List' });
+    expect(r.driver.count('orders')).toBe(0);
+  });
+
   it('api.yaml がなければルートなし（404）、fixtures/default.yaml がなければ空の DB で起動する', async () => {
     const r = await boot({});
     expect(r.state).toBe('Ready');
@@ -284,5 +292,48 @@ describe('操作のハイライト', () => {
     await r.exec({ event: '新規', click: 'new', expect: { screen: 'Input' } });
     expect(seen).toEqual(['lit', 'plain']);
     expect(log).toEqual([]);
+  });
+});
+
+describe('TraceTap（DD-TRREC mock-runtime の記録）', () => {
+  it('begin から take までの API 呼び出し（本文付き）と DB の変化を返し、begin していなければ記録しない', async () => {
+    const r = await boot();
+    await click(r, 'new');
+    val('customer', '山田');
+    val('sku', 'A-100');
+    val('quantity', '2');
+    await click(r, 'next');
+    expect(r.trace.recording).toBe(false);
+    expect(r.trace.take().calls).toEqual([]);
+
+    await click(r, 'back');
+    await click(r, 'new');
+    val('customer', '佐藤');
+    val('sku', 'A-100');
+    val('quantity', '1');
+    r.trace.begin();
+    expect(r.trace.recording).toBe(true);
+    await click(r, 'next');
+    const t = r.trace.take();
+    expect(r.trace.recording).toBe(false);
+    const post = t.calls.find((c) => c.method === 'POST')!;
+    expect(post).toMatchObject({ path: '/api/orders', status: 201 });
+    expect(JSON.parse(post.requestBody!)).toMatchObject({ customer: '佐藤', quantity: 1 });
+    expect(JSON.parse(post.responseBody!)).toMatchObject({ id: 3, status: 'Submitted' });
+    expect(post.durationMs).toBeGreaterThanOrEqual(0);
+    expect(t.db).toEqual([{ table: 'orders', kind: 'added', key: '3', after: expect.objectContaining({ id: 3, customer: '佐藤' }) }]);
+  });
+
+  it('BridgeEngine の traceBegin / traceTake / observe（ライブ表示）', async () => {
+    const r = await boot();
+    const s: Step = { event: '新規', click: 'new', expect: { screen: 'Input', visible: ['customer'] } };
+    r.traceBegin();
+    const res = await r.exec(s);
+    expect(res.ok).toBe(true);
+    expect(r.traceTake()).toEqual({ calls: [], db: [] });
+    expect(await r.observe(s)).toEqual([
+      { kind: 'screen', key: '', expected: 'Input', actual: 'Input', ok: true },
+      { kind: 'visible', key: 'customer', expected: true, actual: true, ok: true },
+    ]);
   });
 });

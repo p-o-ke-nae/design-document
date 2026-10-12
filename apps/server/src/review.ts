@@ -112,7 +112,7 @@ export function judgePlacement(hunks: Hunks | null, a: Pick<Anchor, 'side' | 'st
   return { placement: 'file', shrunk: false };
 }
 
-const KINDS: ElementKind[] = ['block', 'tableRow', 'node', 'edge', 'diagram', 'matrixRow', 'mockElement'];
+const KINDS: ElementKind[] = ['block', 'tableRow', 'node', 'edge', 'diagram', 'matrixRow', 'mockElement', 'testData'];
 const EVENTS: ReviewEvent[] = ['COMMENT', 'APPROVE', 'REQUEST_CHANGES'];
 
 const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 1;
@@ -263,7 +263,7 @@ export class ReviewService {
       line = isInt(input.line) ? input.line : (input.startLine as number);
       startLine = isInt(input.startLine) ? input.startLine : line;
     } else if (el) {
-      if (side === 'LEFT' || el.kind === 'mockElement') throw new ReviewError(422, 'anchor-invalid', 'この要素は行番号（startLine / line）で指定してください');
+      if (side === 'LEFT' || el.kind === 'mockElement' || el.kind === 'testData') throw new ReviewError(422, 'anchor-invalid', 'この要素は行番号（startLine / line）で指定してください');
       const doc = parseDoc(text);
       const elements = elementsOf(doc, text);
       const lock = await readLock(ws.dir).catch(() => null);

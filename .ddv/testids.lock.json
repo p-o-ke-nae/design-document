@@ -3195,6 +3195,316 @@
         }
       }
     },
+    "DD-HIST-CLASSIFY": {
+      "doc": "docs/design/detailed/test-history.md",
+      "diagram": "classify",
+      "next": {
+        "P": 6,
+        "T": 9
+      },
+      "cases": {
+        "P:A||B>B|ない|U": {
+          "id": "DD-HIST-CLASSIFY-P001",
+          "status": "active",
+          "title": "classify → linked → [ない] unlinked"
+        },
+        "P:A||B>B|ある|C>C|ない|R": {
+          "id": "DD-HIST-CLASSIFY-P002",
+          "status": "active",
+          "title": "classify → linked → [ある] latest がある → [ない] unexecuted"
+        },
+        "P:A||B>B|ある|C>C|ある|D>D|passed|P": {
+          "id": "DD-HIST-CLASSIFY-P003",
+          "status": "active",
+          "title": "classify → linked → [ある] latest がある → [ある] latest.status → [passed] passed"
+        },
+        "P:A||B>B|ある|C>C|ある|D>D|failed か error|F": {
+          "id": "DD-HIST-CLASSIFY-P004",
+          "status": "active",
+          "title": "classify → linked → [ある] latest がある → [ある] latest.status → [failed か error] failed"
+        },
+        "P:A||B>B|ある|C>C|ある|D>D|skipped|K": {
+          "id": "DD-HIST-CLASSIFY-P005",
+          "status": "active",
+          "title": "classify → linked → [ある] latest がある → [ある] latest.status → [skipped] skipped"
+        },
+        "T:A||B": {
+          "id": "DD-HIST-CLASSIFY-T001",
+          "status": "active",
+          "title": "classify --> linked"
+        },
+        "T:B|ない|U": {
+          "id": "DD-HIST-CLASSIFY-T002",
+          "status": "active",
+          "title": "linked --[ない]--> unlinked"
+        },
+        "T:B|ある|C": {
+          "id": "DD-HIST-CLASSIFY-T003",
+          "status": "active",
+          "title": "linked --[ある]--> latest がある"
+        },
+        "T:C|ない|R": {
+          "id": "DD-HIST-CLASSIFY-T004",
+          "status": "active",
+          "title": "latest がある --[ない]--> unexecuted"
+        },
+        "T:C|ある|D": {
+          "id": "DD-HIST-CLASSIFY-T005",
+          "status": "active",
+          "title": "latest がある --[ある]--> latest.status"
+        },
+        "T:D|passed|P": {
+          "id": "DD-HIST-CLASSIFY-T006",
+          "status": "active",
+          "title": "latest.status --[passed]--> passed"
+        },
+        "T:D|failed か error|F": {
+          "id": "DD-HIST-CLASSIFY-T007",
+          "status": "active",
+          "title": "latest.status --[failed か error]--> failed"
+        },
+        "T:D|skipped|K": {
+          "id": "DD-HIST-CLASSIFY-T008",
+          "status": "active",
+          "title": "latest.status --[skipped]--> skipped"
+        }
+      }
+    },
+    "DD-HIST-COVVIEW": {
+      "doc": "docs/design/detailed/test-history.md",
+      "diagram": "coverage-toggle",
+      "next": {
+        "T": 5,
+        "X": 4
+      },
+      "cases": {
+        "T:[*]start||Highlight": {
+          "id": "DD-HIST-COVVIEW-T001",
+          "status": "active",
+          "title": "開始 --> 強調"
+        },
+        "T:Highlight|カバレッジを表示|Coverage": {
+          "id": "DD-HIST-COVVIEW-T002",
+          "status": "active",
+          "title": "強調 --[カバレッジを表示]--> カバレッジ"
+        },
+        "T:Coverage|カバレッジを隠す|Highlight": {
+          "id": "DD-HIST-COVVIEW-T003",
+          "status": "active",
+          "title": "カバレッジ --[カバレッジを隠す]--> 強調"
+        },
+        "T:Coverage|行を選ぶ|Highlight": {
+          "id": "DD-HIST-COVVIEW-T004",
+          "status": "active",
+          "title": "カバレッジ --[行を選ぶ]--> 強調"
+        },
+        "X:Highlight|カバレッジを隠す": {
+          "id": "DD-HIST-COVVIEW-X001",
+          "status": "active",
+          "title": "強調 で [カバレッジを隠す]"
+        },
+        "X:Highlight|行を選ぶ": {
+          "id": "DD-HIST-COVVIEW-X002",
+          "status": "active",
+          "title": "強調 で [行を選ぶ]"
+        },
+        "X:Coverage|カバレッジを表示": {
+          "id": "DD-HIST-COVVIEW-X003",
+          "status": "active",
+          "title": "カバレッジ で [カバレッジを表示]"
+        }
+      }
+    },
+    "DD-HIST-ELEMENT": {
+      "doc": "docs/design/detailed/test-history.md",
+      "diagram": "element",
+      "next": {
+        "P": 3,
+        "T": 5
+      },
+      "cases": {
+        "P:A||B>B||C>C|ない|N": {
+          "id": "DD-HIST-ELEMENT-P001",
+          "status": "active",
+          "title": "図の遷移またはノード → その要素を含む T と P のケースを集める → ケースがある → [ない] 分類なし（色を付けない）"
+        },
+        "P:A||B>B||C>C|ある|D": {
+          "id": "DD-HIST-ELEMENT-P002",
+          "status": "active",
+          "title": "図の遷移またはノード → その要素を含む T と P のケースを集める → ケースがある → [ある] 各ケースの分類のうち順位の最も高いものにする"
+        },
+        "T:A||B": {
+          "id": "DD-HIST-ELEMENT-T001",
+          "status": "active",
+          "title": "図の遷移またはノード --> その要素を含む T と P のケースを集める"
+        },
+        "T:B||C": {
+          "id": "DD-HIST-ELEMENT-T002",
+          "status": "active",
+          "title": "その要素を含む T と P のケースを集める --> ケースがある"
+        },
+        "T:C|ない|N": {
+          "id": "DD-HIST-ELEMENT-T003",
+          "status": "active",
+          "title": "ケースがある --[ない]--> 分類なし（色を付けない）"
+        },
+        "T:C|ある|D": {
+          "id": "DD-HIST-ELEMENT-T004",
+          "status": "active",
+          "title": "ケースがある --[ある]--> 各ケースの分類のうち順位の最も高いものにする"
+        }
+      }
+    },
+    "DD-HIST-FIRSTFAIL": {
+      "doc": "docs/design/detailed/test-history.md",
+      "diagram": "first-failure",
+      "next": {
+        "P": 8,
+        "T": 12
+      },
+      "cases": {
+        "P:A||B>B|いいえ|N": {
+          "id": "DD-HIST-FIRSTFAIL-P001",
+          "status": "active",
+          "title": "entries を新しい順に見る → 先頭の status が failed か error → [いいえ] なし"
+        },
+        "P:A||B>B|はい|C>C||D>D|ない|R": {
+          "id": "DD-HIST-FIRSTFAIL-P002",
+          "status": "active",
+          "title": "entries を新しい順に見る → 先頭の status が failed か error → [はい] 先頭を候補にする → 次の行がある → [ない] 候補を返す"
+        },
+        "P:A||B>B|はい|C>C||D>D|ある|E>E|failed か error|F>F||D>D|ない|R": {
+          "id": "DD-HIST-FIRSTFAIL-P003",
+          "status": "active",
+          "title": "entries を新しい順に見る → 先頭の status が failed か error → [はい] 先頭を候補にする → 次の行がある → [ある] 次の行の status → [failed か error] 次の行を候補にして進む → 次の行がある → [ない] 候補を返す"
+        },
+        "P:A||B>B|はい|C>C||D>D|ある|E>E|failed か error|F>F||D>D|ある|E>E|passed|R": {
+          "id": "DD-HIST-FIRSTFAIL-P004",
+          "status": "active",
+          "title": "entries を新しい順に見る → 先頭の status が failed か error → [はい] 先頭を候補にする → 次の行がある → [ある] 次の行の status → [failed か error] 次の行を候補にして進む → 次の行がある → [ある] 次の行の status → [passed] 候補を返す"
+        },
+        "P:A||B>B|はい|C>C||D>D|ある|E>E|skipped|G>G||D>D|ない|R": {
+          "id": "DD-HIST-FIRSTFAIL-P005",
+          "status": "active",
+          "title": "entries を新しい順に見る → 先頭の status が failed か error → [はい] 先頭を候補にする → 次の行がある → [ある] 次の行の status → [skipped] 飛ばして進む → 次の行がある → [ない] 候補を返す"
+        },
+        "P:A||B>B|はい|C>C||D>D|ある|E>E|skipped|G>G||D>D|ある|E>E|passed|R": {
+          "id": "DD-HIST-FIRSTFAIL-P006",
+          "status": "active",
+          "title": "entries を新しい順に見る → 先頭の status が failed か error → [はい] 先頭を候補にする → 次の行がある → [ある] 次の行の status → [skipped] 飛ばして進む → 次の行がある → [ある] 次の行の status → [passed] 候補を返す"
+        },
+        "P:A||B>B|はい|C>C||D>D|ある|E>E|passed|R": {
+          "id": "DD-HIST-FIRSTFAIL-P007",
+          "status": "active",
+          "title": "entries を新しい順に見る → 先頭の status が failed か error → [はい] 先頭を候補にする → 次の行がある → [ある] 次の行の status → [passed] 候補を返す"
+        },
+        "T:A||B": {
+          "id": "DD-HIST-FIRSTFAIL-T001",
+          "status": "active",
+          "title": "entries を新しい順に見る --> 先頭の status が failed か error"
+        },
+        "T:B|いいえ|N": {
+          "id": "DD-HIST-FIRSTFAIL-T002",
+          "status": "active",
+          "title": "先頭の status が failed か error --[いいえ]--> なし"
+        },
+        "T:B|はい|C": {
+          "id": "DD-HIST-FIRSTFAIL-T003",
+          "status": "active",
+          "title": "先頭の status が failed か error --[はい]--> 先頭を候補にする"
+        },
+        "T:C||D": {
+          "id": "DD-HIST-FIRSTFAIL-T004",
+          "status": "active",
+          "title": "先頭を候補にする --> 次の行がある"
+        },
+        "T:D|ない|R": {
+          "id": "DD-HIST-FIRSTFAIL-T005",
+          "status": "active",
+          "title": "次の行がある --[ない]--> 候補を返す"
+        },
+        "T:D|ある|E": {
+          "id": "DD-HIST-FIRSTFAIL-T006",
+          "status": "active",
+          "title": "次の行がある --[ある]--> 次の行の status"
+        },
+        "T:E|failed か error|F": {
+          "id": "DD-HIST-FIRSTFAIL-T007",
+          "status": "active",
+          "title": "次の行の status --[failed か error]--> 次の行を候補にして進む"
+        },
+        "T:E|skipped|G": {
+          "id": "DD-HIST-FIRSTFAIL-T008",
+          "status": "active",
+          "title": "次の行の status --[skipped]--> 飛ばして進む"
+        },
+        "T:E|passed|R": {
+          "id": "DD-HIST-FIRSTFAIL-T009",
+          "status": "active",
+          "title": "次の行の status --[passed]--> 候補を返す"
+        },
+        "T:F||D": {
+          "id": "DD-HIST-FIRSTFAIL-T010",
+          "status": "active",
+          "title": "次の行を候補にして進む --> 次の行がある"
+        },
+        "T:G||D": {
+          "id": "DD-HIST-FIRSTFAIL-T011",
+          "status": "active",
+          "title": "飛ばして進む --> 次の行がある"
+        }
+      }
+    },
+    "DD-HIST-FLAKY": {
+      "doc": "docs/design/detailed/test-history.md",
+      "diagram": "flaky",
+      "next": {
+        "P": 3,
+        "T": 7
+      },
+      "cases": {
+        "P:A||B>B||C>C||D>D||E>E|ない|S": {
+          "id": "DD-HIST-FLAKY-P001",
+          "status": "active",
+          "title": "entries → commit があり dirty が false の行だけ残す → status が passed か failed の行だけ残す → commit ごとにまとめる → passed と failed の両方がある commit がある → [ない] 空の配列（安定）"
+        },
+        "P:A||B>B||C>C||D>D||E>E|ある|F": {
+          "id": "DD-HIST-FLAKY-P002",
+          "status": "active",
+          "title": "entries → commit があり dirty が false の行だけ残す → status が passed か failed の行だけ残す → commit ごとにまとめる → passed と failed の両方がある commit がある → [ある] その commit を最新の行の新しい順に返す"
+        },
+        "T:A||B": {
+          "id": "DD-HIST-FLAKY-T001",
+          "status": "active",
+          "title": "entries --> commit があり dirty が false の行だけ残す"
+        },
+        "T:B||C": {
+          "id": "DD-HIST-FLAKY-T002",
+          "status": "active",
+          "title": "commit があり dirty が false の行だけ残す --> status が passed か failed の行だけ残す"
+        },
+        "T:C||D": {
+          "id": "DD-HIST-FLAKY-T003",
+          "status": "active",
+          "title": "status が passed か failed の行だけ残す --> commit ごとにまとめる"
+        },
+        "T:D||E": {
+          "id": "DD-HIST-FLAKY-T004",
+          "status": "active",
+          "title": "commit ごとにまとめる --> passed と failed の両方がある commit がある"
+        },
+        "T:E|ない|S": {
+          "id": "DD-HIST-FLAKY-T005",
+          "status": "active",
+          "title": "passed と failed の両方がある commit がある --[ない]--> 空の配列（安定）"
+        },
+        "T:E|ある|F": {
+          "id": "DD-HIST-FLAKY-T006",
+          "status": "active",
+          "title": "passed と failed の両方がある commit がある --[ある]--> その commit を最新の行の新しい順に返す"
+        }
+      }
+    },
     "DD-MOCKRT-BRIDGE": {
       "doc": "docs/design/detailed/mock-runtime.md",
       "diagram": "bridge",
@@ -4123,6 +4433,341 @@
           "id": "DD-REVCMT-THREAD-T009",
           "status": "active",
           "title": "line を含む最小の要素がある --[ない]--> 文書の先頭: ファイルのコメント"
+        }
+      }
+    },
+    "DD-RUNREC-LOAD": {
+      "doc": "docs/design/detailed/run-record.md",
+      "diagram": "load",
+      "next": {
+        "P": 6,
+        "T": 9
+      },
+      "cases": {
+        "P:A||B>B|読めない|S": {
+          "id": "DD-RUNREC-LOAD-P001",
+          "status": "active",
+          "title": ".ddv/runs/*.json を 1 件読む → JSON として読める → [読めない] 無視して次へ"
+        },
+        "P:A||B>B|読める|C>C|はい|E>E||D>D|ない|U": {
+          "id": "DD-RUNREC-LOAD-P002",
+          "status": "active",
+          "title": ".ddv/runs/*.json を 1 件読む → JSON として読める → [読める] status が running → [はい] status を error にする → commit がある → [ない] コミット不明として登録"
+        },
+        "P:A||B>B|読める|C>C|はい|E>E||D>D|ある|K": {
+          "id": "DD-RUNREC-LOAD-P003",
+          "status": "active",
+          "title": ".ddv/runs/*.json を 1 件読む → JSON として読める → [読める] status が running → [はい] status を error にする → commit がある → [ある] そのまま登録"
+        },
+        "P:A||B>B|読める|C>C|いいえ|D>D|ない|U": {
+          "id": "DD-RUNREC-LOAD-P004",
+          "status": "active",
+          "title": ".ddv/runs/*.json を 1 件読む → JSON として読める → [読める] status が running → [いいえ] commit がある → [ない] コミット不明として登録"
+        },
+        "P:A||B>B|読める|C>C|いいえ|D>D|ある|K": {
+          "id": "DD-RUNREC-LOAD-P005",
+          "status": "active",
+          "title": ".ddv/runs/*.json を 1 件読む → JSON として読める → [読める] status が running → [いいえ] commit がある → [ある] そのまま登録"
+        },
+        "T:A||B": {
+          "id": "DD-RUNREC-LOAD-T001",
+          "status": "active",
+          "title": ".ddv/runs/*.json を 1 件読む --> JSON として読める"
+        },
+        "T:B|読めない|S": {
+          "id": "DD-RUNREC-LOAD-T002",
+          "status": "active",
+          "title": "JSON として読める --[読めない]--> 無視して次へ"
+        },
+        "T:B|読める|C": {
+          "id": "DD-RUNREC-LOAD-T003",
+          "status": "active",
+          "title": "JSON として読める --[読める]--> status が running"
+        },
+        "T:C|はい|E": {
+          "id": "DD-RUNREC-LOAD-T004",
+          "status": "active",
+          "title": "status が running --[はい]--> status を error にする"
+        },
+        "T:C|いいえ|D": {
+          "id": "DD-RUNREC-LOAD-T005",
+          "status": "active",
+          "title": "status が running --[いいえ]--> commit がある"
+        },
+        "T:E||D": {
+          "id": "DD-RUNREC-LOAD-T006",
+          "status": "active",
+          "title": "status を error にする --> commit がある"
+        },
+        "T:D|ない|U": {
+          "id": "DD-RUNREC-LOAD-T007",
+          "status": "active",
+          "title": "commit がある --[ない]--> コミット不明として登録"
+        },
+        "T:D|ある|K": {
+          "id": "DD-RUNREC-LOAD-T008",
+          "status": "active",
+          "title": "commit がある --[ある]--> そのまま登録"
+        }
+      }
+    },
+    "DD-RUNREC-PRUNE": {
+      "doc": "docs/design/detailed/run-record.md",
+      "diagram": "prune-plan",
+      "next": {
+        "P": 9,
+        "T": 13
+      },
+      "cases": {
+        "P:A||B>B||C>C|超える|D>D||E>E||F>F|超える|G>G||H>H|ある|I>I||J": {
+          "id": "DD-RUNREC-PRUNE-P001",
+          "status": "active",
+          "title": "plan → テストの実行記録を startedAt の新しい順に並べる → maxRuns が 0 でなく件数が maxRuns を超える → [超える] maxRuns 件目より古い実行を runs に入れ同じIDのトレースも traces に入れる → 残す実行のうちトレースのディレクトリがあるものを新しい順に並べる → maxTraceRuns が 0 でなく件数が maxTraceRuns を超える → [超える] maxTraceRuns 件目より古い実行のトレースを traces に入れる → 実行記録の無いトレースのディレクトリがある → [ある] traces に入れる → PrunePlan を返す"
+        },
+        "P:A||B>B||C>C|超える|D>D||E>E||F>F|超える|G>G||H>H|ない|J": {
+          "id": "DD-RUNREC-PRUNE-P002",
+          "status": "active",
+          "title": "plan → テストの実行記録を startedAt の新しい順に並べる → maxRuns が 0 でなく件数が maxRuns を超える → [超える] maxRuns 件目より古い実行を runs に入れ同じIDのトレースも traces に入れる → 残す実行のうちトレースのディレクトリがあるものを新しい順に並べる → maxTraceRuns が 0 でなく件数が maxTraceRuns を超える → [超える] maxTraceRuns 件目より古い実行のトレースを traces に入れる → 実行記録の無いトレースのディレクトリがある → [ない] PrunePlan を返す"
+        },
+        "P:A||B>B||C>C|超える|D>D||E>E||F>F|以内|H>H|ある|I>I||J": {
+          "id": "DD-RUNREC-PRUNE-P003",
+          "status": "active",
+          "title": "plan → テストの実行記録を startedAt の新しい順に並べる → maxRuns が 0 でなく件数が maxRuns を超える → [超える] maxRuns 件目より古い実行を runs に入れ同じIDのトレースも traces に入れる → 残す実行のうちトレースのディレクトリがあるものを新しい順に並べる → maxTraceRuns が 0 でなく件数が maxTraceRuns を超える → [以内] 実行記録の無いトレースのディレクトリがある → [ある] traces に入れる → PrunePlan を返す"
+        },
+        "P:A||B>B||C>C|超える|D>D||E>E||F>F|以内|H>H|ない|J": {
+          "id": "DD-RUNREC-PRUNE-P004",
+          "status": "active",
+          "title": "plan → テストの実行記録を startedAt の新しい順に並べる → maxRuns が 0 でなく件数が maxRuns を超える → [超える] maxRuns 件目より古い実行を runs に入れ同じIDのトレースも traces に入れる → 残す実行のうちトレースのディレクトリがあるものを新しい順に並べる → maxTraceRuns が 0 でなく件数が maxTraceRuns を超える → [以内] 実行記録の無いトレースのディレクトリがある → [ない] PrunePlan を返す"
+        },
+        "P:A||B>B||C>C|以内|E>E||F>F|超える|G>G||H>H|ある|I>I||J": {
+          "id": "DD-RUNREC-PRUNE-P005",
+          "status": "active",
+          "title": "plan → テストの実行記録を startedAt の新しい順に並べる → maxRuns が 0 でなく件数が maxRuns を超える → [以内] 残す実行のうちトレースのディレクトリがあるものを新しい順に並べる → maxTraceRuns が 0 でなく件数が maxTraceRuns を超える → [超える] maxTraceRuns 件目より古い実行のトレースを traces に入れる → 実行記録の無いトレースのディレクトリがある → [ある] traces に入れる → PrunePlan を返す"
+        },
+        "P:A||B>B||C>C|以内|E>E||F>F|超える|G>G||H>H|ない|J": {
+          "id": "DD-RUNREC-PRUNE-P006",
+          "status": "active",
+          "title": "plan → テストの実行記録を startedAt の新しい順に並べる → maxRuns が 0 でなく件数が maxRuns を超える → [以内] 残す実行のうちトレースのディレクトリがあるものを新しい順に並べる → maxTraceRuns が 0 でなく件数が maxTraceRuns を超える → [超える] maxTraceRuns 件目より古い実行のトレースを traces に入れる → 実行記録の無いトレースのディレクトリがある → [ない] PrunePlan を返す"
+        },
+        "P:A||B>B||C>C|以内|E>E||F>F|以内|H>H|ある|I>I||J": {
+          "id": "DD-RUNREC-PRUNE-P007",
+          "status": "active",
+          "title": "plan → テストの実行記録を startedAt の新しい順に並べる → maxRuns が 0 でなく件数が maxRuns を超える → [以内] 残す実行のうちトレースのディレクトリがあるものを新しい順に並べる → maxTraceRuns が 0 でなく件数が maxTraceRuns を超える → [以内] 実行記録の無いトレースのディレクトリがある → [ある] traces に入れる → PrunePlan を返す"
+        },
+        "P:A||B>B||C>C|以内|E>E||F>F|以内|H>H|ない|J": {
+          "id": "DD-RUNREC-PRUNE-P008",
+          "status": "active",
+          "title": "plan → テストの実行記録を startedAt の新しい順に並べる → maxRuns が 0 でなく件数が maxRuns を超える → [以内] 残す実行のうちトレースのディレクトリがあるものを新しい順に並べる → maxTraceRuns が 0 でなく件数が maxTraceRuns を超える → [以内] 実行記録の無いトレースのディレクトリがある → [ない] PrunePlan を返す"
+        },
+        "T:A||B": {
+          "id": "DD-RUNREC-PRUNE-T001",
+          "status": "active",
+          "title": "plan --> テストの実行記録を startedAt の新しい順に並べる"
+        },
+        "T:B||C": {
+          "id": "DD-RUNREC-PRUNE-T002",
+          "status": "active",
+          "title": "テストの実行記録を startedAt の新しい順に並べる --> maxRuns が 0 でなく件数が maxRuns を超える"
+        },
+        "T:C|超える|D": {
+          "id": "DD-RUNREC-PRUNE-T003",
+          "status": "active",
+          "title": "maxRuns が 0 でなく件数が maxRuns を超える --[超える]--> maxRuns 件目より古い実行を runs に入れ同じIDのトレースも traces に入れる"
+        },
+        "T:C|以内|E": {
+          "id": "DD-RUNREC-PRUNE-T004",
+          "status": "active",
+          "title": "maxRuns が 0 でなく件数が maxRuns を超える --[以内]--> 残す実行のうちトレースのディレクトリがあるものを新しい順に並べる"
+        },
+        "T:D||E": {
+          "id": "DD-RUNREC-PRUNE-T005",
+          "status": "active",
+          "title": "maxRuns 件目より古い実行を runs に入れ同じIDのトレースも traces に入れる --> 残す実行のうちトレースのディレクトリがあるものを新しい順に並べる"
+        },
+        "T:E||F": {
+          "id": "DD-RUNREC-PRUNE-T006",
+          "status": "active",
+          "title": "残す実行のうちトレースのディレクトリがあるものを新しい順に並べる --> maxTraceRuns が 0 でなく件数が maxTraceRuns を超える"
+        },
+        "T:F|超える|G": {
+          "id": "DD-RUNREC-PRUNE-T007",
+          "status": "active",
+          "title": "maxTraceRuns が 0 でなく件数が maxTraceRuns を超える --[超える]--> maxTraceRuns 件目より古い実行のトレースを traces に入れる"
+        },
+        "T:F|以内|H": {
+          "id": "DD-RUNREC-PRUNE-T008",
+          "status": "active",
+          "title": "maxTraceRuns が 0 でなく件数が maxTraceRuns を超える --[以内]--> 実行記録の無いトレースのディレクトリがある"
+        },
+        "T:G||H": {
+          "id": "DD-RUNREC-PRUNE-T009",
+          "status": "active",
+          "title": "maxTraceRuns 件目より古い実行のトレースを traces に入れる --> 実行記録の無いトレースのディレクトリがある"
+        },
+        "T:H|ある|I": {
+          "id": "DD-RUNREC-PRUNE-T010",
+          "status": "active",
+          "title": "実行記録の無いトレースのディレクトリがある --[ある]--> traces に入れる"
+        },
+        "T:H|ない|J": {
+          "id": "DD-RUNREC-PRUNE-T011",
+          "status": "active",
+          "title": "実行記録の無いトレースのディレクトリがある --[ない]--> PrunePlan を返す"
+        },
+        "T:I||J": {
+          "id": "DD-RUNREC-PRUNE-T012",
+          "status": "active",
+          "title": "traces に入れる --> PrunePlan を返す"
+        }
+      }
+    },
+    "DD-RUNREC-REPOSTATE": {
+      "doc": "docs/design/detailed/run-record.md",
+      "diagram": "repo-state",
+      "next": {
+        "P": 5,
+        "T": 8
+      },
+      "cases": {
+        "P:A||B>B|失敗|U": {
+          "id": "DD-RUNREC-REPOSTATE-P001",
+          "status": "active",
+          "title": "read → git rev-parse HEAD が成功 → [失敗] null（不明）"
+        },
+        "P:A||B>B|成功|C>C|失敗|U": {
+          "id": "DD-RUNREC-REPOSTATE-P002",
+          "status": "active",
+          "title": "read → git rev-parse HEAD が成功 → [成功] git status --porcelain が成功 → [失敗] null（不明）"
+        },
+        "P:A||B>B|成功|C>C|成功|D>D|ある|DT": {
+          "id": "DD-RUNREC-REPOSTATE-P003",
+          "status": "active",
+          "title": "read → git rev-parse HEAD が成功 → [成功] git status --porcelain が成功 → [成功] .ddv/ 配下以外の行がある → [ある] commit・dirty: true"
+        },
+        "P:A||B>B|成功|C>C|成功|D>D|ない|CL": {
+          "id": "DD-RUNREC-REPOSTATE-P004",
+          "status": "active",
+          "title": "read → git rev-parse HEAD が成功 → [成功] git status --porcelain が成功 → [成功] .ddv/ 配下以外の行がある → [ない] commit・dirty: false"
+        },
+        "T:A||B": {
+          "id": "DD-RUNREC-REPOSTATE-T001",
+          "status": "active",
+          "title": "read --> git rev-parse HEAD が成功"
+        },
+        "T:B|失敗|U": {
+          "id": "DD-RUNREC-REPOSTATE-T002",
+          "status": "active",
+          "title": "git rev-parse HEAD が成功 --[失敗]--> null（不明）"
+        },
+        "T:B|成功|C": {
+          "id": "DD-RUNREC-REPOSTATE-T003",
+          "status": "active",
+          "title": "git rev-parse HEAD が成功 --[成功]--> git status --porcelain が成功"
+        },
+        "T:C|失敗|U": {
+          "id": "DD-RUNREC-REPOSTATE-T004",
+          "status": "active",
+          "title": "git status --porcelain が成功 --[失敗]--> null（不明）"
+        },
+        "T:C|成功|D": {
+          "id": "DD-RUNREC-REPOSTATE-T005",
+          "status": "active",
+          "title": "git status --porcelain が成功 --[成功]--> .ddv/ 配下以外の行がある"
+        },
+        "T:D|ある|DT": {
+          "id": "DD-RUNREC-REPOSTATE-T006",
+          "status": "active",
+          "title": ".ddv/ 配下以外の行がある --[ある]--> commit・dirty: true"
+        },
+        "T:D|ない|CL": {
+          "id": "DD-RUNREC-REPOSTATE-T007",
+          "status": "active",
+          "title": ".ddv/ 配下以外の行がある --[ない]--> commit・dirty: false"
+        }
+      }
+    },
+    "DD-RUNREC-RERUN": {
+      "doc": "docs/design/detailed/run-record.md",
+      "diagram": "rerun",
+      "next": {
+        "T": 8,
+        "X": 9
+      },
+      "cases": {
+        "T:[*]start||Idle": {
+          "id": "DD-RUNREC-RERUN-T001",
+          "status": "active",
+          "title": "開始 --> 待機"
+        },
+        "T:Idle|start|Running": {
+          "id": "DD-RUNREC-RERUN-T002",
+          "status": "active",
+          "title": "待機 --[start]--> 実行中"
+        },
+        "T:Running|実行終了|Idle": {
+          "id": "DD-RUNREC-RERUN-T003",
+          "status": "active",
+          "title": "実行中 --[実行終了]--> 待機"
+        },
+        "T:Idle|rerun [失敗あり]|Rerunning": {
+          "id": "DD-RUNREC-RERUN-T004",
+          "status": "active",
+          "title": "待機 --[rerun [失敗あり]]--> 再実行中"
+        },
+        "T:Idle|rerun [失敗なし]|Idle": {
+          "id": "DD-RUNREC-RERUN-T005",
+          "status": "active",
+          "title": "待機 --[rerun [失敗なし]]--> 待機"
+        },
+        "T:Rerunning|1 回終了 [残りあり]|Rerunning": {
+          "id": "DD-RUNREC-RERUN-T006",
+          "status": "active",
+          "title": "再実行中 --[1 回終了 [残りあり]]--> 再実行中"
+        },
+        "T:Rerunning|1 回終了 [残りなし]|Idle": {
+          "id": "DD-RUNREC-RERUN-T007",
+          "status": "active",
+          "title": "再実行中 --[1 回終了 [残りなし]]--> 待機"
+        },
+        "X:Idle|実行終了": {
+          "id": "DD-RUNREC-RERUN-X001",
+          "status": "active",
+          "title": "待機 で [実行終了]"
+        },
+        "X:Idle|1 回終了": {
+          "id": "DD-RUNREC-RERUN-X002",
+          "status": "active",
+          "title": "待機 で [1 回終了]"
+        },
+        "X:Running|start": {
+          "id": "DD-RUNREC-RERUN-X003",
+          "status": "active",
+          "title": "実行中 で [start]"
+        },
+        "X:Running|rerun": {
+          "id": "DD-RUNREC-RERUN-X004",
+          "status": "active",
+          "title": "実行中 で [rerun]"
+        },
+        "X:Running|1 回終了": {
+          "id": "DD-RUNREC-RERUN-X005",
+          "status": "active",
+          "title": "実行中 で [1 回終了]"
+        },
+        "X:Rerunning|start": {
+          "id": "DD-RUNREC-RERUN-X006",
+          "status": "active",
+          "title": "再実行中 で [start]"
+        },
+        "X:Rerunning|実行終了": {
+          "id": "DD-RUNREC-RERUN-X007",
+          "status": "active",
+          "title": "再実行中 で [実行終了]"
+        },
+        "X:Rerunning|rerun": {
+          "id": "DD-RUNREC-RERUN-X008",
+          "status": "active",
+          "title": "再実行中 で [rerun]"
         }
       }
     },
@@ -5438,6 +6083,546 @@
         }
       }
     },
+    "DD-TDEDIT-DRAFT": {
+      "doc": "docs/design/detailed/test-data.md",
+      "diagram": "draft",
+      "next": {
+        "T": 13,
+        "X": 41
+      },
+      "cases": {
+        "T:[*]start||View": {
+          "id": "DD-TDEDIT-DRAFT-T001",
+          "status": "active",
+          "title": "開始 --> 表示"
+        },
+        "T:View|編集|Editing": {
+          "id": "DD-TDEDIT-DRAFT-T002",
+          "status": "active",
+          "title": "表示 --[編集]--> 編集中"
+        },
+        "T:Editing|値を変更|Editing": {
+          "id": "DD-TDEDIT-DRAFT-T003",
+          "status": "active",
+          "title": "編集中 --[値を変更]--> 編集中"
+        },
+        "T:Editing|再生 [形式OK]|Previewing": {
+          "id": "DD-TDEDIT-DRAFT-T004",
+          "status": "active",
+          "title": "編集中 --[再生 [形式OK]]--> 再生中"
+        },
+        "T:Previewing|再生終了|Editing": {
+          "id": "DD-TDEDIT-DRAFT-T005",
+          "status": "active",
+          "title": "再生中 --[再生終了]--> 編集中"
+        },
+        "T:Editing|保存 [変更あり・エラーなし]|Saving": {
+          "id": "DD-TDEDIT-DRAFT-T006",
+          "status": "active",
+          "title": "編集中 --[保存 [変更あり・エラーなし]]--> 保存中"
+        },
+        "T:Saving|応答 [成功]|View": {
+          "id": "DD-TDEDIT-DRAFT-T007",
+          "status": "active",
+          "title": "保存中 --[応答 [成功]]--> 表示"
+        },
+        "T:Saving|応答 [失敗]|Editing": {
+          "id": "DD-TDEDIT-DRAFT-T008",
+          "status": "active",
+          "title": "保存中 --[応答 [失敗]]--> 編集中"
+        },
+        "T:Editing|取消|View": {
+          "id": "DD-TDEDIT-DRAFT-T009",
+          "status": "active",
+          "title": "編集中 --[取消]--> 表示"
+        },
+        "T:Editing|他へ移る [変更あり]|Leaving": {
+          "id": "DD-TDEDIT-DRAFT-T010",
+          "status": "active",
+          "title": "編集中 --[他へ移る [変更あり]]--> 離脱の確認"
+        },
+        "T:Leaving|破棄|View": {
+          "id": "DD-TDEDIT-DRAFT-T011",
+          "status": "active",
+          "title": "離脱の確認 --[破棄]--> 表示"
+        },
+        "T:Leaving|留まる|Editing": {
+          "id": "DD-TDEDIT-DRAFT-T012",
+          "status": "active",
+          "title": "離脱の確認 --[留まる]--> 編集中"
+        },
+        "X:View|値を変更": {
+          "id": "DD-TDEDIT-DRAFT-X001",
+          "status": "active",
+          "title": "表示 で [値を変更]"
+        },
+        "X:View|再生": {
+          "id": "DD-TDEDIT-DRAFT-X002",
+          "status": "active",
+          "title": "表示 で [再生]"
+        },
+        "X:View|再生終了": {
+          "id": "DD-TDEDIT-DRAFT-X003",
+          "status": "active",
+          "title": "表示 で [再生終了]"
+        },
+        "X:View|保存": {
+          "id": "DD-TDEDIT-DRAFT-X004",
+          "status": "active",
+          "title": "表示 で [保存]"
+        },
+        "X:View|応答": {
+          "id": "DD-TDEDIT-DRAFT-X005",
+          "status": "active",
+          "title": "表示 で [応答]"
+        },
+        "X:View|取消": {
+          "id": "DD-TDEDIT-DRAFT-X006",
+          "status": "active",
+          "title": "表示 で [取消]"
+        },
+        "X:View|他へ移る": {
+          "id": "DD-TDEDIT-DRAFT-X007",
+          "status": "active",
+          "title": "表示 で [他へ移る]"
+        },
+        "X:View|破棄": {
+          "id": "DD-TDEDIT-DRAFT-X008",
+          "status": "active",
+          "title": "表示 で [破棄]"
+        },
+        "X:View|留まる": {
+          "id": "DD-TDEDIT-DRAFT-X009",
+          "status": "active",
+          "title": "表示 で [留まる]"
+        },
+        "X:Editing|編集": {
+          "id": "DD-TDEDIT-DRAFT-X010",
+          "status": "active",
+          "title": "編集中 で [編集]"
+        },
+        "X:Editing|再生終了": {
+          "id": "DD-TDEDIT-DRAFT-X011",
+          "status": "active",
+          "title": "編集中 で [再生終了]"
+        },
+        "X:Editing|応答": {
+          "id": "DD-TDEDIT-DRAFT-X012",
+          "status": "active",
+          "title": "編集中 で [応答]"
+        },
+        "X:Editing|破棄": {
+          "id": "DD-TDEDIT-DRAFT-X013",
+          "status": "active",
+          "title": "編集中 で [破棄]"
+        },
+        "X:Editing|留まる": {
+          "id": "DD-TDEDIT-DRAFT-X014",
+          "status": "active",
+          "title": "編集中 で [留まる]"
+        },
+        "X:Previewing|編集": {
+          "id": "DD-TDEDIT-DRAFT-X015",
+          "status": "active",
+          "title": "再生中 で [編集]"
+        },
+        "X:Previewing|値を変更": {
+          "id": "DD-TDEDIT-DRAFT-X016",
+          "status": "active",
+          "title": "再生中 で [値を変更]"
+        },
+        "X:Previewing|再生": {
+          "id": "DD-TDEDIT-DRAFT-X017",
+          "status": "active",
+          "title": "再生中 で [再生]"
+        },
+        "X:Previewing|保存": {
+          "id": "DD-TDEDIT-DRAFT-X018",
+          "status": "active",
+          "title": "再生中 で [保存]"
+        },
+        "X:Previewing|応答": {
+          "id": "DD-TDEDIT-DRAFT-X019",
+          "status": "active",
+          "title": "再生中 で [応答]"
+        },
+        "X:Previewing|取消": {
+          "id": "DD-TDEDIT-DRAFT-X020",
+          "status": "active",
+          "title": "再生中 で [取消]"
+        },
+        "X:Previewing|他へ移る": {
+          "id": "DD-TDEDIT-DRAFT-X021",
+          "status": "active",
+          "title": "再生中 で [他へ移る]"
+        },
+        "X:Previewing|破棄": {
+          "id": "DD-TDEDIT-DRAFT-X022",
+          "status": "active",
+          "title": "再生中 で [破棄]"
+        },
+        "X:Previewing|留まる": {
+          "id": "DD-TDEDIT-DRAFT-X023",
+          "status": "active",
+          "title": "再生中 で [留まる]"
+        },
+        "X:Saving|編集": {
+          "id": "DD-TDEDIT-DRAFT-X024",
+          "status": "active",
+          "title": "保存中 で [編集]"
+        },
+        "X:Saving|値を変更": {
+          "id": "DD-TDEDIT-DRAFT-X025",
+          "status": "active",
+          "title": "保存中 で [値を変更]"
+        },
+        "X:Saving|再生": {
+          "id": "DD-TDEDIT-DRAFT-X026",
+          "status": "active",
+          "title": "保存中 で [再生]"
+        },
+        "X:Saving|再生終了": {
+          "id": "DD-TDEDIT-DRAFT-X027",
+          "status": "active",
+          "title": "保存中 で [再生終了]"
+        },
+        "X:Saving|保存": {
+          "id": "DD-TDEDIT-DRAFT-X028",
+          "status": "active",
+          "title": "保存中 で [保存]"
+        },
+        "X:Saving|取消": {
+          "id": "DD-TDEDIT-DRAFT-X029",
+          "status": "active",
+          "title": "保存中 で [取消]"
+        },
+        "X:Saving|他へ移る": {
+          "id": "DD-TDEDIT-DRAFT-X030",
+          "status": "active",
+          "title": "保存中 で [他へ移る]"
+        },
+        "X:Saving|破棄": {
+          "id": "DD-TDEDIT-DRAFT-X031",
+          "status": "active",
+          "title": "保存中 で [破棄]"
+        },
+        "X:Saving|留まる": {
+          "id": "DD-TDEDIT-DRAFT-X032",
+          "status": "active",
+          "title": "保存中 で [留まる]"
+        },
+        "X:Leaving|編集": {
+          "id": "DD-TDEDIT-DRAFT-X033",
+          "status": "active",
+          "title": "離脱の確認 で [編集]"
+        },
+        "X:Leaving|値を変更": {
+          "id": "DD-TDEDIT-DRAFT-X034",
+          "status": "active",
+          "title": "離脱の確認 で [値を変更]"
+        },
+        "X:Leaving|再生": {
+          "id": "DD-TDEDIT-DRAFT-X035",
+          "status": "active",
+          "title": "離脱の確認 で [再生]"
+        },
+        "X:Leaving|再生終了": {
+          "id": "DD-TDEDIT-DRAFT-X036",
+          "status": "active",
+          "title": "離脱の確認 で [再生終了]"
+        },
+        "X:Leaving|保存": {
+          "id": "DD-TDEDIT-DRAFT-X037",
+          "status": "active",
+          "title": "離脱の確認 で [保存]"
+        },
+        "X:Leaving|応答": {
+          "id": "DD-TDEDIT-DRAFT-X038",
+          "status": "active",
+          "title": "離脱の確認 で [応答]"
+        },
+        "X:Leaving|取消": {
+          "id": "DD-TDEDIT-DRAFT-X039",
+          "status": "active",
+          "title": "離脱の確認 で [取消]"
+        },
+        "X:Leaving|他へ移る": {
+          "id": "DD-TDEDIT-DRAFT-X040",
+          "status": "active",
+          "title": "離脱の確認 で [他へ移る]"
+        }
+      }
+    },
+    "DD-TDEDIT-PATCH": {
+      "doc": "docs/design/detailed/test-data.md",
+      "diagram": "patch",
+      "next": {
+        "P": 9,
+        "T": 13
+      },
+      "cases": {
+        "P:A||B>B|値の変更|C>C|いいえ|S": {
+          "id": "DD-TDEDIT-PATCH-P001",
+          "status": "active",
+          "title": "before と after の差の 1 つ → 種類 → [値の変更] 元の値がフロー形式の中 → [いいえ] 値のノードの範囲だけを元の書き方で書いた新しい値に置換"
+        },
+        "P:A||B>B|値の変更|C>C|はい|FL": {
+          "id": "DD-TDEDIT-PATCH-P002",
+          "status": "active",
+          "title": "before と after の差の 1 つ → 種類 → [値の変更] 元の値がフロー形式の中 → [はい] フロー形式のノード全体を 1 行で書き直して置換"
+        },
+        "P:A||B>B|キーの追加|D>D|はい|FL": {
+          "id": "DD-TDEDIT-PATCH-P003",
+          "status": "active",
+          "title": "before と after の差の 1 つ → 種類 → [キーの追加] 親がフロー形式 → [はい] フロー形式のノード全体を 1 行で書き直して置換"
+        },
+        "P:A||B>B|キーの追加|D>D|いいえ|AK": {
+          "id": "DD-TDEDIT-PATCH-P004",
+          "status": "active",
+          "title": "before と after の差の 1 つ → 種類 → [キーの追加] 親がフロー形式 → [いいえ] 兄弟のキーと同じインデントの行を親の最後のキーの後に挿入"
+        },
+        "P:A||B>B|キーの削除|E>E|はい|FL": {
+          "id": "DD-TDEDIT-PATCH-P005",
+          "status": "active",
+          "title": "before と after の差の 1 つ → 種類 → [キーの削除] 親がフロー形式 → [はい] フロー形式のノード全体を 1 行で書き直して置換"
+        },
+        "P:A||B>B|キーの削除|E>E|いいえ|RK": {
+          "id": "DD-TDEDIT-PATCH-P006",
+          "status": "active",
+          "title": "before と after の差の 1 つ → 種類 → [キーの削除] 親がフロー形式 → [いいえ] そのキーの行の範囲（コメント行を除く）を削除"
+        },
+        "P:A||B>B|行の追加|AR": {
+          "id": "DD-TDEDIT-PATCH-P007",
+          "status": "active",
+          "title": "before と after の差の 1 つ → 種類 → [行の追加] 配列の最後の要素と同じ書式で要素を挿入"
+        },
+        "P:A||B>B|行の削除|RR": {
+          "id": "DD-TDEDIT-PATCH-P008",
+          "status": "active",
+          "title": "before と after の差の 1 つ → 種類 → [行の削除] その要素の行の範囲を削除"
+        },
+        "T:A||B": {
+          "id": "DD-TDEDIT-PATCH-T001",
+          "status": "active",
+          "title": "before と after の差の 1 つ --> 種類"
+        },
+        "T:B|値の変更|C": {
+          "id": "DD-TDEDIT-PATCH-T002",
+          "status": "active",
+          "title": "種類 --[値の変更]--> 元の値がフロー形式の中"
+        },
+        "T:C|いいえ|S": {
+          "id": "DD-TDEDIT-PATCH-T003",
+          "status": "active",
+          "title": "元の値がフロー形式の中 --[いいえ]--> 値のノードの範囲だけを元の書き方で書いた新しい値に置換"
+        },
+        "T:C|はい|FL": {
+          "id": "DD-TDEDIT-PATCH-T004",
+          "status": "active",
+          "title": "元の値がフロー形式の中 --[はい]--> フロー形式のノード全体を 1 行で書き直して置換"
+        },
+        "T:B|キーの追加|D": {
+          "id": "DD-TDEDIT-PATCH-T005",
+          "status": "active",
+          "title": "種類 --[キーの追加]--> 親がフロー形式"
+        },
+        "T:D|はい|FL": {
+          "id": "DD-TDEDIT-PATCH-T006",
+          "status": "active",
+          "title": "親がフロー形式 --[はい]--> フロー形式のノード全体を 1 行で書き直して置換"
+        },
+        "T:D|いいえ|AK": {
+          "id": "DD-TDEDIT-PATCH-T007",
+          "status": "active",
+          "title": "親がフロー形式 --[いいえ]--> 兄弟のキーと同じインデントの行を親の最後のキーの後に挿入"
+        },
+        "T:B|キーの削除|E": {
+          "id": "DD-TDEDIT-PATCH-T008",
+          "status": "active",
+          "title": "種類 --[キーの削除]--> 親がフロー形式"
+        },
+        "T:E|はい|FL": {
+          "id": "DD-TDEDIT-PATCH-T009",
+          "status": "active",
+          "title": "親がフロー形式 --[はい]--> フロー形式のノード全体を 1 行で書き直して置換"
+        },
+        "T:E|いいえ|RK": {
+          "id": "DD-TDEDIT-PATCH-T010",
+          "status": "active",
+          "title": "親がフロー形式 --[いいえ]--> そのキーの行の範囲（コメント行を除く）を削除"
+        },
+        "T:B|行の追加|AR": {
+          "id": "DD-TDEDIT-PATCH-T011",
+          "status": "active",
+          "title": "種類 --[行の追加]--> 配列の最後の要素と同じ書式で要素を挿入"
+        },
+        "T:B|行の削除|RR": {
+          "id": "DD-TDEDIT-PATCH-T012",
+          "status": "active",
+          "title": "種類 --[行の削除]--> その要素の行の範囲を削除"
+        }
+      }
+    },
+    "DD-TDEDIT-SUGGEST": {
+      "doc": "docs/design/detailed/test-data.md",
+      "diagram": "suggest",
+      "next": {
+        "P": 5,
+        "T": 8
+      },
+      "cases": {
+        "P:A||B>B|はい|ONE>ONE||C>C|含む|R": {
+          "id": "DD-TDEDIT-SUGGEST-P001",
+          "status": "active",
+          "title": "ファイルの行の差分 → 差分の塊が 1 つ → [はい] その塊の行範囲への suggestion を 1 件 → 塊が元の行を含む → [含む] 元の行の範囲を startLine から line にする"
+        },
+        "P:A||B>B|はい|ONE>ONE||C>C|含まない（追加だけ）|P": {
+          "id": "DD-TDEDIT-SUGGEST-P002",
+          "status": "active",
+          "title": "ファイルの行の差分 → 差分の塊が 1 つ → [はい] その塊の行範囲への suggestion を 1 件 → 塊が元の行を含む → [含まない（追加だけ）] 直前の 1 行を範囲に含め suggestion の先頭にその行を置く"
+        },
+        "P:A||B>B|いいえ|MANY>MANY||C>C|含む|R": {
+          "id": "DD-TDEDIT-SUGGEST-P003",
+          "status": "active",
+          "title": "ファイルの行の差分 → 差分の塊が 1 つ → [いいえ] 塊ごとに suggestion を 1 件ずつ → 塊が元の行を含む → [含む] 元の行の範囲を startLine から line にする"
+        },
+        "P:A||B>B|いいえ|MANY>MANY||C>C|含まない（追加だけ）|P": {
+          "id": "DD-TDEDIT-SUGGEST-P004",
+          "status": "active",
+          "title": "ファイルの行の差分 → 差分の塊が 1 つ → [いいえ] 塊ごとに suggestion を 1 件ずつ → 塊が元の行を含む → [含まない（追加だけ）] 直前の 1 行を範囲に含め suggestion の先頭にその行を置く"
+        },
+        "T:A||B": {
+          "id": "DD-TDEDIT-SUGGEST-T001",
+          "status": "active",
+          "title": "ファイルの行の差分 --> 差分の塊が 1 つ"
+        },
+        "T:B|はい|ONE": {
+          "id": "DD-TDEDIT-SUGGEST-T002",
+          "status": "active",
+          "title": "差分の塊が 1 つ --[はい]--> その塊の行範囲への suggestion を 1 件"
+        },
+        "T:B|いいえ|MANY": {
+          "id": "DD-TDEDIT-SUGGEST-T003",
+          "status": "active",
+          "title": "差分の塊が 1 つ --[いいえ]--> 塊ごとに suggestion を 1 件ずつ"
+        },
+        "T:ONE||C": {
+          "id": "DD-TDEDIT-SUGGEST-T004",
+          "status": "active",
+          "title": "その塊の行範囲への suggestion を 1 件 --> 塊が元の行を含む"
+        },
+        "T:MANY||C": {
+          "id": "DD-TDEDIT-SUGGEST-T005",
+          "status": "active",
+          "title": "塊ごとに suggestion を 1 件ずつ --> 塊が元の行を含む"
+        },
+        "T:C|含む|R": {
+          "id": "DD-TDEDIT-SUGGEST-T006",
+          "status": "active",
+          "title": "塊が元の行を含む --[含む]--> 元の行の範囲を startLine から line にする"
+        },
+        "T:C|含まない（追加だけ）|P": {
+          "id": "DD-TDEDIT-SUGGEST-T007",
+          "status": "active",
+          "title": "塊が元の行を含む --[含まない（追加だけ）]--> 直前の 1 行を範囲に含め suggestion の先頭にその行を置く"
+        }
+      }
+    },
+    "DD-TDEDIT-VALIDATE": {
+      "doc": "docs/design/detailed/test-data.md",
+      "diagram": "validate",
+      "next": {
+        "P": 7,
+        "T": 12
+      },
+      "cases": {
+        "P:A||B>B|合わない|E1": {
+          "id": "DD-TDEDIT-VALIDATE-P001",
+          "status": "active",
+          "title": "validate → シナリオが ScenarioSchema に合う → [合わない] エラー schema"
+        },
+        "P:A||B>B|合う|C>C|違う|E2": {
+          "id": "DD-TDEDIT-VALIDATE-P002",
+          "status": "active",
+          "title": "validate → シナリオが ScenarioSchema に合う → [合う] 生成項目と id・start・ステップ数が元と同じ → [違う] エラー generated"
+        },
+        "P:A||B>B|合う|C>C|同じ|D>D|ない|E3": {
+          "id": "DD-TDEDIT-VALIDATE-P003",
+          "status": "active",
+          "title": "validate → シナリオが ScenarioSchema に合う → [合う] 生成項目と id・start・ステップ数が元と同じ → [同じ] 使う fixtures がすべてある → [ない] エラー unknownFixture"
+        },
+        "P:A||B>B|合う|C>C|同じ|D>D|ある|F>F|空か重複|E4": {
+          "id": "DD-TDEDIT-VALIDATE-P004",
+          "status": "active",
+          "title": "validate → シナリオが ScenarioSchema に合う → [合う] 生成項目と id・start・ステップ数が元と同じ → [同じ] 使う fixtures がすべてある → [ある] fixtures の行のキーが空でなく重複しない → [空か重複] エラー emptyKey か duplicateKey"
+        },
+        "P:A||B>B|合う|C>C|同じ|D>D|ある|F>F|問題なし|G>G|違う|E5": {
+          "id": "DD-TDEDIT-VALIDATE-P005",
+          "status": "active",
+          "title": "validate → シナリオが ScenarioSchema に合う → [合う] 生成項目と id・start・ステップ数が元と同じ → [同じ] 使う fixtures がすべてある → [ある] fixtures の行のキーが空でなく重複しない → [問題なし] base のハッシュが今のファイルと同じ → [違う] エラー conflict"
+        },
+        "P:A||B>B|合う|C>C|同じ|D>D|ある|F>F|問題なし|G>G|同じ|H": {
+          "id": "DD-TDEDIT-VALIDATE-P006",
+          "status": "active",
+          "title": "validate → シナリオが ScenarioSchema に合う → [合う] 生成項目と id・start・ステップ数が元と同じ → [同じ] 使う fixtures がすべてある → [ある] fixtures の行のキーが空でなく重複しない → [問題なし] base のハッシュが今のファイルと同じ → [同じ] 警告を集めて差分を作る"
+        },
+        "T:A||B": {
+          "id": "DD-TDEDIT-VALIDATE-T001",
+          "status": "active",
+          "title": "validate --> シナリオが ScenarioSchema に合う"
+        },
+        "T:B|合わない|E1": {
+          "id": "DD-TDEDIT-VALIDATE-T002",
+          "status": "active",
+          "title": "シナリオが ScenarioSchema に合う --[合わない]--> エラー schema"
+        },
+        "T:B|合う|C": {
+          "id": "DD-TDEDIT-VALIDATE-T003",
+          "status": "active",
+          "title": "シナリオが ScenarioSchema に合う --[合う]--> 生成項目と id・start・ステップ数が元と同じ"
+        },
+        "T:C|違う|E2": {
+          "id": "DD-TDEDIT-VALIDATE-T004",
+          "status": "active",
+          "title": "生成項目と id・start・ステップ数が元と同じ --[違う]--> エラー generated"
+        },
+        "T:C|同じ|D": {
+          "id": "DD-TDEDIT-VALIDATE-T005",
+          "status": "active",
+          "title": "生成項目と id・start・ステップ数が元と同じ --[同じ]--> 使う fixtures がすべてある"
+        },
+        "T:D|ない|E3": {
+          "id": "DD-TDEDIT-VALIDATE-T006",
+          "status": "active",
+          "title": "使う fixtures がすべてある --[ない]--> エラー unknownFixture"
+        },
+        "T:D|ある|F": {
+          "id": "DD-TDEDIT-VALIDATE-T007",
+          "status": "active",
+          "title": "使う fixtures がすべてある --[ある]--> fixtures の行のキーが空でなく重複しない"
+        },
+        "T:F|空か重複|E4": {
+          "id": "DD-TDEDIT-VALIDATE-T008",
+          "status": "active",
+          "title": "fixtures の行のキーが空でなく重複しない --[空か重複]--> エラー emptyKey か duplicateKey"
+        },
+        "T:F|問題なし|G": {
+          "id": "DD-TDEDIT-VALIDATE-T009",
+          "status": "active",
+          "title": "fixtures の行のキーが空でなく重複しない --[問題なし]--> base のハッシュが今のファイルと同じ"
+        },
+        "T:G|違う|E5": {
+          "id": "DD-TDEDIT-VALIDATE-T010",
+          "status": "active",
+          "title": "base のハッシュが今のファイルと同じ --[違う]--> エラー conflict"
+        },
+        "T:G|同じ|H": {
+          "id": "DD-TDEDIT-VALIDATE-T011",
+          "status": "active",
+          "title": "base のハッシュが今のファイルと同じ --[同じ]--> 警告を集めて差分を作る"
+        }
+      }
+    },
     "DD-TESTID-LOCK": {
       "doc": "docs/design/detailed/testid.md",
       "diagram": "lock-case",
@@ -5469,6 +6654,567 @@
           "id": "DD-TESTID-LOCK-T005",
           "status": "active",
           "title": "欠番 --[再生成 [経路なし]]--> 欠番"
+        }
+      }
+    },
+    "DD-TRREC-CLIP": {
+      "doc": "docs/design/detailed/trace-recorder.md",
+      "diagram": "clip",
+      "next": {
+        "P": 4,
+        "T": 6
+      },
+      "cases": {
+        "P:A||B>B|ない|U": {
+          "id": "DD-TRREC-CLIP-P001",
+          "status": "active",
+          "title": "clipBody → 本文がある → [ない] undefined"
+        },
+        "P:A||B>B|ある|C>C|以下|T": {
+          "id": "DD-TRREC-CLIP-P002",
+          "status": "active",
+          "title": "clipBody → 本文がある → [ある] UTF-8 で limit バイト以下 → [以下] そのまま"
+        },
+        "P:A||B>B|ある|C>C|超える|D": {
+          "id": "DD-TRREC-CLIP-P003",
+          "status": "active",
+          "title": "clipBody → 本文がある → [ある] UTF-8 で limit バイト以下 → [超える] limit バイト以内の文字の境界で切り truncated: true"
+        },
+        "T:A||B": {
+          "id": "DD-TRREC-CLIP-T001",
+          "status": "active",
+          "title": "clipBody --> 本文がある"
+        },
+        "T:B|ない|U": {
+          "id": "DD-TRREC-CLIP-T002",
+          "status": "active",
+          "title": "本文がある --[ない]--> undefined"
+        },
+        "T:B|ある|C": {
+          "id": "DD-TRREC-CLIP-T003",
+          "status": "active",
+          "title": "本文がある --[ある]--> UTF-8 で limit バイト以下"
+        },
+        "T:C|以下|T": {
+          "id": "DD-TRREC-CLIP-T004",
+          "status": "active",
+          "title": "UTF-8 で limit バイト以下 --[以下]--> そのまま"
+        },
+        "T:C|超える|D": {
+          "id": "DD-TRREC-CLIP-T005",
+          "status": "active",
+          "title": "UTF-8 で limit バイト以下 --[超える]--> limit バイト以内の文字の境界で切り truncated: true"
+        }
+      }
+    },
+    "DD-TRREC-DBDIFF": {
+      "doc": "docs/design/detailed/trace-recorder.md",
+      "diagram": "dbdiff",
+      "next": {
+        "P": 5,
+        "T": 9
+      },
+      "cases": {
+        "P:A||B>B|ない|C>C|ある|AD": {
+          "id": "DD-TRREC-DBDIFF-P001",
+          "status": "active",
+          "title": "テーブルの 1 行のキー → before にある → [ない] after にある → [ある] added: after"
+        },
+        "P:A||B>B|ある|D>D|ない|RM": {
+          "id": "DD-TRREC-DBDIFF-P002",
+          "status": "active",
+          "title": "テーブルの 1 行のキー → before にある → [ある] after にある → [ない] removed: before"
+        },
+        "P:A||B>B|ある|D>D|ある|E>E|同じ|N": {
+          "id": "DD-TRREC-DBDIFF-P003",
+          "status": "active",
+          "title": "テーブルの 1 行のキー → before にある → [ある] after にある → [ある] JSON として同じ → [同じ] 記録しない"
+        },
+        "P:A||B>B|ある|D>D|ある|E>E|違う|CH": {
+          "id": "DD-TRREC-DBDIFF-P004",
+          "status": "active",
+          "title": "テーブルの 1 行のキー → before にある → [ある] after にある → [ある] JSON として同じ → [違う] changed: before と after"
+        },
+        "T:A||B": {
+          "id": "DD-TRREC-DBDIFF-T001",
+          "status": "active",
+          "title": "テーブルの 1 行のキー --> before にある"
+        },
+        "T:B|ない|C": {
+          "id": "DD-TRREC-DBDIFF-T002",
+          "status": "active",
+          "title": "before にある --[ない]--> after にある"
+        },
+        "T:C|ある|AD": {
+          "id": "DD-TRREC-DBDIFF-T003",
+          "status": "active",
+          "title": "after にある --[ある]--> added: after"
+        },
+        "T:B|ある|D": {
+          "id": "DD-TRREC-DBDIFF-T004",
+          "status": "active",
+          "title": "before にある --[ある]--> after にある"
+        },
+        "T:D|ない|RM": {
+          "id": "DD-TRREC-DBDIFF-T005",
+          "status": "active",
+          "title": "after にある --[ない]--> removed: before"
+        },
+        "T:D|ある|E": {
+          "id": "DD-TRREC-DBDIFF-T006",
+          "status": "active",
+          "title": "after にある --[ある]--> JSON として同じ"
+        },
+        "T:E|同じ|N": {
+          "id": "DD-TRREC-DBDIFF-T007",
+          "status": "active",
+          "title": "JSON として同じ --[同じ]--> 記録しない"
+        },
+        "T:E|違う|CH": {
+          "id": "DD-TRREC-DBDIFF-T008",
+          "status": "active",
+          "title": "JSON として同じ --[違う]--> changed: before と after"
+        }
+      }
+    },
+    "DD-TRREC-ENABLE": {
+      "doc": "docs/design/detailed/trace-recorder.md",
+      "diagram": "enable",
+      "next": {
+        "P": 4,
+        "T": 7
+      },
+      "cases": {
+        "P:A||B>B|いいえ|N": {
+          "id": "DD-TRREC-ENABLE-P001",
+          "status": "active",
+          "title": "RunManager がランナーを実行する → ランナーが playwright で scenarios: true → [いいえ] DDV_TRACE_DIR を渡さない"
+        },
+        "P:A||B>B|はい|C>C||D>D|null|N2": {
+          "id": "DD-TRREC-ENABLE-P002",
+          "status": "active",
+          "title": "RunManager がランナーを実行する → ランナーが playwright で scenarios: true → [はい] DDV_TRACE_DIR = repoRoot/.ddv/traces/実行ID を環境変数に入れる → defineScenarioTests で traceDirOf が null でない → [null] 記録しない"
+        },
+        "P:A||B>B|はい|C>C||D>D|あり|R": {
+          "id": "DD-TRREC-ENABLE-P003",
+          "status": "active",
+          "title": "RunManager がランナーを実行する → ランナーが playwright で scenarios: true → [はい] DDV_TRACE_DIR = repoRoot/.ddv/traces/実行ID を環境変数に入れる → defineScenarioTests で traceDirOf が null でない → [あり] テストごとに TraceRecorder を作り runScenario に渡す"
+        },
+        "T:A||B": {
+          "id": "DD-TRREC-ENABLE-T001",
+          "status": "active",
+          "title": "RunManager がランナーを実行する --> ランナーが playwright で scenarios: true"
+        },
+        "T:B|いいえ|N": {
+          "id": "DD-TRREC-ENABLE-T002",
+          "status": "active",
+          "title": "ランナーが playwright で scenarios: true --[いいえ]--> DDV_TRACE_DIR を渡さない"
+        },
+        "T:B|はい|C": {
+          "id": "DD-TRREC-ENABLE-T003",
+          "status": "active",
+          "title": "ランナーが playwright で scenarios: true --[はい]--> DDV_TRACE_DIR = repoRoot/.ddv/traces/実行ID を環境変数に入れる"
+        },
+        "T:C||D": {
+          "id": "DD-TRREC-ENABLE-T004",
+          "status": "active",
+          "title": "DDV_TRACE_DIR = repoRoot/.ddv/traces/実行ID を環境変数に入れる --> defineScenarioTests で traceDirOf が null でない"
+        },
+        "T:D|null|N2": {
+          "id": "DD-TRREC-ENABLE-T005",
+          "status": "active",
+          "title": "defineScenarioTests で traceDirOf が null でない --[null]--> 記録しない"
+        },
+        "T:D|あり|R": {
+          "id": "DD-TRREC-ENABLE-T006",
+          "status": "active",
+          "title": "defineScenarioTests で traceDirOf が null でない --[あり]--> テストごとに TraceRecorder を作り runScenario に渡す"
+        }
+      }
+    },
+    "DD-TRREC-RECORDER": {
+      "doc": "docs/design/detailed/trace-recorder.md",
+      "diagram": "recorder",
+      "next": {
+        "P": 7,
+        "T": 8,
+        "X": 9
+      },
+      "cases": {
+        "P:[*]start||Idle>Idle|beginStep|InStep>InStep|endStep [成功]|Idle>Idle|beginStep|InStep>InStep|endStep [失敗] / write|Written>Written||[*]end": {
+          "id": "DD-TRREC-RECORDER-P001",
+          "status": "active",
+          "title": "開始 → 待機 → [beginStep] ステップ記録中 → [endStep [成功]] 待機 → [beginStep] ステップ記録中 → [endStep [失敗] / write] 書き込み済み → 終了"
+        },
+        "P:[*]start||Idle>Idle|beginStep|InStep>InStep|endStep [成功]|Idle>Idle|write|Written>Written||[*]end": {
+          "id": "DD-TRREC-RECORDER-P002",
+          "status": "active",
+          "title": "開始 → 待機 → [beginStep] ステップ記録中 → [endStep [成功]] 待機 → [write] 書き込み済み → 終了"
+        },
+        "P:[*]start||Idle>Idle|beginStep|InStep>InStep|endStep [成功]|Idle>Idle|fail / write|Written>Written||[*]end": {
+          "id": "DD-TRREC-RECORDER-P003",
+          "status": "active",
+          "title": "開始 → 待機 → [beginStep] ステップ記録中 → [endStep [成功]] 待機 → [fail / write] 書き込み済み → 終了"
+        },
+        "P:[*]start||Idle>Idle|beginStep|InStep>InStep|endStep [失敗] / write|Written>Written||[*]end": {
+          "id": "DD-TRREC-RECORDER-P004",
+          "status": "active",
+          "title": "開始 → 待機 → [beginStep] ステップ記録中 → [endStep [失敗] / write] 書き込み済み → 終了"
+        },
+        "P:[*]start||Idle>Idle|write|Written>Written||[*]end": {
+          "id": "DD-TRREC-RECORDER-P005",
+          "status": "active",
+          "title": "開始 → 待機 → [write] 書き込み済み → 終了"
+        },
+        "P:[*]start||Idle>Idle|fail / write|Written>Written||[*]end": {
+          "id": "DD-TRREC-RECORDER-P006",
+          "status": "active",
+          "title": "開始 → 待機 → [fail / write] 書き込み済み → 終了"
+        },
+        "T:[*]start||Idle": {
+          "id": "DD-TRREC-RECORDER-T001",
+          "status": "active",
+          "title": "開始 --> 待機"
+        },
+        "T:Idle|beginStep|InStep": {
+          "id": "DD-TRREC-RECORDER-T002",
+          "status": "active",
+          "title": "待機 --[beginStep]--> ステップ記録中"
+        },
+        "T:InStep|endStep [成功]|Idle": {
+          "id": "DD-TRREC-RECORDER-T003",
+          "status": "active",
+          "title": "ステップ記録中 --[endStep [成功]]--> 待機"
+        },
+        "T:InStep|endStep [失敗] / write|Written": {
+          "id": "DD-TRREC-RECORDER-T004",
+          "status": "active",
+          "title": "ステップ記録中 --[endStep [失敗] / write]--> 書き込み済み"
+        },
+        "T:Idle|write|Written": {
+          "id": "DD-TRREC-RECORDER-T005",
+          "status": "active",
+          "title": "待機 --[write]--> 書き込み済み"
+        },
+        "T:Idle|fail / write|Written": {
+          "id": "DD-TRREC-RECORDER-T006",
+          "status": "active",
+          "title": "待機 --[fail / write]--> 書き込み済み"
+        },
+        "T:Written||[*]end": {
+          "id": "DD-TRREC-RECORDER-T007",
+          "status": "active",
+          "title": "書き込み済み --> 終了"
+        },
+        "X:Idle|endStep": {
+          "id": "DD-TRREC-RECORDER-X001",
+          "status": "active",
+          "title": "待機 で [endStep]"
+        },
+        "X:InStep|beginStep": {
+          "id": "DD-TRREC-RECORDER-X002",
+          "status": "active",
+          "title": "ステップ記録中 で [beginStep]"
+        },
+        "X:InStep|write": {
+          "id": "DD-TRREC-RECORDER-X003",
+          "status": "active",
+          "title": "ステップ記録中 で [write]"
+        },
+        "X:InStep|fail": {
+          "id": "DD-TRREC-RECORDER-X004",
+          "status": "active",
+          "title": "ステップ記録中 で [fail]"
+        },
+        "X:Written|beginStep": {
+          "id": "DD-TRREC-RECORDER-X005",
+          "status": "active",
+          "title": "書き込み済み で [beginStep]"
+        },
+        "X:Written|endStep": {
+          "id": "DD-TRREC-RECORDER-X006",
+          "status": "active",
+          "title": "書き込み済み で [endStep]"
+        },
+        "X:Written|write": {
+          "id": "DD-TRREC-RECORDER-X007",
+          "status": "active",
+          "title": "書き込み済み で [write]"
+        },
+        "X:Written|fail": {
+          "id": "DD-TRREC-RECORDER-X008",
+          "status": "active",
+          "title": "書き込み済み で [fail]"
+        }
+      }
+    },
+    "DD-TRVIEW-INITIAL": {
+      "doc": "docs/design/detailed/trace.md",
+      "diagram": "initial",
+      "next": {
+        "P": 4,
+        "T": 6
+      },
+      "cases": {
+        "P:A||B>B|いいえ|S1": {
+          "id": "DD-TRVIEW-INITIAL-P001",
+          "status": "active",
+          "title": "トレースを表示 → status が failed → [いいえ] ステップ 1"
+        },
+        "P:A||B>B|はい|C>C|はい|SF": {
+          "id": "DD-TRVIEW-INITIAL-P002",
+          "status": "active",
+          "title": "トレースを表示 → status が failed → [はい] failedStep が 1 以上 → [はい] failedStep"
+        },
+        "P:A||B>B|はい|C>C|いいえ|S0": {
+          "id": "DD-TRVIEW-INITIAL-P003",
+          "status": "active",
+          "title": "トレースを表示 → status が failed → [はい] failedStep が 1 以上 → [いいえ] 選択なし（開始前のエラーを表示）"
+        },
+        "T:A||B": {
+          "id": "DD-TRVIEW-INITIAL-T001",
+          "status": "active",
+          "title": "トレースを表示 --> status が failed"
+        },
+        "T:B|いいえ|S1": {
+          "id": "DD-TRVIEW-INITIAL-T002",
+          "status": "active",
+          "title": "status が failed --[いいえ]--> ステップ 1"
+        },
+        "T:B|はい|C": {
+          "id": "DD-TRVIEW-INITIAL-T003",
+          "status": "active",
+          "title": "status が failed --[はい]--> failedStep が 1 以上"
+        },
+        "T:C|はい|SF": {
+          "id": "DD-TRVIEW-INITIAL-T004",
+          "status": "active",
+          "title": "failedStep が 1 以上 --[はい]--> failedStep"
+        },
+        "T:C|いいえ|S0": {
+          "id": "DD-TRVIEW-INITIAL-T005",
+          "status": "active",
+          "title": "failedStep が 1 以上 --[いいえ]--> 選択なし（開始前のエラーを表示）"
+        }
+      }
+    },
+    "DD-TRVIEW-READ": {
+      "doc": "docs/design/detailed/trace.md",
+      "diagram": "read",
+      "next": {
+        "P": 9,
+        "T": 16
+      },
+      "cases": {
+        "P:A||V>V|合わない|R0": {
+          "id": "DD-TRVIEW-READ-P001",
+          "status": "active",
+          "title": "read → runId と testId が形式に合う → [合わない] 400"
+        },
+        "P:A||V>V|合う|B>B|ない|R1": {
+          "id": "DD-TRVIEW-READ-P002",
+          "status": "active",
+          "title": "read → runId と testId が形式に合う → [合う] 実行記録がある → [ない] unknownRun"
+        },
+        "P:A||V>V|合う|B>B|ある|C>C|ない|R2": {
+          "id": "DD-TRVIEW-READ-P003",
+          "status": "active",
+          "title": "read → runId と testId が形式に合う → [合う] 実行記録がある → [ある] results に testId がある → [ない] notInRun"
+        },
+        "P:A||V>V|合う|B>B|ある|C>C|ある|D>D|ない|R3": {
+          "id": "DD-TRVIEW-READ-P004",
+          "status": "active",
+          "title": "read → runId と testId が形式に合う → [合う] 実行記録がある → [ある] results に testId がある → [ある] 記録の traces がある → [ない] beforeTrace"
+        },
+        "P:A||V>V|合う|B>B|ある|C>C|ある|D>D|ある|E>E|ない|F>F|はい|R5": {
+          "id": "DD-TRVIEW-READ-P005",
+          "status": "active",
+          "title": "read → runId と testId が形式に合う → [合う] 実行記録がある → [ある] results に testId がある → [ある] 記録の traces がある → [ある] traces に testId がある → [ない] 結果が error → [はい] aborted"
+        },
+        "P:A||V>V|合う|B>B|ある|C>C|ある|D>D|ある|E>E|ない|F>F|いいえ|R6": {
+          "id": "DD-TRVIEW-READ-P006",
+          "status": "active",
+          "title": "read → runId と testId が形式に合う → [合う] 実行記録がある → [ある] results に testId がある → [ある] 記録の traces がある → [ある] traces に testId がある → [ない] 結果が error → [いいえ] notRecorded"
+        },
+        "P:A||V>V|合う|B>B|ある|C>C|ある|D>D|ある|E>E|ある|G>G|読めない|R4": {
+          "id": "DD-TRVIEW-READ-P007",
+          "status": "active",
+          "title": "read → runId と testId が形式に合う → [合う] 実行記録がある → [ある] results に testId がある → [ある] 記録の traces がある → [ある] traces に testId がある → [ある] ファイルを読める → [読めない] pruned"
+        },
+        "P:A||V>V|合う|B>B|ある|C>C|ある|D>D|ある|E>E|ある|G>G|読める|OK": {
+          "id": "DD-TRVIEW-READ-P008",
+          "status": "active",
+          "title": "read → runId と testId が形式に合う → [合う] 実行記録がある → [ある] results に testId がある → [ある] 記録の traces がある → [ある] traces に testId がある → [ある] ファイルを読める → [読める] TraceFile"
+        },
+        "T:A||V": {
+          "id": "DD-TRVIEW-READ-T001",
+          "status": "active",
+          "title": "read --> runId と testId が形式に合う"
+        },
+        "T:V|合わない|R0": {
+          "id": "DD-TRVIEW-READ-T002",
+          "status": "active",
+          "title": "runId と testId が形式に合う --[合わない]--> 400"
+        },
+        "T:V|合う|B": {
+          "id": "DD-TRVIEW-READ-T003",
+          "status": "active",
+          "title": "runId と testId が形式に合う --[合う]--> 実行記録がある"
+        },
+        "T:B|ない|R1": {
+          "id": "DD-TRVIEW-READ-T004",
+          "status": "active",
+          "title": "実行記録がある --[ない]--> unknownRun"
+        },
+        "T:B|ある|C": {
+          "id": "DD-TRVIEW-READ-T005",
+          "status": "active",
+          "title": "実行記録がある --[ある]--> results に testId がある"
+        },
+        "T:C|ない|R2": {
+          "id": "DD-TRVIEW-READ-T006",
+          "status": "active",
+          "title": "results に testId がある --[ない]--> notInRun"
+        },
+        "T:C|ある|D": {
+          "id": "DD-TRVIEW-READ-T007",
+          "status": "active",
+          "title": "results に testId がある --[ある]--> 記録の traces がある"
+        },
+        "T:D|ない|R3": {
+          "id": "DD-TRVIEW-READ-T008",
+          "status": "active",
+          "title": "記録の traces がある --[ない]--> beforeTrace"
+        },
+        "T:D|ある|E": {
+          "id": "DD-TRVIEW-READ-T009",
+          "status": "active",
+          "title": "記録の traces がある --[ある]--> traces に testId がある"
+        },
+        "T:E|ない|F": {
+          "id": "DD-TRVIEW-READ-T010",
+          "status": "active",
+          "title": "traces に testId がある --[ない]--> 結果が error"
+        },
+        "T:F|はい|R5": {
+          "id": "DD-TRVIEW-READ-T011",
+          "status": "active",
+          "title": "結果が error --[はい]--> aborted"
+        },
+        "T:F|いいえ|R6": {
+          "id": "DD-TRVIEW-READ-T012",
+          "status": "active",
+          "title": "結果が error --[いいえ]--> notRecorded"
+        },
+        "T:E|ある|G": {
+          "id": "DD-TRVIEW-READ-T013",
+          "status": "active",
+          "title": "traces に testId がある --[ある]--> ファイルを読める"
+        },
+        "T:G|読めない|R4": {
+          "id": "DD-TRVIEW-READ-T014",
+          "status": "active",
+          "title": "ファイルを読める --[読めない]--> pruned"
+        },
+        "T:G|読める|OK": {
+          "id": "DD-TRVIEW-READ-T015",
+          "status": "active",
+          "title": "ファイルを読める --[読める]--> TraceFile"
+        }
+      }
+    },
+    "DD-TRVIEW-SELECT": {
+      "doc": "docs/design/detailed/trace.md",
+      "diagram": "select",
+      "next": {
+        "T": 9,
+        "X": 10
+      },
+      "cases": {
+        "T:[*]start||Loading": {
+          "id": "DD-TRVIEW-SELECT-T001",
+          "status": "active",
+          "title": "開始 --> 読み込み中"
+        },
+        "T:Loading|取得 [あり]|Shown": {
+          "id": "DD-TRVIEW-SELECT-T002",
+          "status": "active",
+          "title": "読み込み中 --[取得 [あり]]--> 表示"
+        },
+        "T:Loading|取得 [なし]|None": {
+          "id": "DD-TRVIEW-SELECT-T003",
+          "status": "active",
+          "title": "読み込み中 --[取得 [なし]]--> トレースなし"
+        },
+        "T:Shown|ステップを選ぶ|Shown": {
+          "id": "DD-TRVIEW-SELECT-T004",
+          "status": "active",
+          "title": "表示 --[ステップを選ぶ]--> 表示"
+        },
+        "T:Shown|前 [先頭でない]|Shown": {
+          "id": "DD-TRVIEW-SELECT-T005",
+          "status": "active",
+          "title": "表示 --[前 [先頭でない]]--> 表示"
+        },
+        "T:Shown|次 [末尾でない]|Shown": {
+          "id": "DD-TRVIEW-SELECT-T006",
+          "status": "active",
+          "title": "表示 --[次 [末尾でない]]--> 表示"
+        },
+        "T:Shown|別のトレースを開く|Loading": {
+          "id": "DD-TRVIEW-SELECT-T007",
+          "status": "active",
+          "title": "表示 --[別のトレースを開く]--> 読み込み中"
+        },
+        "T:None|別のトレースを開く|Loading": {
+          "id": "DD-TRVIEW-SELECT-T008",
+          "status": "active",
+          "title": "トレースなし --[別のトレースを開く]--> 読み込み中"
+        },
+        "X:Loading|ステップを選ぶ": {
+          "id": "DD-TRVIEW-SELECT-X001",
+          "status": "active",
+          "title": "読み込み中 で [ステップを選ぶ]"
+        },
+        "X:Loading|前": {
+          "id": "DD-TRVIEW-SELECT-X002",
+          "status": "active",
+          "title": "読み込み中 で [前]"
+        },
+        "X:Loading|次": {
+          "id": "DD-TRVIEW-SELECT-X003",
+          "status": "active",
+          "title": "読み込み中 で [次]"
+        },
+        "X:Loading|別のトレースを開く": {
+          "id": "DD-TRVIEW-SELECT-X004",
+          "status": "active",
+          "title": "読み込み中 で [別のトレースを開く]"
+        },
+        "X:Shown|取得": {
+          "id": "DD-TRVIEW-SELECT-X005",
+          "status": "active",
+          "title": "表示 で [取得]"
+        },
+        "X:None|取得": {
+          "id": "DD-TRVIEW-SELECT-X006",
+          "status": "active",
+          "title": "トレースなし で [取得]"
+        },
+        "X:None|ステップを選ぶ": {
+          "id": "DD-TRVIEW-SELECT-X007",
+          "status": "active",
+          "title": "トレースなし で [ステップを選ぶ]"
+        },
+        "X:None|前": {
+          "id": "DD-TRVIEW-SELECT-X008",
+          "status": "active",
+          "title": "トレースなし で [前]"
+        },
+        "X:None|次": {
+          "id": "DD-TRVIEW-SELECT-X009",
+          "status": "active",
+          "title": "トレースなし で [次]"
         }
       }
     },

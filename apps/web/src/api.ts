@@ -1,6 +1,7 @@
 import type { Graph, GraphDiff, StateEventTable, TestCase } from '@ddv/graph';
 import type { DdvConfig, DiagramBlock, DirectiveRef, DocElement, Heading, SourceBlock, TocEntry } from '@ddv/core';
 import type { ElementPatch } from '@ddv/mock/tune-patch';
+import type { TraceFile } from '@ddv/mock/trace-format';
 
 export type { Graph, GraphDiff, StateEventTable, TestCase, DdvConfig, DiagramBlock, DocElement, Heading, SourceBlock, TocEntry };
 
@@ -23,7 +24,12 @@ export interface CaseResult {
   test: string;
   runId?: string;
   at?: string;
+  /** `/api/results/latest`: the trace of that run is still there. */
+  trace?: boolean;
 }
+
+/** `GET /api/traces/{runId}/{testId}`: the trace plus the run's commit. */
+export type TraceResponse = TraceFile & { commit?: string; dirty?: boolean };
 
 export interface MatrixCase extends TestCase {
   id: string;
@@ -109,6 +115,85 @@ export interface RunSummary {
   results: Record<string, CaseResult>;
   total: number;
   log?: string[];
+  kind?: string;
+  commit?: string;
+  dirty?: boolean;
+  rerunOf?: string;
+  attempt?: number;
+  times?: number;
+  traces?: string[];
+  /** `/api/runs/{id}`: whether each trace file still exists. */
+  traceOf?: Record<string, boolean>;
+}
+
+export type RecentMark = TestStatus | 'none';
+export type CoverageClass = 'unlinked' | 'unexecuted' | 'passed' | 'failed' | 'skipped';
+
+export interface TestSummary {
+  recent: RecentMark[];
+  recentAt: Array<{ at: string; commit?: string; dirty?: boolean } | null>;
+  flaky: boolean;
+  flakyCommits: string[];
+}
+
+export interface HistorySummary {
+  tests: Record<string, TestSummary>;
+  flakyCount: number;
+  rerunnable: number;
+}
+
+export interface HistoryEntry {
+  runId: string;
+  at: string;
+  commit?: string;
+  dirty?: boolean;
+  rerunOf?: string;
+  attempt?: number;
+  times?: number;
+  status: TestStatus;
+  durationMs: number;
+  message?: string;
+  trace: boolean;
+}
+
+export interface TestHistory {
+  id: string;
+  known: boolean;
+  doc?: string;
+  diagram?: string;
+  title?: string;
+  entries: HistoryEntry[];
+  changed: string[];
+  firstFailure?: HistoryEntry;
+  flakyCommits: string[];
+}
+
+export interface FlakyEntry {
+  id: string;
+  doc: string;
+  commits: Array<{ commit: string; passed: number; failed: number }>;
+  lastFailedAt: string;
+  lastFailedRun: string;
+}
+
+export interface CoverageCount {
+  ids: number;
+  linked: number;
+  executed: number;
+  passed: number;
+}
+
+export interface ElementCoverage {
+  edges: Record<number, CoverageClass>;
+  nodes: Record<string, CoverageClass>;
+}
+
+export interface DocCoverage {
+  path: string;
+  total: CoverageCount;
+  diagrams: Record<string, CoverageCount>;
+  cases: Record<string, CoverageClass>;
+  elements: Record<string, ElementCoverage>;
 }
 
 export type StepValue = string | number | boolean;
@@ -193,9 +278,90 @@ export class ApiError extends Error {
     message: string,
     readonly status: number,
     readonly code?: string,
+    /** Response body of a refused request (test data save: errors / warnings). */
+    readonly body?: Record<string, unknown>,
   ) {
     super(message);
   }
+}
+
+// --- Test data editor (DD-TDEDIT) ---
+
+export type TdValue = string | number | boolean | null;
+export type TdRow = Record<string, TdValue>;
+export type FixtureTables = Record<string, TdRow[]>;
+export type TdWorkspaceKind = 'local' | 'pr' | 'branch';
+export type IssueCode = 'schema' | 'generated' | 'duplicateKey' | 'emptyKey' | 'unknownFixture' | 'conflict' | 'unknownElement' | 'unknownTable' | 'sharedFixture';
+
+export interface TdScenario {
+  id: string;
+  title: string;
+  fixtures?: string[];
+  start: string;
+  steps: Step[];
+}
+
+export interface FileData<T> {
+  name: string;
+  path: string;
+  hash: string;
+  data: T;
+}
+
+export interface MockField {
+  key: string;
+  kind: 'text' | 'number' | 'select' | 'checkbox';
+  required: boolean;
+  options: string[];
+}
+
+export interface TestDataBundle {
+  scenario: FileData<TdScenario>;
+  fixtures: FileData<FixtureTables>[];
+  availableFixtures: string[];
+  mock: { fields: MockField[]; testids: string[]; tables: Array<{ name: string; key: string }> };
+  editable: boolean;
+  readonlyReason?: string;
+  workspace: TdWorkspaceKind;
+  headSha?: string;
+  transitions: ScenarioTransition[];
+  retired: boolean;
+}
+
+export interface TestDataDraft {
+  scenarioId: string;
+  scenario: TdScenario;
+  fixtures: Record<string, FixtureTables>;
+  base: Record<string, string>;
+  headSha?: string;
+  comment?: string;
+}
+
+export interface DataIssue {
+  file: string;
+  path: string;
+  code: IssueCode;
+  message: string;
+}
+
+export interface LineHunk {
+  startLine: number;
+  endLine: number;
+  before: string[];
+  after: string[];
+}
+
+export interface ValidationResult {
+  errors: DataIssue[];
+  warnings: DataIssue[];
+  diff: Array<{ path: string; hunks: LineHunk[] }>;
+}
+
+export interface SaveResult {
+  mode: 'file' | 'suggestion';
+  files: string[];
+  comments: string[];
+  warnings?: string[];
 }
 
 export interface DepsTarget {
@@ -240,7 +406,7 @@ export async function json<T>(res: Response): Promise<T> {
   if (!res.ok && !(body && typeof body === 'object' && 'ok' in body)) {
     const b = body as { error?: string; message?: string; code?: string };
     if (res.status === 403 && b.code === 'untrusted') window.dispatchEvent(new CustomEvent('ddv-untrusted'));
-    throw new ApiError(b.message ?? b.error ?? `HTTP ${res.status}`, res.status, b.code);
+    throw new ApiError(b.message ?? b.error ?? `HTTP ${res.status}`, res.status, b.code, body && typeof body === 'object' ? (body as Record<string, unknown>) : undefined);
   }
   return body as T;
 }
@@ -268,12 +434,22 @@ export function createApi(ws: string) {
     runs: () => get<RunSummary[]>('/api/runs'),
     run: (id: string) => get<RunSummary>(`/api/runs/${id}`),
     startRun: (body: { ids?: string[]; runner?: string }) => post(A('/api/tests/run'), body).then((r) => json<{ id: string }>(r)),
+    rerun: (times: number) => post(A('/api/tests/rerun'), { times }).then((r) => json<{ id: string; status: 'running'; rerunOf: string; attempt: number; times: number }>(r)),
+    historySummary: () => get<HistorySummary>('/api/history/summary'),
+    historyTest: (id: string) => get<TestHistory>(`/api/history/tests/${encodeURIComponent(id)}`),
+    flaky: () => get<FlakyEntry[]>('/api/history/flaky'),
+    trace: (runId: string, id: string) => get<TraceResponse>(`/api/traces/${encodeURIComponent(runId)}/${encodeURIComponent(id)}`),
+    traceShot: (runId: string, id: string, n: number) => A(`/api/traces/${encodeURIComponent(runId)}/${encodeURIComponent(id)}/steps/${n}.png`),
+    coverage: (path: string) => get<DocCoverage>(`/api/coverage?path=${encodeURIComponent(path)}`),
     deps: () => get<DepsStatus>('/api/deps'),
     installDeps: () => post(A('/api/deps/install')).then((r) => json<{ runId: string; deps: DepsStatus }>(r)),
     generateIds: () => fetch(A('/api/testids/generate'), { method: 'POST' }).then((r) => json<{ changed: boolean; added: string[]; retired: string[] }>(r)),
     scenarios: () => get<{ scenarios: ScenarioSummary[] }>('/api/mocks/scenarios'),
     scenario: (id: string) => get<ScenarioDetail>(`/api/mocks/scenario?id=${encodeURIComponent(id)}`),
     played: (body: { id: string; ok: boolean; failures?: StepFailure[] }) => post(A('/api/mocks/played'), body).then((r) => json<unknown>(r)),
+    testData: (scenario: string) => get<TestDataBundle>(`/api/testdata?scenario=${encodeURIComponent(scenario)}`),
+    validateTestData: (draft: TestDataDraft) => post(A('/api/testdata/validate'), draft).then((r) => json<ValidationResult>(r)),
+    saveTestData: (draft: TestDataDraft) => post(A('/api/testdata/save'), draft).then((r) => json<SaveResult>(r)),
     scaffold: (body: { mock?: string } = {}) => post(A('/api/mocks/scaffold'), body).then((r) => json<Record<string, unknown>>(r)),
     mockSource: (body: { mock: string; path: number[]; expect: { tag: string; testid?: string }; patch?: ElementPatch }) =>
       post(A('/api/mock-source'), body).then((r) => json<MockSourceResult>(r)),
@@ -435,7 +611,7 @@ export interface Thread {
 export type ReviewEvent = 'COMMENT' | 'APPROVE' | 'REQUEST_CHANGES';
 
 export interface ElementRef {
-  kind: 'block' | 'tableRow' | 'node' | 'edge' | 'diagram' | 'matrixRow' | 'mockElement';
+  kind: 'block' | 'tableRow' | 'node' | 'edge' | 'diagram' | 'matrixRow' | 'mockElement' | 'testData';
   key: string;
   label?: string;
 }

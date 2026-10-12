@@ -1,5 +1,6 @@
 import type { Step, StepFailure } from './api.ts';
 import type { ElementPatch, PickedElement } from '@ddv/mock/tune-patch';
+import type { LiveStepTrace, TraceStep } from '@ddv/mock/trace-format';
 
 /** BD-MOCK-PLAYER (docs/design/basic/mock-player.md#プレイヤー). */
 export type PlayerState = 'Idle' | 'Playing' | 'Paused' | 'Done' | 'Failed';
@@ -64,13 +65,82 @@ export interface StepResult {
   screen: string | null;
   failures: StepFailure[];
   message?: string;
+  /** Step record for the live view (absent when the runtime does not support it). */
+  trace?: LiveStepTrace;
 }
 
 export interface PlayerTransport {
   /** Sends ddv:reset and resolves on the following ddv:ready. */
-  reset(fixtures: string[], start?: string): Promise<{ screen: string | null }>;
-  /** Sends ddv:step and resolves on the matching ddv:result. */
-  step(index: number, step: Step, highlight?: StepHighlight): Promise<StepResult>;
+  reset(fixtures: string[], start?: string, data?: DraftData): Promise<{ screen: string | null }>;
+  /** Sends ddv:step and resolves on the matching ddv:result. `trace` asks the runtime for the step record. */
+  step(index: number, step: Step, highlight?: StepHighlight, trace?: boolean): Promise<StepResult>;
+}
+
+/** Contents of fixtures by name (ddv:reset data): used instead of the files (DD-TDEDIT 編集中の再生). */
+export type DraftData = Record<string, Record<string, Array<Record<string, unknown>>>>;
+
+export interface LiveTraceSnapshot {
+  steps: TraceStep[];
+  /** false once a result came back without `trace` (old runtime). */
+  supported: boolean;
+  /** Playing the data being edited (test data editor). */
+  draft: boolean;
+}
+
+/** Step records of the player's playback, kept in memory only (DD-TRVIEW ライブ表示). */
+export class LiveTrace {
+  private snap: LiveTraceSnapshot = { steps: [], supported: true, draft: false };
+  private listeners = new Set<() => void>();
+
+  subscribe = (fn: () => void): (() => void) => {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  };
+
+  getSnapshot = (): LiveTraceSnapshot => this.snap;
+
+  get steps(): TraceStep[] {
+    return this.snap.steps;
+  }
+
+  get supported(): boolean {
+    return this.snap.supported;
+  }
+
+  get draft(): boolean {
+    return this.snap.draft;
+  }
+
+  /** Adds (or replaces, for the same index) the record of step `index` (0-based). `responded` = false for a timeout. */
+  add(index: number, step: Step, result: StepResult, durationMs: number, responded = true) {
+    const t = result.trace;
+    const rec: TraceStep = {
+      index: index + 1,
+      event: step.event,
+      ...(step.input ? { input: step.input } : {}),
+      ...(step.click !== undefined ? { click: step.click } : {}),
+      ...(step.do !== undefined ? { do: step.do } : {}),
+      screenBefore: t?.screenBefore ?? null,
+      screenAfter: result.screen,
+      expects: t?.expects ?? [],
+      ok: result.ok,
+      ...(result.message ? { error: result.message } : {}),
+      durationMs: Math.max(0, Math.round(durationMs)),
+      calls: t?.calls ?? [],
+      db: t ? t.db : null,
+    };
+    const steps = [...this.snap.steps.filter((s) => s.index !== rec.index), rec].sort((a, b) => a.index - b.index);
+    this.emit({ steps, supported: this.snap.supported && (!responded || !!t) });
+  }
+
+  clear(draft = false) {
+    this.emit({ steps: [], supported: true, draft });
+  }
+
+  private emit(p: Partial<LiveTraceSnapshot>) {
+    this.snap = { ...this.snap, ...p };
+    for (const l of [...this.listeners]) l();
+  }
 }
 
 export interface PlayerTimer {
@@ -115,6 +185,8 @@ export interface PlayerSnapshot {
   highlight: boolean;
   screen: string | null;
   failure: PlayerFailure | null;
+  /** Playing the data being edited (playDraft): results are not reported as played. */
+  draft: boolean;
 }
 
 export interface PlayerOptions {
@@ -122,8 +194,12 @@ export interface PlayerOptions {
   timeoutMs?: number;
   speed?: number;
   highlight?: boolean;
+  /** Clock for the live view's step durations (ms). */
+  now?: () => number;
   /** Called when a playback reaches 完了 / 失敗. */
   onFinish?: (r: { id: string; ok: boolean; failures: StepFailure[] }) => void;
+  /** Called instead of onFinish when a draft playback (playDraft) reaches 完了 / 失敗. */
+  onDraftFinish?: (r: { id: string; ok: boolean; failures: StepFailure[] }) => void;
 }
 
 /** Framework-free player; React reads it with useSyncExternalStore(subscribe, getSnapshot). */
@@ -131,6 +207,7 @@ export class PlayerController {
   private snap: PlayerSnapshot;
   private listeners = new Set<() => void>();
   private scenario: PlayerScenario | null = null;
+  private data: DraftData | null = null;
   private timer: PlayerTimer;
   private timeoutMs: number;
   /** Invalidates in-flight work (load / reset / rewind). */
@@ -139,6 +216,8 @@ export class PlayerController {
   private loop = 0;
   private cancelSleep: (() => void) | null = null;
   private disposed = false;
+  readonly liveTrace = new LiveTrace();
+  private now: () => number;
 
   constructor(
     private transport: PlayerTransport,
@@ -146,7 +225,8 @@ export class PlayerController {
   ) {
     this.timer = opts.timer ?? defaultTimer;
     this.timeoutMs = opts.timeoutMs ?? RESPONSE_TIMEOUT_MS;
-    this.snap = { state: INITIAL_STATE, scenarioId: null, cursor: 0, total: 0, running: null, busy: false, speed: opts.speed ?? 1000, highlight: opts.highlight ?? false, screen: null, failure: null };
+    this.now = opts.now ?? (() => globalThis.performance?.now() ?? Date.now());
+    this.snap = { state: INITIAL_STATE, scenarioId: null, cursor: 0, total: 0, running: null, busy: false, speed: opts.speed ?? 1000, highlight: opts.highlight ?? false, screen: null, failure: null, draft: false };
   }
 
   subscribe = (fn: () => void): (() => void) => {
@@ -168,9 +248,29 @@ export class PlayerController {
 
   /** Loads a scenario and starts over at 停止 ([*] --> 停止). */
   load(scenario: PlayerScenario | null) {
+    this.loadWith(scenario, null);
+  }
+
+  /** Plays the data being edited: ddv:reset carries data, and the result is not reported as played (onDraftFinish). */
+  playDraft(scenario: PlayerScenario, data: DraftData): boolean {
+    this.loadWith(scenario, data);
+    return this.play();
+  }
+
+  private loadWith(scenario: PlayerScenario | null, data: DraftData | null) {
     this.invalidate();
     this.scenario = scenario;
-    this.set({ state: INITIAL_STATE, scenarioId: scenario?.id ?? null, cursor: 0, total: scenario?.steps.length ?? 0, running: null, busy: false, failure: null });
+    this.data = scenario ? data : null;
+    this.clearTrace();
+    this.set({ state: INITIAL_STATE, scenarioId: scenario?.id ?? null, cursor: 0, total: scenario?.steps.length ?? 0, running: null, busy: false, failure: null, draft: !!this.data });
+  }
+
+  private clearTrace() {
+    this.liveTrace.clear(!!this.data);
+  }
+
+  private resetMock(s: PlayerScenario) {
+    return this.transport.reset(s.fixtures ?? [], s.start, this.data ?? undefined);
   }
 
   /** Speed is a setting, not a state change. */
@@ -240,7 +340,7 @@ export class PlayerController {
       if (!(await this.doReset(epoch))) return;
       for (let i = 0; i < target; i++) {
         this.set({ running: i, busy: true });
-        const r = await this.callStep(i, steps[i]);
+        const r = await this.callStep(epoch, i, steps[i]);
         if (!this.alive(epoch)) return;
         if (!r.ok) {
           this.set({ running: null, busy: false, cursor: i, failure: this.failureOf(i, r) });
@@ -257,8 +357,9 @@ export class PlayerController {
     const to = nextState(this.snap.state, 'reset');
     if (!to) return false;
     this.invalidate();
+    this.clearTrace();
     this.set({ state: to, cursor: 0, running: null, busy: false, failure: null });
-    if (this.scenario) void this.transport.reset(this.scenario.fixtures ?? [], this.scenario.start).catch(() => {});
+    if (this.scenario) void this.resetMock(this.scenario).catch(() => {});
     return true;
   }
 
@@ -308,14 +409,20 @@ export class PlayerController {
     });
   }
 
-  private async callStep(index: number, step: Step, highlight?: StepHighlight): Promise<StepResult> {
+  /** Runs one step and records it in the live view (unless the work was invalidated meanwhile). */
+  private async callStep(epoch: number, index: number, step: Step, highlight?: StepHighlight): Promise<StepResult> {
+    const t0 = this.now();
+    let r: StepResult;
+    let responded = true;
     try {
-      if (!highlight) return await this.withTimeout(this.transport.step(index, step));
-      const ops = Object.keys(step.input ?? {}).length + (step.click !== undefined ? 1 : 0);
-      return await this.withTimeout(this.transport.step(index, step, highlight), highlight.holdMs * ops);
+      const ops = highlight ? Object.keys(step.input ?? {}).length + (step.click !== undefined ? 1 : 0) : 0;
+      r = await this.withTimeout(this.transport.step(index, step, highlight, true), highlight ? highlight.holdMs * ops : 0);
     } catch (e) {
-      return { ok: false, screen: null, failures: [], message: (e as Error)?.message || NO_RESPONSE };
+      responded = false;
+      r = { ok: false, screen: null, failures: [], message: (e as Error)?.message || NO_RESPONSE };
     }
+    if (this.alive(epoch)) this.liveTrace.add(index, step, r, this.now() - t0, responded);
+    return r;
   }
 
   private failureOf(index: number | null, r: { screen: string | null; failures: StepFailure[]; message?: string }): PlayerFailure {
@@ -326,9 +433,10 @@ export class PlayerController {
   /** Resets the mock to the scenario start; on failure records it (and fails a running playback). */
   private async doReset(epoch: number): Promise<boolean> {
     const s = this.scenario!;
+    this.clearTrace();
     this.set({ busy: true });
     try {
-      const r = await this.withTimeout(this.transport.reset(s.fixtures ?? [], s.start));
+      const r = await this.withTimeout(this.resetMock(s));
       if (!this.alive(epoch)) return false;
       this.set({ screen: r?.screen ?? this.snap.screen });
       return true;
@@ -348,7 +456,7 @@ export class PlayerController {
     const index = this.snap.cursor;
     this.set({ running: index, busy: true, failure: null });
     const highlight = this.snap.highlight ? { holdMs: highlightHoldMs(this.snap.speed) } : undefined;
-    const r = await this.callStep(index, s.steps[index], highlight);
+    const r = await this.callStep(epoch, index, s.steps[index], highlight);
     // A late result after reset / rewind / reload is ignored (ステップ終了 in 停止 etc.)
     if (!this.alive(epoch)) return;
     const guard: StepGuard = !r.ok ? 'mismatch' : index + 1 >= s.steps.length ? 'last' : 'remaining';
@@ -390,13 +498,16 @@ export class PlayerController {
 
   private finish(ok: boolean) {
     const s = this.scenario;
-    if (s) this.opts.onFinish?.({ id: s.id, ok, failures: this.snap.failure?.failures ?? [] });
+    if (!s) return;
+    const r = { id: s.id, ok, failures: this.snap.failure?.failures ?? [] };
+    if (this.data) this.opts.onDraftFinish?.(r);
+    else this.opts.onFinish?.(r);
   }
 }
 
 export type MockMessage =
   | { type: 'ddv:ready'; screen: string; version: string }
-  | { type: 'ddv:result'; index: number; ok: boolean; screen: string | null; failures: StepFailure[]; message?: string }
+  | { type: 'ddv:result'; index: number; ok: boolean; screen: string | null; failures: StepFailure[]; message?: string; trace?: LiveStepTrace }
   | { type: 'ddv:screen'; screen: string }
   | { type: 'ddv:error'; message: string }
   | ({ type: 'ddv:picked' } & PickedElement);
@@ -436,7 +547,8 @@ export function createFrameTransport(
     } else if (d.type === 'ddv:result') {
       const w2 = stepWaiters.get(d.index);
       stepWaiters.delete(d.index);
-      w2?.resolve({ ok: !!d.ok, screen: d.screen ?? null, failures: Array.isArray(d.failures) ? d.failures : [], message: d.message });
+      const trace = d.trace && typeof d.trace === 'object' ? d.trace : undefined;
+      w2?.resolve({ ok: !!d.ok, screen: d.screen ?? null, failures: Array.isArray(d.failures) ? d.failures : [], message: d.message, ...(trace ? { trace } : {}) });
     }
     opts.onMessage?.(d);
   };
@@ -456,25 +568,25 @@ export function createFrameTransport(
     });
 
   return {
-    reset(fixtures, start) {
+    reset(fixtures, start, data) {
       const run = async () => {
         // Initial load: wait for the runtime to announce itself (it may already have, unseen)
         if (!loaded) await nextReady(opts.bootWaitMs ?? 3000).catch(() => {});
         for (const w of stepWaiters.values()) w.reject(new Error('reset'));
         stepWaiters.clear();
         const p = nextReady(RESPONSE_TIMEOUT_MS);
-        post({ type: 'ddv:reset', fixtures, ...(start ? { start } : {}) });
+        post({ type: 'ddv:reset', fixtures, ...(start ? { start } : {}), ...(data ? { data } : {}) });
         return { screen: await p };
       };
       const r = chain.then(run, run);
       chain = r.catch(() => {});
       return r;
     },
-    step(index, step, highlight) {
+    step(index, step, highlight, trace) {
       return new Promise<StepResult>((resolve, reject) => {
         stepWaiters.get(index)?.reject(new Error('superseded'));
         stepWaiters.set(index, { resolve, reject });
-        post({ type: 'ddv:step', index, step, ...(highlight ? { highlight } : {}) });
+        post({ type: 'ddv:step', index, step, ...(highlight ? { highlight } : {}), ...(trace ? { trace: true } : {}) });
       });
     },
     send(msg) {

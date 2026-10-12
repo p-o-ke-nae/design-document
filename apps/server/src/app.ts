@@ -10,10 +10,14 @@ import { activeIds, docMatrices, generateAll, readLock, scanTestLinks, LOCK_PATH
 import { checkMocks, scaffoldMock } from '@ddv/mock';
 import { build as buildSuggestion, locate as locateMockElement, NO_SOURCE_MESSAGE, TuneError } from '@ddv/mock/tune';
 import { validatePatch } from '@ddv/mock/tune-patch';
-import { RunManager, RUNS_DIR, type RunEvent } from './runs.ts';
+import { RerunError, RunManager, RUNS_DIR, type RunEvent, type RunRecord } from './runs.ts';
+import { HistoryError, HistoryService } from './history.ts';
+import { TRACES_DIR } from './prune.ts';
+import { NO_TRACE_MESSAGE, TraceError, TraceStore } from './traces.ts';
 import { checkDeps, installDeps } from './deps.ts';
 import { listScenarios, recordPlay, scenarioDetail } from './scenarios.ts';
 import { checkId, SnapshotError, SnapshotService, SNAPSHOTS_DIR, type SnapKind } from './snapshots.ts';
+import { TestDataError, TestDataService, type Reviewer, type TestDataDraft, type TestDataWorkspace } from './testdata.ts';
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -42,10 +46,14 @@ export interface ServerContext {
   repoRoot: string;
   config: DdvConfig;
   runs: RunManager;
+  history: HistoryService;
+  traces: TraceStore;
   snapshots: SnapshotService;
   events: EventEmitter;
   /** GitHub workspaces: refuse test runs (409 deps-missing) until the runners' packages are installed. */
   checkDeps?: boolean;
+  /** GitHub workspaces: the kind (pr / branch) and review service for the test-data editor (DD-TDEDIT). Absent = the local workspace. */
+  testData?: () => TestDataWorkspace & { review?: Reviewer };
   close(): void;
 }
 
@@ -56,6 +64,8 @@ export async function createContext(repoRoot: string, opts: { watch?: boolean; s
     repoRoot: root,
     config: await loadConfig(root),
     runs: undefined as unknown as RunManager,
+    history: undefined as unknown as HistoryService,
+    traces: undefined as unknown as TraceStore,
     snapshots: undefined as unknown as SnapshotService,
     events: new EventEmitter(),
     close: () => {},
@@ -63,8 +73,11 @@ export async function createContext(repoRoot: string, opts: { watch?: boolean; s
   ctx.events.setMaxListeners(100);
   ctx.runs = new RunManager(root, () => ctx.config);
   ctx.runs.setMaxListeners(100);
+  ctx.history = new HistoryService(ctx.runs, root, () => ctx.config);
+  ctx.traces = new TraceStore(root, ctx.runs, () => ctx.config);
   ctx.snapshots = new SnapshotService(root, () => ctx.config, opts.snapshots);
   await ctx.runs.load();
+  await ctx.runs.prune();
   if (opts.watch !== false) {
     let watcher: FSWatcher | null = null;
     const pending = new Set<string>();
@@ -73,7 +86,7 @@ export async function createContext(repoRoot: string, opts: { watch?: boolean; s
       watcher = watch(root, { recursive: true }, (_ev, file) => {
         if (!file) return;
         const rel = toPosix(file.toString());
-        if (/(^|\/)(node_modules|\.git|bin|obj|dist|test-results|playwright-report)(\/|$)/.test(rel) || rel.startsWith(RUNS_DIR) || rel.startsWith(SNAPSHOTS_DIR)) return;
+        if (/(^|\/)(node_modules|\.git|bin|obj|dist|test-results|playwright-report)(\/|$)/.test(rel) || rel.startsWith(RUNS_DIR) || rel.startsWith(SNAPSHOTS_DIR) || rel.startsWith(TRACES_DIR)) return;
         pending.add(rel);
         if (timer) clearTimeout(timer);
         timer = setTimeout(async () => {
@@ -230,7 +243,51 @@ export function createApp(ctx: ServerContext): Hono {
     }
   });
 
-  app.get('/api/runs', (c) => c.json(ctx.runs.list().map(({ log: _log, ...r }) => ({ ...r, total: Object.keys(r.results).length }))));
+  app.post('/api/tests/rerun', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { times?: unknown };
+    const times = body.times;
+    if (typeof times !== 'number' || !Number.isInteger(times) || times < 1 || times > 5) {
+      const e = new RerunError('times-invalid');
+      return c.json({ error: e.message, code: e.code }, 400);
+    }
+    if (ctx.runs.activeTask('deps')) return c.json({ error: '依存の導入が進行中です。終わってから実行してください', code: 'deps-installing' }, 409);
+    if (ctx.checkDeps) {
+      const all = checkDeps(root, ctx.config);
+      if (all.targets.length) return c.json({ error: 'テストの実行に必要な依存が導入されていません', code: 'deps-missing', deps: { ...all, needed: true } }, 409);
+    }
+    try {
+      const run = ctx.runs.rerun(times);
+      return c.json({ id: run.id, status: run.status, rerunOf: run.rerunOf, attempt: run.attempt, times: run.times }, 202);
+    } catch (e) {
+      if (e instanceof RerunError) return c.json({ error: e.message, code: e.code }, e.code === 'times-invalid' ? 400 : 409);
+      return c.json({ error: (e as Error).message }, 409);
+    }
+  });
+
+  app.get('/api/history/summary', async (c) => c.json(await ctx.history.summary()));
+
+  app.get('/api/history/flaky', async (c) => c.json(await ctx.history.flaky()));
+
+  app.get('/api/history/tests/:id', async (c) => {
+    try {
+      return c.json(await ctx.history.test(c.req.param('id')));
+    } catch (e) {
+      if (e instanceof HistoryError) return c.json({ error: e.message, code: e.code }, e.status);
+      throw e;
+    }
+  });
+
+  app.get('/api/coverage', async (c) => {
+    const p = c.req.query('path');
+    if (!p) return c.json({ error: 'path is required' }, 400);
+    try {
+      return c.json(await ctx.history.coverage(p));
+    } catch {
+      return c.json({ error: `文書が見つかりません: ${p}`, code: 'not-found' }, 404);
+    }
+  });
+
+  app.get('/api/runs', (c) => c.json(ctx.runs.list().map(({ log: _log, traces: _traces, ...r }) => ({ ...r, total: Object.keys(r.results).length }))));
 
   app.get('/api/deps', (c) => c.json(checkDeps(root, ctx.config)));
 
@@ -256,7 +313,32 @@ export function createApp(ctx: ServerContext): Hono {
 
   app.get('/api/runs/:id', (c) => {
     const r = ctx.runs.runs.get(c.req.param('id'));
-    return r ? c.json(r) : c.json({ error: 'not found' }, 404);
+    if (!r) return c.json({ error: 'not found' }, 404);
+    const traceOf: Record<string, boolean> = {};
+    for (const id of r.traces ?? []) traceOf[id] = ctx.traces.exists(r.id, id);
+    return c.json({ ...r, traceOf });
+  });
+
+  app.get('/api/traces/:runId/:testId/steps/:file', async (c) => {
+    const m = /^(\d+)\.png$/.exec(c.req.param('file'));
+    try {
+      const p = m ? await ctx.traces.screenshot(c.req.param('runId'), c.req.param('testId'), Number(m[1])) : null;
+      if (!p) return c.json({ error: 'スクリーンショットはありません' }, 404);
+      return new Response(new Uint8Array(await fs.readFile(p)), { headers: { 'content-type': 'image/png', 'cache-control': 'private, max-age=86400' } });
+    } catch (e) {
+      if (e instanceof TraceError) return c.json({ code: e.code, error: e.message }, e.status);
+      throw e;
+    }
+  });
+
+  app.get('/api/traces/:runId/:testId', async (c) => {
+    try {
+      const r = await ctx.traces.read(c.req.param('runId'), c.req.param('testId'));
+      return r.ok ? c.json(r.trace) : c.json({ code: r.reason, error: NO_TRACE_MESSAGE[r.reason] }, 404);
+    } catch (e) {
+      if (e instanceof TraceError) return c.json({ code: e.code, error: e.message }, e.status);
+      throw e;
+    }
   });
 
   app.get('/api/runs/:id/events', (c) => {
@@ -291,7 +373,11 @@ export function createApp(ctx: ServerContext): Hono {
     });
   });
 
-  app.get('/api/results/latest', (c) => c.json(ctx.runs.latest()));
+  app.get('/api/results/latest', (c) => {
+    const out: Record<string, ReturnType<RunManager['latest']>[string] & { trace: boolean }> = {};
+    for (const [id, res] of Object.entries(ctx.runs.latest())) out[id] = { ...res, trace: !!ctx.runs.runs.get(res.runId)?.traces?.includes(id) && ctx.traces.exists(res.runId, id) };
+    return c.json(out);
+  });
 
   app.get('/api/events', (c) =>
     streamSSE(c, async (stream) => {
@@ -299,13 +385,17 @@ export function createApp(ctx: ServerContext): Hono {
       await new Promise<void>((resolve) => {
         const onChange = (paths: string[]) => void stream.writeSSE({ event: 'change', data: JSON.stringify(paths) });
         const onEnd = (id: string, run?: { kind?: string }) => void stream.writeSSE({ event: 'run-end', data: JSON.stringify({ id, kind: run?.kind ?? 'test' }) });
+        const onRun = (id: string, run: RunRecord) =>
+          void stream.writeSSE({ event: 'run', data: JSON.stringify({ id, kind: 'test', rerunOf: run.rerunOf, attempt: run.attempt, times: run.times }) });
         const ping = setInterval(() => void stream.writeSSE({ event: 'ping', data: '' }), 25000);
         ctx.events.on('change', onChange);
         ctx.runs.on('end', onEnd);
+        ctx.runs.on('run', onRun);
         stream.onAbort(() => {
           clearInterval(ping);
           ctx.events.off('change', onChange);
           ctx.runs.off('end', onEnd);
+          ctx.runs.off('run', onRun);
           resolve();
         });
       });
@@ -389,6 +479,44 @@ export function createApp(ctx: ServerContext): Hono {
     if (typeof body.id !== 'string' || !body.id || typeof body.ok !== 'boolean') return c.json({ error: 'id（文字列）と ok（真偽値）が必要です' }, 400);
     const rec = await recordPlay(root, body.id, body.ok, Array.isArray(body.failures) ? body.failures : undefined);
     return c.json({ id: body.id, ...rec });
+  });
+
+  // Test-data editor (DD-TDEDIT). A GitHub workspace without a PR is read-only (branch).
+  const testData = () => {
+    const w = ctx.testData?.() ?? { kind: ctx.checkDeps ? ('branch' as const) : ('local' as const) };
+    return { ws: w, svc: new TestDataService(root, ctx.config, w.review) };
+  };
+  const tdError = (c: Context, e: unknown) => {
+    if (e instanceof TestDataError) return c.json({ error: e.message, code: e.code, ...e.extra }, e.status);
+    throw e;
+  };
+  const draftOf = async (c: Context) => (await c.req.json().catch(() => null)) as TestDataDraft;
+
+  app.get('/api/testdata', async (c) => {
+    const { ws, svc } = testData();
+    try {
+      return c.json(await svc.load(c.req.query('scenario') ?? '', ws));
+    } catch (e) {
+      return tdError(c, e);
+    }
+  });
+
+  app.post('/api/testdata/validate', async (c) => {
+    const { ws, svc } = testData();
+    try {
+      return c.json(await svc.validate(await draftOf(c), ws));
+    } catch (e) {
+      return tdError(c, e);
+    }
+  });
+
+  app.post('/api/testdata/save', async (c) => {
+    const { ws, svc } = testData();
+    try {
+      return c.json(await svc.save(await draftOf(c), ws));
+    } catch (e) {
+      return tdError(c, e);
+    }
   });
 
   const snapError = (c: Context, e: unknown) => {
