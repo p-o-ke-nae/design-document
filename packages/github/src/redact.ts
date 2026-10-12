@@ -1,7 +1,14 @@
+function base64(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
 /** Values that reveal `token` when printed: the token itself and the base64 forms used in git's Basic auth header. */
 export function secretForms(token: string): string[] {
   if (!token) return [];
-  return [token, Buffer.from(`x-access-token:${token}`).toString('base64'), Buffer.from(token).toString('base64')];
+  return [token, base64(`x-access-token:${token}`), base64(token)];
 }
 
 /** Replaces every occurrence of the tokens (and their base64 forms) with `***`. */

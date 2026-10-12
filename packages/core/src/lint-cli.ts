@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import path from 'node:path';
 import { loadConfig } from './node.ts';
-import { lintRepo, formatIssues } from './lint.ts';
+import { formatIssues } from './lint.ts';
+import { lintRepo } from './lint-node.ts';
 
 const args = process.argv.slice(2);
 const repoIdx = args.indexOf('--repo');

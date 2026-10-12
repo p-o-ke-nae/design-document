@@ -55,6 +55,12 @@ export const ConfigSchema = z.object({
       maxTraceRuns: z.number().int().min(0).default(20),
     })
     .prefault({}),
+  /** Pages 版の配信元。あるときローカル版に「この画面の Pages 版の URL をコピー」を出す。 */
+  pages: z
+    .object({
+      url: z.url({ protocol: /^https$/, error: 'pages.url は https:// で始まる URL を書いてください' }).transform((u) => u.replace(/\/+$/, '')),
+    })
+    .optional(),
 });
 
 export type DdvConfig = z.infer<typeof ConfigSchema>;

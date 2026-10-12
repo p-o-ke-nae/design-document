@@ -1,18 +1,14 @@
 import { promises as fs, existsSync } from 'node:fs';
 import path from 'node:path';
-import YAML from 'yaml';
-import { parseConfig, inferDocKind, type DdvConfig, type DocKind } from './config.ts';
-import { parseDoc, type ParsedDoc } from './markdown.ts';
+import { parseConfig, type DdvConfig } from './config.ts';
+import { CONFIG_FILES, docEntryOf, parseConfigText, type DocEntry } from './doc.ts';
 
-export const CONFIG_FILES = ['ddv.config.yaml', 'ddv.config.yml', 'ddv.config.json'];
+export { CONFIG_FILES, docEntryOf, parseConfigText, type DocEntry } from './doc.ts';
 
 export async function loadConfig(repoRoot: string): Promise<DdvConfig> {
   for (const name of CONFIG_FILES) {
     const p = path.join(repoRoot, name);
-    if (existsSync(p)) {
-      const text = await fs.readFile(p, 'utf8');
-      return parseConfig(name.endsWith('.json') ? JSON.parse(text) : YAML.parse(text));
-    }
+    if (existsSync(p)) return parseConfigText(name, await fs.readFile(p, 'utf8'));
   }
   return parseConfig({});
 }
@@ -50,30 +46,8 @@ export async function walk(repoRoot: string, dir: string, filter: (rel: string) 
   return out.sort();
 }
 
-export interface DocEntry {
-  path: string;
-  kind: DocKind;
-  title: string;
-  id: string;
-  status: string;
-  parsed: ParsedDoc;
-  text: string;
-}
-
 export async function loadDoc(repoRoot: string, rel: string): Promise<DocEntry> {
-  const text = await fs.readFile(safeJoin(repoRoot, rel), 'utf8');
-  const parsed = parseDoc(text);
-  const fm = parsed.frontMatter;
-  const base = path.posix.basename(rel, '.md');
-  return {
-    path: rel,
-    kind: inferDocKind(rel, fm.kind),
-    title: parsed.title || base,
-    id: typeof fm.id === 'string' ? fm.id : base.toUpperCase(),
-    status: typeof fm.status === 'string' ? fm.status : 'draft',
-    parsed,
-    text,
-  };
+  return docEntryOf(rel, await fs.readFile(safeJoin(repoRoot, rel), 'utf8'));
 }
 
 export async function loadDocs(repoRoot: string, config: DdvConfig): Promise<DocEntry[]> {

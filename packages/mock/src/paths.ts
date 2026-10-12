@@ -1,7 +1,6 @@
 import { generateMatrix, parseMermaidGraph, splitLabel, type Graph } from '@ddv/graph';
-import type { DdvConfig, DiagramBlock } from '@ddv/core';
-import type { DocEntry } from '@ddv/core/node';
-import { diagramKeyOf, matrixOptionsFor, type TestIdLock } from '@ddv/testid';
+import type { DdvConfig, DiagramBlock, DocEntry } from '@ddv/core';
+import { diagramKeyOf, matrixOptionsFor, type TestIdLock } from '@ddv/testid/core';
 import type { PathSpec, PathTransition } from './types.ts';
 
 /**
