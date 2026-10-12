@@ -8,6 +8,8 @@ export interface GitHubClientOptions {
   maxPages?: number;
   /** Send requests without Authorization when no token is available (Pages edition). */
   anonymous?: boolean;
+  /** Called with the headers of every response (2xx and errors), e.g. for `RateMeter.update`. */
+  onResponse?(headers: Headers): void;
 }
 
 export interface RestResult<T> {
@@ -32,6 +34,7 @@ export class GitHubClient {
   readonly apiBase: string;
   private readonly maxPages: number;
   private readonly anonymous: boolean;
+  private readonly onResponse?: (headers: Headers) => void;
 
   constructor(
     private readonly tokens: TokenProvider,
@@ -41,6 +44,7 @@ export class GitHubClient {
     this.apiBase = (opts.apiBase ?? 'https://api.github.com').replace(/\/+$/, '');
     this.maxPages = opts.maxPages ?? MAX_PAGES;
     this.anonymous = opts.anonymous ?? false;
+    this.onResponse = opts.onResponse;
   }
 
   async rest<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -115,6 +119,11 @@ export class GitHubClient {
         });
       } catch (e) {
         throw new GitHubError('network', 0, `GitHub に接続できません: ${(e as Error).message}`);
+      }
+      try {
+        this.onResponse?.(res.headers);
+      } catch {
+        // A broken observer must not fail the request.
       }
       if (res.status === 401 && auth && attempt === 0 && this.tokens.unauthorized()) continue;
       if (!res.ok) throw toGitHubError(res, await res.json().catch(() => ({})));

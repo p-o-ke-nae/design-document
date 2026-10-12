@@ -75,6 +75,20 @@ describe('toGitHubError (APIERR)', () => {
     const c = new GitHubClient(tokens, { fetch: async () => json(200, { number: 12 }) });
     expect(await c.rest('GET', '/repos/o/r/pulls/12')).toEqual({ number: 12 });
   });
+  it('onResponse は 2xx・エラーの両方の応答ヘッダで呼ぶ', async () => {
+    const seen: (string | null)[] = [];
+    const tokens = { authorization: async () => null, unauthorized: () => false };
+    let status = 200;
+    const c = new GitHubClient(tokens, {
+      anonymous: true,
+      fetch: async () => json(status, {}, { 'x-ratelimit-remaining': String(status) }),
+      onResponse: (h) => seen.push(h.get('x-ratelimit-remaining')),
+    });
+    await c.rest('GET', '/repos/o/r');
+    status = 404;
+    await expect(c.rest('GET', '/repos/o/r')).rejects.toMatchObject({ kind: 'notFound' });
+    expect(seen).toEqual(['200', '404']);
+  });
   it('[DD-WSPACE-APIERR-P002] [DD-WSPACE-APIERR-T003] 401 は auth', () => {
     expect(toGitHubError({ status: 401, headers: h() }, { message: 'Bad credentials' }).kind).toBe('auth');
   });
