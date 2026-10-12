@@ -40,6 +40,11 @@ export function onActionsStatus(listener: (s: ActionsStatus) => void): () => voi
   return () => statusListeners.delete(listener);
 }
 
+/** Forgets the cached status (Pages: the target was loaded again, e.g. after the PAT changed). */
+export function resetActionsStatus(): void {
+  statusCache = null;
+}
+
 // --- SSE `actions` (received by the app's /api/events connection, kept here so that screens opened later see the replay) ---
 
 const trackers = new Map<string, TrackerUpdate>();

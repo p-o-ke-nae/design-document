@@ -6,7 +6,8 @@ import type { PagesConfig } from '@ddv/core';
 import { GitHubClient, GitHubError } from '@ddv/github';
 import { PAGES_CAPABILITIES } from '../backend/capabilities.ts';
 import { pagesFeed, setPagesContext } from '../backend/pages.ts';
-import type { OperationId } from '../backend/types.ts';
+import type { ActionsEvent as BackendActionsEvent, OperationId } from '../backend/types.ts';
+import { resetActionsStatus } from '../actionsApi.ts';
 import { notifyGate, setGate } from '../gate.tsx';
 import { BlobCache } from './blob-cache.ts';
 import { HeadWatcher } from './head-watcher.ts';
@@ -34,6 +35,8 @@ export class PagesRuntime {
   readonly pending: Promise<IdbPendingStore>;
   readonly loader: TargetLoader;
   private readonly channel: BroadcastChannel | null;
+  /** The built target whose Actions runs are followed. */
+  private current: BuiltTarget | null = null;
 
   constructor(config: PagesConfig | null | undefined = import.meta.env.DDV_PAGES_CONFIG) {
     this.config = config ?? DEFAULT_CONFIG;
@@ -71,6 +74,11 @@ export class PagesRuntime {
       if (ev.data?.type !== 'reviews-changed' || !s || s.target.kind !== 'pr' || !s.target.pr) return;
       if (ev.data.key === reviewKey(s.target.owner, s.target.repo, s.target.pr)) pagesFeed(targetWs(s.target)).onChange([]);
     });
+    // actions-run.md「実行の追跡」: Pages stops following the runs when the page closes.
+    globalThis.addEventListener?.('pagehide', () => {
+      this.current?.dispose();
+      this.current = null;
+    });
   }
 
   /** The `build` result of the current snapshot. */
@@ -79,6 +87,7 @@ export class PagesRuntime {
   }
 
   private async build(snap: TargetSnapshot): Promise<BuiltTarget> {
+    const scope = targetWs(snap.target);
     const built = await buildTarget(snap, {
       github: this.client,
       pat: this.pat,
@@ -92,7 +101,11 @@ export class PagesRuntime {
           notifyGate();
         }
       },
+      onActions: (e) => pagesFeed(scope).onActions(e as unknown as BackendActionsEvent),
     });
+    this.current?.dispose();
+    this.current = built;
+    resetActionsStatus();
     setPagesContext(built.scope, built.context);
     return built;
   }

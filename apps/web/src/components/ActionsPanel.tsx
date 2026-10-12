@@ -15,6 +15,7 @@ import {
   type ActionsStatus,
   type TrackerUpdate,
 } from '../actionsApi.ts';
+import { GateReason, useGate } from '../gate.tsx';
 import { actionsHref, useApp, viewHref } from '../state.tsx';
 import { StatusBadge } from './StatusBadge.tsx';
 import { TraceView } from './TraceView.tsx';
@@ -146,6 +147,7 @@ function ListView({ status }: { status: ActionsStatus }) {
     return f;
   });
   const [busy, setBusy] = useState(false);
+  const dispatchGate = useGate('actionsDispatch');
 
   const reload = useCallback(() => {
     actionsApi
@@ -238,10 +240,11 @@ function ListView({ status }: { status: ActionsStatus }) {
           <input value={ids} onChange={(e) => setIds(e.target.value)} maxLength={4000} data-testid="ids" />
         </label>
         {!fork && (
-          <button type="button" className="primary" disabled={!ready || busy || !list} title={ready ? undefined : status.reason} onClick={() => void dispatch(splitIds(ids), list?.rows ?? [])} data-testid="dispatch">
+          <button type="button" className="primary"           disabled={!ready || busy || !list || !dispatchGate.enabled} title={ready ? dispatchGate.reason : status.reason} onClick={() => void dispatch(splitIds(ids), list?.rows ?? [])} data-testid="dispatch">
             Actionsで実行
           </button>
         )}
+                  {ready && !fork && <GateReason gate={dispatchGate} />}
       </div>
       {shown && (
         <div className="notice warn" data-testid="dispatch-error">
@@ -566,6 +569,7 @@ function DetailView({ id, status }: { id: string; status: ActionsStatus }) {
   });
   const [approveError, setApproveError] = useState(flash?.error ?? '');
   const [off, setOff] = useState<Set<string>>(new Set());
+  const approveGate = useGate('snapshotApprove');
 
   useEffect(() => {
     actionsApi
@@ -601,11 +605,13 @@ function DetailView({ id, status }: { id: string; status: ActionsStatus }) {
     ? ACTIONS_TEXT.approveIds
     : status.state !== 'ready'
       ? status.reason
-      : status.target?.pr === undefined
-        ? ACTIONS_TEXT.notPr
-        : d.trimmed
-          ? ACTIONS_TEXT.trimmed
-          : '';
+      : !approveGate.enabled
+        ? (approveGate.reason ?? '')
+        : status.target?.pr === undefined
+          ? ACTIONS_TEXT.notPr
+          : d.trimmed
+            ? ACTIONS_TEXT.trimmed
+            : '';
   const commitUrl = (sha: string) => `https://github.com/${status.repo ?? ''}/commit/${sha}`;
 
   const approve = async () => {

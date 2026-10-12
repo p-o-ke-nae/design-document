@@ -140,8 +140,8 @@ export interface PagesContextOptions extends Omit<PagesContext, 'services' | 'pl
   /** PR targets (review・PR diff). */
   pr?: ServiceDeps['pr'];
   /**
-   * Actions (actions-run.md): the Actions slice plugs `PagesActionsTarget` in here (`ServiceDeps.actions`); its run tracker
-   * pushes into `pagesFeed(scope).onActions`. PagesApp does not set it yet.
+   * Actions (actions-run.md): the target's `ActionsService` over `PagesActionsTarget` (pages/target-context.ts `actionsOf`);
+   * its run tracker pushes into `pagesFeed(scope).onActions`.
    */
   actions?: ServiceDeps['actions'];
   env?: ServiceDeps['env'];
@@ -241,7 +241,12 @@ export function createPagesBackend(scope: string, getContext: () => PagesContext
     get capabilities() {
       return getContext()?.capabilities ?? PAGES_CAPABILITIES;
     },
-    subscribe: (listener) => pagesFeed(scope).add(listener),
+    subscribe: (listener) => {
+      const off = pagesFeed(scope).add(listener);
+      // Like the SSE `actions` replay: the latest update of every tracker of the target's ActionsService.
+      for (const u of getContext()?.services.actions?.replay() ?? []) listener({ type: 'actions', data: u as unknown as ActionsEvent });
+      return off;
+    },
     // Pages has no local runs (Actions runs arrive as `actions` events).
     followRun: (_id, handlers) => {
       queueMicrotask(() => handlers.onEnd?.(''));

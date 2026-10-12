@@ -3,9 +3,22 @@
  * `GitHubRepoReader`, the PR's review / diff deps and the lock warning. No DOM / React.
  */
 import type { DdvConfig } from '@ddv/core';
-import { GitHubChangeSource, StatusCommitter, type PendingReviewStore, type PrContext, type RepoEntry, type RepoReader } from '@ddv/services';
+import {
+  ActionsService,
+  GitHubChangeSource,
+  StatusCommitter,
+  systemEnv,
+  type ActionsEvent,
+  type HistoryService,
+  type PendingReviewStore,
+  type PrContext,
+  type RepoEntry,
+  type RepoReader,
+  type TrackerIntervals,
+} from '@ddv/services';
 import type { GitHubClient } from '@ddv/github';
 import type { PrInfo } from '../api.ts';
+import { PagesActionsTarget } from '../backend/pages-actions-target.ts';
 import { createPagesContext, type OperationGateLike, type PagesContext } from '../backend/pages.ts';
 import type { PatView } from '../backend/types.ts';
 import { targetWs } from './hash-route.ts';
@@ -54,6 +67,13 @@ export interface TargetContextDeps {
   /** `ReviewService.refresh` (a status commit moved head): reload the target. */
   refresh: () => Promise<void>;
   onDenied?: PagesContext['onDenied'];
+  /**
+   * Actions (actions-run.md, services.md「PagesActionsTarget」): the events of the target's `ActionsService`
+   * (`PagesFeed.onActions`). Absent = no ActionsService (the Actions tab is hidden).
+   */
+  onActions?: (e: ActionsEvent) => void;
+  /** Tests: shorter run polling. */
+  actionsIntervals?: Partial<TrackerIntervals>;
 }
 
 export interface BuiltTarget {
@@ -61,6 +81,28 @@ export interface BuiltTarget {
   scope: string;
   context: PagesContext;
   lock: LockWarning;
+  /** The target is replaced or the page closes (`pagehide`): stops following the Actions runs (the runs go on in GitHub). */
+  dispose(): void;
+}
+
+/** The `ActionsService` of a target (one per opened target; the results branch is read with `MemoryBlobStore`). */
+export function actionsOf(s: TargetSnapshot, deps: Pick<TargetContextDeps, 'github' | 'pat' | 'actionsIntervals'>): (history: HistoryService) => ActionsService {
+  const { owner, repo } = s.target;
+  return (history) =>
+    new ActionsService({
+      client: deps.github,
+      repo: { owner, repo },
+      targets: new PagesActionsTarget(() => s),
+      history,
+      clock: systemEnv.clock,
+      random: systemEnv.random,
+      // Without a PAT the results branch is still read (raw.githubusercontent.com, no credentials); runs are not dispatched.
+      hasToken: () => deps.pat.state !== 'none',
+      edition: 'pages',
+      canInit: false,
+      getConfig: () => s.config,
+      ...(deps.actionsIntervals ? { intervals: deps.actionsIntervals } : {}),
+    });
 }
 
 /** `PrInfo` of `api.pr()` (the same shape as the local `/api/w/:ws/pr`). */
@@ -113,6 +155,7 @@ export async function buildTarget(s: TargetSnapshot, deps: TargetContextDeps): P
     gate: deps.gate,
     prInfo: async () => info,
     ...(deps.onDenied ? { onDenied: deps.onDenied } : {}),
+    ...(deps.onActions ? { actions: actionsOf(s, deps) } : {}),
     ...(prContext
       ? {
           pr: {
@@ -126,7 +169,18 @@ export async function buildTarget(s: TargetSnapshot, deps: TargetContextDeps): P
         }
       : {}),
   });
-  const docs = await context.services.docs.loadDocs();
-  const lock = checkLock(docs, config, await s.reader.tryReadText('.ddv/testids.lock.json'));
-  return { scope: targetWs(s.target), context, lock };
+  const actions = context.services.actions;
+  const off = actions && deps.onActions ? actions.onEvent(deps.onActions) : () => {};
+  const dispose = () => {
+    off();
+    actions?.stopAll();
+  };
+  try {
+    const docs = await context.services.docs.loadDocs();
+    const lock = checkLock(docs, config, await s.reader.tryReadText('.ddv/testids.lock.json'));
+    return { scope: targetWs(s.target), context, lock, dispose };
+  } catch (e) {
+    dispose();
+    throw e;
+  }
 }
