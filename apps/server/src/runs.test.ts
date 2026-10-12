@@ -288,3 +288,54 @@ describe('実行記録の読み込み（DD-RUNREC-LOAD）', () => {
     expect(runs.runs.get('cur')).toMatchObject({ status: 'passed', commit: SHA, dirty: false, rerunOf: 'o', attempt: 2, times: 3, traces: [ID1] });
   });
 });
+
+describe('基本設計：保持件数（BD-TMON-PRUNE）', () => {
+  /** Old runs r0 (oldest) .. r2, each with a trace; then one new run is saved (no trace) and pruned with the given limits. */
+  async function saveAfter(history: { maxRuns: number; maxTraceRuns: number }) {
+    await fs.mkdir(path.join(repo, RUNS_DIR), { recursive: true });
+    for (let i = 0; i < 3; i++) {
+      const r = { id: `r${i}`, kind: 'test', startedAt: new Date(Date.UTC(2025, 0, 1, i)).toISOString(), status: 'failed', request: {}, runners: [], results: {}, log: [], traces: [ID1] };
+      await fs.writeFile(path.join(repo, RUNS_DIR, `${r.id}.json`), JSON.stringify(r));
+      await fs.mkdir(path.join(repo, TRACES_DIR, r.id), { recursive: true });
+      await fs.writeFile(path.join(repo, TRACES_DIR, r.id, `${ID1}.json`), '{}');
+    }
+    const runs = manager(parseConfig({ history }));
+    await runs.load();
+    const added = await failedRun(runs);
+    const record = (id: string) => existsSync(path.join(repo, RUNS_DIR, `${id}.json`));
+    const trace = (id: string) => existsSync(path.join(repo, TRACES_DIR, id));
+    return {
+      runs: runs.list().map((r) => r.id),
+      records: ['r0', 'r1', 'r2', added.id].filter(record),
+      traces: ['r0', 'r1', 'r2'].filter(trace),
+      added,
+    };
+  }
+
+  it('[BD-TMON-PRUNE-P001] [BD-TMON-PRUNE-T001] [BD-TMON-PRUNE-T002] [BD-TMON-PRUNE-T004] [BD-TMON-PRUNE-T005] [BD-TMON-PRUNE-T007] [BD-TMON-PRUNE-S001] [BD-TMON-PRUNE-S003] [BD-TMON-PRUNE-S006] [BD-TMON-PRUNE-S008] 実行記録が上限を超えたら古い記録とそのトレースを消し、残りのトレースも上限を超えたら古い実行のトレースだけ消す', async () => {
+    const r = await saveAfter({ maxRuns: 3, maxTraceRuns: 1 });
+    expect(r.runs).toEqual([r.added.id, 'r2', 'r1']);
+    expect(r.records).toEqual(['r1', 'r2', r.added.id]);
+    // r0 went with its record; r1 keeps its record but loses its trace.
+    expect(r.traces).toEqual(['r2']);
+  });
+
+  it('[BD-TMON-PRUNE-P002] [BD-TMON-PRUNE-T006] [BD-TMON-PRUNE-S007] 実行記録が上限を超えたら古い記録とそのトレースを消し、トレースが上限以内なら終わる', async () => {
+    const r = await saveAfter({ maxRuns: 3, maxTraceRuns: 5 });
+    expect(r.records).toEqual(['r1', 'r2', r.added.id]);
+    expect(r.traces).toEqual(['r1', 'r2']);
+  });
+
+  it('[BD-TMON-PRUNE-P003] [BD-TMON-PRUNE-T003] [BD-TMON-PRUNE-S002] [BD-TMON-PRUNE-S004] [BD-TMON-PRUNE-S008] 実行記録が上限以内でもトレースのある実行が上限を超えたら、古い実行のトレースだけ消して記録は残す', async () => {
+    const r = await saveAfter({ maxRuns: 10, maxTraceRuns: 1 });
+    expect(r.runs).toEqual([r.added.id, 'r2', 'r1', 'r0']);
+    expect(r.records).toEqual(['r0', 'r1', 'r2', r.added.id]);
+    expect(r.traces).toEqual(['r2']);
+  });
+
+  it('[BD-TMON-PRUNE-P004] [BD-TMON-PRUNE-S005] どちらも上限以内なら何も消さない', async () => {
+    const r = await saveAfter({ maxRuns: 10, maxTraceRuns: 5 });
+    expect(r.records).toEqual(['r0', 'r1', 'r2', r.added.id]);
+    expect(r.traces).toEqual(['r0', 'r1', 'r2']);
+  });
+});

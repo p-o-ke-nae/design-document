@@ -106,7 +106,7 @@ export function TestsPage() {
         <button type="button" disabled={running || !runnable([...checked]).length} onClick={() => runTests({ ids: runnable([...checked]) })} data-testid="run-selected">
           選択を実行 ({runnable([...checked]).length})
         </button>
-        <button type="button" onClick={() => (location.hash = flakyHref())} data-testid="flaky-open">
+        <button type="button" disabled={rerunning} title={rerunning ? '失敗の再実行中は開けません' : undefined} onClick={() => (location.hash = flakyHref())} data-testid="flaky-open">
           フレーキー（{history?.flakyCount ?? 0}）
         </button>
         <select value={rerunTimes} onChange={(e) => setRerunTimes(Number(e.target.value))} aria-label="再実行の回数" data-testid="rerun-times">
@@ -196,9 +196,16 @@ export function TestsPage() {
                       />
                     </td>
                     <td className="nowrap">
-                      <a href={historyHref(c.id)} data-testid="test-open">
-                        <code className="test-id">{c.id}</code>
-                      </a>
+                      {/* The re-run stays on the list until it ends (BD-TMON-SCREEN: no transition from 再実行中 but 実行完了). */}
+                      {rerunning ? (
+                        <code className="test-id" title="失敗の再実行中は開けません">
+                          {c.id}
+                        </code>
+                      ) : (
+                        <a href={historyHref(c.id)} data-testid="test-open">
+                          <code className="test-id">{c.id}</code>
+                        </a>
+                      )}
                       {history?.tests[c.id]?.flaky && <FlakyMark commits={history.tests[c.id].flakyCommits} />}
                     </td>
                     <td>{c.title}</td>

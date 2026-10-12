@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { loadConfig } from '@ddv/core/node';
 import { generateAll } from '@ddv/testid';
 import { createApp, createContext, type ServerContext } from './app.ts';
@@ -287,5 +287,154 @@ describe('履歴・フレーキー・カバレッジ・再実行の API', () => 
     expect(events).toEqual([{ attempt: 2, times: 2 }]);
     const list = ctx.runs.list();
     expect(list.slice(0, 2).map((x) => x.attempt)).toEqual([2, 1]);
+  });
+});
+
+describe('基本設計：設計カバレッジ（BD-TMON-COV）', () => {
+  // T001 = 入力→種類, T002..T006 = the five branches, P001..P005 = the paths. Removing the branch 「五」 retires one T and one P.
+  const doc = (branches: number) =>
+    ['---', 'id: KIND', 'kind: detailed', 'title: 種類', '---', '', '# 種類', '', '```mermaid id=kind code=KIND matrix nswitch=0', 'flowchart TD', '  A[入力] --> B{種類}']
+      .concat(['一', '二', '三', '四', '五'].slice(0, branches).map((n, i) => `  B -->|${i + 1}| N${i}[${n}]`))
+      .concat(['```', ''])
+      .join('\n');
+  const id = (k: string) => ['DD', 'KIND', 'KIND', k].join('-');
+  const at = (m: number) => new Date(Date.UTC(2025, 0, 1, 0, m)).toISOString();
+  const res = (status: S) => ({ status, durationMs: 1, runner: 'unit', test: 't' });
+
+  let root: string;
+  let ctx: ServerContext;
+  let cov: any;
+  let retired: string[];
+
+  beforeAll(async () => {
+    root = await fs.mkdtemp(path.join(os.tmpdir(), 'ddv-cov-'));
+    await fs.mkdir(path.join(root, 'docs/detailed'), { recursive: true });
+    await fs.writeFile(path.join(root, 'ddv.config.yaml'), 'docsRoot: docs\nrunners:\n  - name: unit\n    type: vitest\n');
+    await fs.writeFile(path.join(root, 'package.json'), '{"name":"x","version":"1.0.0","private":true,"devDependencies":{"vitest":"*"}}');
+    const file = path.join(root, 'docs/detailed/kind.md');
+    await fs.writeFile(file, doc(5));
+    const before = new Set((await generateAll(root, await loadConfig(root), { write: true })).matrices[0].cases.map((c) => c.id));
+    await fs.writeFile(file, doc(4));
+    const after = new Set((await generateAll(root, await loadConfig(root), { write: true })).matrices[0].cases.map((c) => c.id));
+    retired = [...before].filter((x) => !after.has(x));
+    // Linked: T001..T005 and the retired ids. P001..P004 stay unlinked.
+    const linked = ['T001', 'T002', 'T003', 'T004', 'T005'].map(id).concat(retired);
+    await fs.writeFile(path.join(root, 'kind.test.ts'), linked.map((x) => `it('[${x}] x', () => {});`).join('\n') + '\n');
+    await fs.mkdir(path.join(root, RUNS_DIR), { recursive: true });
+    const runs = [
+      // Older results are superseded by the newest one of each id.
+      { id: 'r1', startedAt: at(1), results: { [id('T001')]: res('failed'), [id('T002')]: res('passed'), [id('T004')]: res('passed') } },
+      { id: 'r2', startedAt: at(2), results: { [id('T001')]: res('passed'), [id('T002')]: res('failed'), [id('T003')]: res('error'), [id('T004')]: res('skipped'), ...Object.fromEntries(retired.map((x) => [x, res('passed')])) } },
+    ];
+    for (const r of runs) await fs.writeFile(path.join(root, RUNS_DIR, `${r.id}.json`), JSON.stringify({ kind: 'test', status: 'failed', request: {}, runners: [], log: [], ...r }));
+    ctx = await createContext(root, { watch: false });
+    cov = await (await createApp(ctx).request('/api/coverage?path=docs/detailed/kind.md')).json();
+  });
+
+  afterAll(async () => {
+    ctx?.close();
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  it('[BD-TMON-COV-P001] [BD-TMON-COV-T001] [BD-TMON-COV-T002] [BD-TMON-COV-S001] ロックで欠番のIDは、紐づけ・結果があっても集計しない', () => {
+    expect(retired.sort()).toEqual([id('P005'), id('T006')]);
+    for (const x of retired) expect(cov.cases[x]).toBeUndefined();
+    // 9 active ids: T001..T005 and P001..P004.
+    expect(Object.keys(cov.cases)).toHaveLength(9);
+    expect(cov.total).toEqual({ ids: 9, linked: 5, executed: 4, passed: 1 });
+    expect(cov.diagrams.kind).toEqual(cov.total);
+  });
+
+  it('[BD-TMON-COV-P002] [BD-TMON-COV-T003] [BD-TMON-COV-T004] [BD-TMON-COV-S002] [BD-TMON-COV-S003] 有効でテストに紐づいていなければ未紐づけ', () => {
+    for (const k of ['P001', 'P002', 'P003', 'P004']) expect(cov.cases[id(k)]).toBe('unlinked');
+  });
+
+  it('[BD-TMON-COV-P003] [BD-TMON-COV-T005] [BD-TMON-COV-T006] [BD-TMON-COV-S004] [BD-TMON-COV-S005] 紐づいていて結果が履歴に無ければ未実行', () => {
+    expect(cov.cases[id('T005')]).toBe('unexecuted');
+  });
+
+  it('[BD-TMON-COV-P004] [BD-TMON-COV-T007] [BD-TMON-COV-T008] [BD-TMON-COV-S006] [BD-TMON-COV-S007] 最新の結果が passed なら成功（古い失敗は見ない）', () => {
+    expect(cov.cases[id('T001')]).toBe('passed');
+  });
+
+  it('[BD-TMON-COV-P005] [BD-TMON-COV-T009] [BD-TMON-COV-S008] 最新の結果が failed または error なら失敗（古い成功は見ない）', () => {
+    expect(cov.cases[id('T002')]).toBe('failed');
+    expect(cov.cases[id('T003')]).toBe('failed');
+  });
+
+  it('[BD-TMON-COV-P006] [BD-TMON-COV-T010] [BD-TMON-COV-S009] 最新の結果が skipped ならスキップ', () => {
+    expect(cov.cases[id('T004')]).toBe('skipped');
+  });
+});
+
+describe('基本設計：フレーキーの判定（BD-TMON-FLAKY）', () => {
+  const ID = ['DD', 'A', 'B', 'T001'].join('-');
+  const A = 'a'.repeat(40);
+  const B = 'b'.repeat(40);
+  const roots: string[] = [];
+  const ctxs: ServerContext[] = [];
+  afterAll(async () => {
+    for (const c of ctxs) c.close();
+    for (const r of roots) await fs.rm(r, { recursive: true, force: true });
+  });
+
+  /** Summary, history and flaky list of `ID` computed from the given runs (oldest first). */
+  async function judge(runs: Array<{ status: S; commit?: string; dirty?: boolean }>) {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'ddv-flaky-'));
+    roots.push(root);
+    await fs.mkdir(path.join(root, RUNS_DIR), { recursive: true });
+    await fs.writeFile(path.join(root, 'ddv.config.yaml'), 'docsRoot: docs\nrunners: []\n');
+    for (const [i, r] of runs.entries()) {
+      const rec = { id: `r${i}`, kind: 'test', startedAt: new Date(Date.UTC(2025, 0, 1, 0, i)).toISOString(), status: r.status, request: {}, runners: [], log: [], results: { [ID]: { status: r.status, durationMs: 1, runner: 'unit', test: 't' } } };
+      if (r.commit !== undefined) Object.assign(rec, { commit: r.commit });
+      if (r.dirty !== undefined) Object.assign(rec, { dirty: r.dirty });
+      await fs.writeFile(path.join(root, RUNS_DIR, `${rec.id}.json`), JSON.stringify(rec));
+    }
+    const ctx = await createContext(root, { watch: false });
+    ctxs.push(ctx);
+    const app = createApp(ctx);
+    const get = async (p: string) => (await app.request(p)).json() as Promise<any>;
+    const summary = await get('/api/history/summary');
+    return { test: summary.tests[ID], flakyCount: summary.flakyCount, history: await get(`/api/history/tests/${ID}`), flaky: await get('/api/history/flaky') };
+  }
+
+  it('[BD-TMON-FLAKY-P001] [BD-TMON-FLAKY-T001] [BD-TMON-FLAKY-T002] [BD-TMON-FLAKY-S001] コミットが分かり変更の無い実行が無ければ判定しない（不明・変更ありの成否が割れていても）', async () => {
+    const r = await judge([
+      { status: 'passed' },
+      { status: 'failed' },
+      { status: 'passed', commit: A, dirty: true },
+      { status: 'failed', commit: A, dirty: true },
+    ]);
+    expect(r.history.entries).toHaveLength(4);
+    expect(r.test).toMatchObject({ flaky: false, flakyCommits: [] });
+    expect(r.history.flakyCommits).toEqual([]);
+    expect(r.flakyCount).toBe(0);
+    expect(r.flaky).toEqual([]);
+  });
+
+  it('[BD-TMON-FLAKY-P002] [BD-TMON-FLAKY-T003] [BD-TMON-FLAKY-T004] [BD-TMON-FLAKY-S002] [BD-TMON-FLAKY-S003] 同じコミット（変更なし）に passed と failed の両方があればフレーキー', async () => {
+    const r = await judge([
+      { status: 'failed', commit: A, dirty: false },
+      { status: 'passed', commit: A, dirty: false },
+      { status: 'passed', commit: B, dirty: false },
+    ]);
+    expect(r.test).toMatchObject({ flaky: true, flakyCommits: [A] });
+    expect(r.history.flakyCommits).toEqual([A]);
+    expect(r.flakyCount).toBe(1);
+    expect(r.flaky).toMatchObject([{ id: ID, commits: [{ commit: A, passed: 1, failed: 1 }], lastFailedRun: 'r0' }]);
+  });
+
+  it('[BD-TMON-FLAKY-P003] [BD-TMON-FLAKY-T005] [BD-TMON-FLAKY-S004] コミットが変わって成否が変わっただけなら安定', async () => {
+    const r = await judge([
+      { status: 'passed', commit: A, dirty: false },
+      { status: 'failed', commit: B, dirty: false },
+      { status: 'failed', commit: B, dirty: false },
+      { status: 'error', commit: A, dirty: false },
+      { status: 'skipped', commit: B, dirty: false },
+    ]);
+    expect(r.test).toMatchObject({ flaky: false, flakyCommits: [] });
+    expect(r.history.flakyCommits).toEqual([]);
+    expect(r.flakyCount).toBe(0);
+    expect(r.flaky).toEqual([]);
   });
 });
