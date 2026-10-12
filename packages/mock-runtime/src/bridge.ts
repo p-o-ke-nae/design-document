@@ -27,10 +27,14 @@ export type OutMessage =
   | ({ type: 'ddv:picked' } & PickedElement);
 
 export type InMessage =
-  | { type: 'ddv:reset'; fixtures?: string[]; start?: string }
+  /** `data`: fixture contents by name, used instead of reading `fixtures/<name>.yaml` (playing the editor's draft, DD-TDEDIT). */
+  | { type: 'ddv:reset'; fixtures?: string[]; start?: string; data?: FixtureData }
   | { type: 'ddv:step'; index: number; step: Step; highlight?: { holdMs: number }; trace?: boolean }
   | { type: 'ddv:tune'; on: boolean }
   | { type: 'ddv:patch'; path: number[]; patch: ElementPatch | null };
+
+/** Fixture name → table → rows. */
+export type FixtureData = Record<string, Record<string, Array<Record<string, unknown>>>>;
 
 export const TUNING_MESSAGE = 'モックの調整中のため実行できません（調整を終了してください）';
 
@@ -38,7 +42,7 @@ export const TUNING_MESSAGE = 'モックの調整中のため実行できませ�
 export interface BridgeEngine {
   readonly version: string;
   /** Loads api.yaml / fixtures and shows the start screen. `fixtures` null = initial boot (default fixture when present). */
-  boot(fixtures: string[] | null, start?: string): Promise<{ screen: string | null }>;
+  boot(fixtures: string[] | null, start?: string, data?: FixtureData): Promise<{ screen: string | null }>;
   exec(step: Step, opts?: { highlight?: { holdMs: number } | null }): Promise<StepResult>;
   /** Discards in-flight declarative work of a running step. */
   cancel(): void;
@@ -67,6 +71,19 @@ export function validHighlight(h: unknown): { holdMs: number } | null {
   if (!h || typeof h !== 'object') return null;
   const ms = (h as { holdMs?: unknown }).holdMs;
   return typeof ms === 'number' && Number.isFinite(ms) && ms >= 0 ? { holdMs: Math.min(ms, 10_000) } : null;
+}
+
+/** `ddv:reset` data: only plain objects of tables (arrays of row objects) are kept. */
+export function validData(d: unknown): FixtureData | undefined {
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return undefined;
+  const out: FixtureData = {};
+  for (const [name, tables] of Object.entries(d)) {
+    if (!tables || typeof tables !== 'object' || Array.isArray(tables)) continue;
+    const t: FixtureData[string] = {};
+    for (const [table, rows] of Object.entries(tables)) if (Array.isArray(rows)) t[table] = rows.filter((r): r is Record<string, unknown> => !!r && typeof r === 'object' && !Array.isArray(r));
+    out[name] = t;
+  }
+  return out;
 }
 
 export class SupersededError extends Error {
@@ -131,7 +148,7 @@ export class HostBridge {
     if (!this.embedded || e.origin !== this.win.location.origin || e.source !== this.win.parent) return;
     const m = e.data as InMessage | null;
     if (!m || typeof m !== 'object') return;
-    if (m.type === 'ddv:reset') this.reset(Array.isArray(m.fixtures) ? m.fixtures : [], m.start).catch(() => {});
+    if (m.type === 'ddv:reset') this.reset(Array.isArray(m.fixtures) ? m.fixtures : [], m.start, validData(m.data)).catch(() => {});
     else if (m.type === 'ddv:step' && typeof m.index === 'number' && m.step && typeof m.step === 'object') void this.step(m.step, m.index, validHighlight(m.highlight), m.trace === true);
     else if (m.type === 'ddv:tune' && typeof m.on === 'boolean') this.engine.tune?.(m.on);
     else if (m.type === 'ddv:patch' && Array.isArray(m.path) && m.path.every((i) => Number.isInteger(i) && i >= 0)) {
@@ -145,12 +162,12 @@ export class HostBridge {
     return this.boot(null);
   }
 
-  reset(fixtures: string[], start?: string): Promise<{ screen: string | null }> {
+  reset(fixtures: string[], start?: string, data?: FixtureData): Promise<{ screen: string | null }> {
     this.engine.cancel();
     this.discard();
     // Booting has no reset transition: a reset while booting supersedes the boot in progress and stays Booting.
     this.fire('reset');
-    return this.boot(fixtures, start);
+    return this.boot(fixtures, start, data);
   }
 
   private discard() {
@@ -160,10 +177,10 @@ export class HostBridge {
     for (const it of items) it.resolve({ ok: false, screen: this.engine.screen(), failures: [], error: { kind: 'error', message: 'リセットにより破棄しました' } });
   }
 
-  private async boot(fixtures: string[] | null, start?: string): Promise<{ screen: string | null }> {
+  private async boot(fixtures: string[] | null, start?: string, data?: FixtureData): Promise<{ screen: string | null }> {
     const g = ++this.gen;
     try {
-      const r = await this.engine.boot(fixtures, start);
+      const r = await this.engine.boot(fixtures, start, data);
       if (g !== this.gen) throw new SupersededError();
       this.fire('loaded');
       this.notify({ type: 'ddv:ready', screen: r.screen, version: this.engine.version });

@@ -1952,3 +1952,115 @@ svg path.ddv-cov-unlinked {
   gap: 8px;
   align-items: center;
 }
+
+/* test data editor (DD-TDEDIT) */
+.td-side {
+  width: 560px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  overflow: auto;
+}
+.td {
+  padding: 8px 12px 24px;
+  font-size: 13px;
+  display: grid;
+  gap: 8px;
+}
+.td-bar,
+.td-actions,
+.td-chips {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.td-bar .spacer,
+.td-actions .spacer {
+  flex: 1;
+}
+.td-route {
+  font-size: 12px;
+}
+.td-form {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.td-field {
+  display: grid;
+  gap: 2px;
+}
+.td-table {
+  width: 100%;
+}
+.td-table input:not([type='checkbox']) {
+  width: 120px;
+}
+.td-gen {
+  color: var(--muted);
+  background: #f6f8fa;
+}
+.td-kv {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 4px;
+  align-items: center;
+  margin-bottom: 2px;
+}
+.td-x {
+  padding: 0 4px;
+  line-height: 1.2;
+}
+.td-h {
+  margin: 6px 0 2px;
+}
+.td-cell-error {
+  color: var(--ng);
+  font-size: 12px;
+  width: 100%;
+}
+[aria-invalid='true'] {
+  outline: 1px solid var(--ng);
+}
+.td-row-failed > td:first-child,
+.td-cell-failed {
+  background: var(--ng-bg);
+}
+.td-diff {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  background: #f6f8fa;
+  padding: 6px;
+  white-space: pre-wrap;
+}
+.td-diff-path {
+  font-weight: 600;
+}
+.td-diff .del {
+  background: #ffebe9;
+}
+.td-diff .add {
+  background: #e6ffec;
+}
+.td-warnings {
+  color: #9a6700;
+  margin: 0;
+}
+.td-errors {
+  color: var(--ng);
+  margin: 0;
+}
+.td-preview-badge {
+  display: inline-block;
+  margin: 0;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--warn-bg);
+}
+.td-newfield {
+  width: 72px;
+}

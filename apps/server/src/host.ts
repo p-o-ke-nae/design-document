@@ -108,6 +108,10 @@ export function createServerApp(opts: ServerAppOptions): Hono {
     const { ws, ctx } = manager.context(id);
     let entry = apps.get(id);
     if (!entry || entry.gen !== ws.generation) {
+      ctx.testData = () => {
+        const cur = manager.context(id).ws;
+        return cur.target.pr ? { kind: 'pr', target: cur, review } : { kind: 'branch' };
+      };
       entry = { gen: ws.generation, app: createApp(ctx) };
       apps.set(id, entry);
     }

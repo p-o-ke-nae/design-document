@@ -2,7 +2,7 @@ import { parse as parseYaml } from 'yaml';
 import { observeExpect, runStep, type ExpectObservation, type Step, type StepResult } from '@ddv/mock/step';
 import type { TapResult } from '@ddv/mock/trace-format';
 import { DeclarativeBinder } from './binder.ts';
-import { HostBridge, type BridgeEngine, type BridgeState } from './bridge.ts';
+import { HostBridge, type BridgeEngine, type BridgeState, type FixtureData } from './bridge.ts';
 import { MemoryDb, type Row } from './db.ts';
 import { DomDriver, type ExecOptions } from './driver.ts';
 import { FetchInterceptor } from './fetch.ts';
@@ -123,9 +123,9 @@ export class MockRuntime implements BridgeEngine {
   }
 
   /** Re-initializes the DB with the fixtures (layered in order) and shows `start` (default: first data-screen). */
-  reset(fixtures: string[] = [], start?: string): Promise<{ screen: string | null }> {
+  reset(fixtures: string[] = [], start?: string, data?: FixtureData): Promise<{ screen: string | null }> {
     this.install();
-    return this.bridge.reset(fixtures, start);
+    return this.bridge.reset(fixtures, start, data);
   }
 
   step(step: Step): Promise<StepResult> {
@@ -152,7 +152,7 @@ export class MockRuntime implements BridgeEngine {
 
   // ---- BridgeEngine ----
 
-  async boot(fixtures: string[] | null, start?: string): Promise<{ screen: string | null }> {
+  async boot(fixtures: string[] | null, start?: string, given?: FixtureData): Promise<{ screen: string | null }> {
     this.binder.cancel();
     const apiText = await this.load('api.yaml');
     const { spec, errors } = parseApiSpec(apiText === null ? null : parseYaml(apiText));
@@ -163,6 +163,11 @@ export class MockRuntime implements BridgeEngine {
 
     const rows: Array<Record<string, Row[]>> = [];
     for (const name of fixtures ?? ['default']) {
+      const draft = given?.[name];
+      if (draft) {
+        rows.push(draft as Record<string, Row[]>);
+        continue;
+      }
       const text = await this.load(`fixtures/${name}.yaml`);
       if (text === null) {
         if (fixtures === null) continue;

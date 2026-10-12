@@ -71,10 +71,13 @@ export interface StepResult {
 
 export interface PlayerTransport {
   /** Sends ddv:reset and resolves on the following ddv:ready. */
-  reset(fixtures: string[], start?: string): Promise<{ screen: string | null }>;
+  reset(fixtures: string[], start?: string, data?: DraftData): Promise<{ screen: string | null }>;
   /** Sends ddv:step and resolves on the matching ddv:result. `trace` asks the runtime for the step record. */
   step(index: number, step: Step, highlight?: StepHighlight, trace?: boolean): Promise<StepResult>;
 }
+
+/** Contents of fixtures by name (ddv:reset data): used instead of the files (DD-TDEDIT 編集中の再生). */
+export type DraftData = Record<string, Record<string, Array<Record<string, unknown>>>>;
 
 export interface LiveTraceSnapshot {
   steps: TraceStep[];
@@ -182,6 +185,8 @@ export interface PlayerSnapshot {
   highlight: boolean;
   screen: string | null;
   failure: PlayerFailure | null;
+  /** Playing the data being edited (playDraft): results are not reported as played. */
+  draft: boolean;
 }
 
 export interface PlayerOptions {
@@ -193,6 +198,8 @@ export interface PlayerOptions {
   now?: () => number;
   /** Called when a playback reaches 完了 / 失敗. */
   onFinish?: (r: { id: string; ok: boolean; failures: StepFailure[] }) => void;
+  /** Called instead of onFinish when a draft playback (playDraft) reaches 完了 / 失敗. */
+  onDraftFinish?: (r: { id: string; ok: boolean; failures: StepFailure[] }) => void;
 }
 
 /** Framework-free player; React reads it with useSyncExternalStore(subscribe, getSnapshot). */
@@ -200,6 +207,7 @@ export class PlayerController {
   private snap: PlayerSnapshot;
   private listeners = new Set<() => void>();
   private scenario: PlayerScenario | null = null;
+  private data: DraftData | null = null;
   private timer: PlayerTimer;
   private timeoutMs: number;
   /** Invalidates in-flight work (load / reset / rewind). */
@@ -218,7 +226,7 @@ export class PlayerController {
     this.timer = opts.timer ?? defaultTimer;
     this.timeoutMs = opts.timeoutMs ?? RESPONSE_TIMEOUT_MS;
     this.now = opts.now ?? (() => globalThis.performance?.now() ?? Date.now());
-    this.snap = { state: INITIAL_STATE, scenarioId: null, cursor: 0, total: 0, running: null, busy: false, speed: opts.speed ?? 1000, highlight: opts.highlight ?? false, screen: null, failure: null };
+    this.snap = { state: INITIAL_STATE, scenarioId: null, cursor: 0, total: 0, running: null, busy: false, speed: opts.speed ?? 1000, highlight: opts.highlight ?? false, screen: null, failure: null, draft: false };
   }
 
   subscribe = (fn: () => void): (() => void) => {
@@ -240,10 +248,29 @@ export class PlayerController {
 
   /** Loads a scenario and starts over at 停止 ([*] --> 停止). */
   load(scenario: PlayerScenario | null) {
+    this.loadWith(scenario, null);
+  }
+
+  /** Plays the data being edited: ddv:reset carries data, and the result is not reported as played (onDraftFinish). */
+  playDraft(scenario: PlayerScenario, data: DraftData): boolean {
+    this.loadWith(scenario, data);
+    return this.play();
+  }
+
+  private loadWith(scenario: PlayerScenario | null, data: DraftData | null) {
     this.invalidate();
     this.scenario = scenario;
-    this.liveTrace.clear();
-    this.set({ state: INITIAL_STATE, scenarioId: scenario?.id ?? null, cursor: 0, total: scenario?.steps.length ?? 0, running: null, busy: false, failure: null });
+    this.data = scenario ? data : null;
+    this.clearTrace();
+    this.set({ state: INITIAL_STATE, scenarioId: scenario?.id ?? null, cursor: 0, total: scenario?.steps.length ?? 0, running: null, busy: false, failure: null, draft: !!this.data });
+  }
+
+  private clearTrace() {
+    this.liveTrace.clear(!!this.data);
+  }
+
+  private resetMock(s: PlayerScenario) {
+    return this.transport.reset(s.fixtures ?? [], s.start, this.data ?? undefined);
   }
 
   /** Speed is a setting, not a state change. */
@@ -330,9 +357,9 @@ export class PlayerController {
     const to = nextState(this.snap.state, 'reset');
     if (!to) return false;
     this.invalidate();
-    this.liveTrace.clear();
+    this.clearTrace();
     this.set({ state: to, cursor: 0, running: null, busy: false, failure: null });
-    if (this.scenario) void this.transport.reset(this.scenario.fixtures ?? [], this.scenario.start).catch(() => {});
+    if (this.scenario) void this.resetMock(this.scenario).catch(() => {});
     return true;
   }
 
@@ -406,10 +433,10 @@ export class PlayerController {
   /** Resets the mock to the scenario start; on failure records it (and fails a running playback). */
   private async doReset(epoch: number): Promise<boolean> {
     const s = this.scenario!;
-    this.liveTrace.clear();
+    this.clearTrace();
     this.set({ busy: true });
     try {
-      const r = await this.withTimeout(this.transport.reset(s.fixtures ?? [], s.start));
+      const r = await this.withTimeout(this.resetMock(s));
       if (!this.alive(epoch)) return false;
       this.set({ screen: r?.screen ?? this.snap.screen });
       return true;
@@ -471,7 +498,10 @@ export class PlayerController {
 
   private finish(ok: boolean) {
     const s = this.scenario;
-    if (s) this.opts.onFinish?.({ id: s.id, ok, failures: this.snap.failure?.failures ?? [] });
+    if (!s) return;
+    const r = { id: s.id, ok, failures: this.snap.failure?.failures ?? [] };
+    if (this.data) this.opts.onDraftFinish?.(r);
+    else this.opts.onFinish?.(r);
   }
 }
 
@@ -538,14 +568,14 @@ export function createFrameTransport(
     });
 
   return {
-    reset(fixtures, start) {
+    reset(fixtures, start, data) {
       const run = async () => {
         // Initial load: wait for the runtime to announce itself (it may already have, unseen)
         if (!loaded) await nextReady(opts.bootWaitMs ?? 3000).catch(() => {});
         for (const w of stepWaiters.values()) w.reject(new Error('reset'));
         stepWaiters.clear();
         const p = nextReady(RESPONSE_TIMEOUT_MS);
-        post({ type: 'ddv:reset', fixtures, ...(start ? { start } : {}) });
+        post({ type: 'ddv:reset', fixtures, ...(start ? { start } : {}), ...(data ? { data } : {}) });
         return { screen: await p };
       };
       const r = chain.then(run, run);

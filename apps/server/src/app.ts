@@ -17,6 +17,7 @@ import { NO_TRACE_MESSAGE, TraceError, TraceStore } from './traces.ts';
 import { checkDeps, installDeps } from './deps.ts';
 import { listScenarios, recordPlay, scenarioDetail } from './scenarios.ts';
 import { checkId, SnapshotError, SnapshotService, SNAPSHOTS_DIR, type SnapKind } from './snapshots.ts';
+import { TestDataError, TestDataService, type Reviewer, type TestDataDraft, type TestDataWorkspace } from './testdata.ts';
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -51,6 +52,8 @@ export interface ServerContext {
   events: EventEmitter;
   /** GitHub workspaces: refuse test runs (409 deps-missing) until the runners' packages are installed. */
   checkDeps?: boolean;
+  /** GitHub workspaces: the kind (pr / branch) and review service for the test-data editor (DD-TDEDIT). Absent = the local workspace. */
+  testData?: () => TestDataWorkspace & { review?: Reviewer };
   close(): void;
 }
 
@@ -476,6 +479,44 @@ export function createApp(ctx: ServerContext): Hono {
     if (typeof body.id !== 'string' || !body.id || typeof body.ok !== 'boolean') return c.json({ error: 'id（文字列）と ok（真偽値）が必要です' }, 400);
     const rec = await recordPlay(root, body.id, body.ok, Array.isArray(body.failures) ? body.failures : undefined);
     return c.json({ id: body.id, ...rec });
+  });
+
+  // Test-data editor (DD-TDEDIT). A GitHub workspace without a PR is read-only (branch).
+  const testData = () => {
+    const w = ctx.testData?.() ?? { kind: ctx.checkDeps ? ('branch' as const) : ('local' as const) };
+    return { ws: w, svc: new TestDataService(root, ctx.config, w.review) };
+  };
+  const tdError = (c: Context, e: unknown) => {
+    if (e instanceof TestDataError) return c.json({ error: e.message, code: e.code, ...e.extra }, e.status);
+    throw e;
+  };
+  const draftOf = async (c: Context) => (await c.req.json().catch(() => null)) as TestDataDraft;
+
+  app.get('/api/testdata', async (c) => {
+    const { ws, svc } = testData();
+    try {
+      return c.json(await svc.load(c.req.query('scenario') ?? '', ws));
+    } catch (e) {
+      return tdError(c, e);
+    }
+  });
+
+  app.post('/api/testdata/validate', async (c) => {
+    const { ws, svc } = testData();
+    try {
+      return c.json(await svc.validate(await draftOf(c), ws));
+    } catch (e) {
+      return tdError(c, e);
+    }
+  });
+
+  app.post('/api/testdata/save', async (c) => {
+    const { ws, svc } = testData();
+    try {
+      return c.json(await svc.save(await draftOf(c), ws));
+    } catch (e) {
+      return tdError(c, e);
+    }
   });
 
   const snapError = (c: Context, e: unknown) => {

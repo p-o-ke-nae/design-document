@@ -126,6 +126,7 @@ export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; se
                         }
                       : undefined
                   }
+                  onTestData={hub?.hasScenario(c.id) ? () => hub.openTestData(c.id) : undefined}
                 />
               ))}
             </tbody>
@@ -158,6 +159,7 @@ function MatrixRow({
   running,
   onRun,
   onPlayMock,
+  onTestData,
   doc,
   coverage,
   summary,
@@ -172,6 +174,7 @@ function MatrixRow({
   running: boolean;
   onRun(): void;
   onPlayMock?: () => void;
+  onTestData?: () => void;
   coverage?: CoverageClass;
   summary?: TestSummary;
 }) {
@@ -221,6 +224,11 @@ function MatrixRow({
         {onPlayMock && (
           <button type="button" className="run play-mock" onClick={onPlayMock} data-testid="matrix-play-mock" title="この経路のシナリオを同じ文書のモックで再生">
             ▶ モック
+          </button>
+        )}
+        {onTestData && (
+          <button type="button" className="run" onClick={onTestData} data-testid="td-open" title="この経路のシナリオのテストデータ（入力値・期待値・fixtures）を表示・編集">
+            テストデータ
           </button>
         )}
         <button type="button" className="run" disabled={!executed} onClick={() => (location.hash = historyHref(c.id))} data-testid="matrix-history" title={executed ? 'このテストIDの履歴' : 'まだ実行していません'}>

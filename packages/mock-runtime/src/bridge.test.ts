@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Step, StepResult } from '@ddv/mock/step';
-import { bridgeTransition, HostBridge, validHighlight, SupersededError, type BridgeEngine, type OutMessage } from './bridge.ts';
+import { bridgeTransition, HostBridge, validData, validHighlight, SupersededError, type BridgeEngine, type OutMessage } from './bridge.ts';
 
 function deferred<T>() {
   let resolve!: (v: T) => void;
@@ -23,9 +23,11 @@ function setup() {
   const boots: Array<ReturnType<typeof deferred<{ screen: string | null }>>> = [];
   const execs: Array<{ step: Step; opts?: { highlight?: { holdMs: number } | null }; d: ReturnType<typeof deferred<StepResult>> }> = [];
   let cancelled = 0;
+  const bootArgs: unknown[][] = [];
   const engine: BridgeEngine = {
     version: '9.9.9',
-    boot: () => {
+    boot: (...args) => {
+      bootArgs.push(args);
       const d = deferred<{ screen: string | null }>();
       boots.push(d);
       return d.promise;
@@ -40,7 +42,7 @@ function setup() {
   };
   const bridge = new HostBridge(win, engine);
   const ok = (screen: string): StepResult => ({ ok: true, screen, failures: [] });
-  return { bridge, posted, boots, execs, ok, parent, win, cancelled: () => cancelled };
+  return { bridge, posted, boots, bootArgs, execs, ok, parent, win, cancelled: () => cancelled };
 }
 
 async function ready(t: ReturnType<typeof setup>) {
@@ -266,6 +268,15 @@ describe('HostBridge', () => {
       expect(t.bridge.state).toBe(end);
       expect(t.posted.filter((m) => m.type === 'ddv:result')).toEqual([]);
     }
+  });
+
+  it('ddv:reset の data（fixtures の内容）を boot に渡す。形の合わない部分は捨てる', async () => {
+    const t = setup();
+    await ready(t);
+    const data = { default: { orders: [{ id: 1 }, 'x'], bad: 1 }, junk: [] };
+    t.bridge.onMessage({ origin: 'http://localhost', source: t.parent, data: { type: 'ddv:reset', fixtures: ['default'], start: 'List', data } } as unknown as MessageEvent);
+    expect(t.bootArgs.at(-1)).toEqual([['default'], 'List', { default: { orders: [{ id: 1 }] } }]);
+    expect(validData(null)).toBeUndefined();
   });
 
   it('origin と source が親でないメッセージは無視し、親が自分なら送らない', async () => {

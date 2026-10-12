@@ -10,6 +10,7 @@
     "./playwright": "./src/playwright.ts",
     "./tune": "./src/tune.ts",
     "./tune-patch": "./src/tune-patch.ts",
+    "./yaml-patch": "./src/yaml-patch.ts",
     "./trace": "./src/trace.ts",
     "./trace-format": "./src/trace-format.ts"
   },

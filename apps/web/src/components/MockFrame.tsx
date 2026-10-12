@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { api, rawUrl, type ScenarioDetail } from '../api.ts';
 import { useApp, useLocalStorage } from '../state.tsx';
 import { playableScenarios, useMockHub } from '../mockHub.tsx';
-import { PlayerController, SPEEDS, STATE_LABEL, createFrameTransport, type FrameTransport, type PlayerSnapshot, type TuneMessage } from '../player.ts';
+import { PlayerController, SPEEDS, STATE_LABEL, createFrameTransport, type DraftData, type FrameTransport, type PlayerSnapshot, type TuneMessage } from '../player.ts';
+import type { TdScenario } from '../api.ts';
 import type { PickedElement } from '@ddv/mock/tune-patch';
 import { SnapshotPanel } from './SnapshotPanel.tsx';
 import { TunePanel } from './TunePanel.tsx';
@@ -17,7 +18,7 @@ const SIZES: Array<[string, number | null]> = [
 
 const SCENARIO_STATUS: Record<string, string> = { Unverified: '未確認', Passed: '再生OK', Failed: '再生NG', Retired: '欠番' };
 
-const IDLE: PlayerSnapshot = { state: 'Idle', scenarioId: null, cursor: 0, total: 0, running: null, busy: false, speed: 1000, highlight: false, screen: null, failure: null };
+const IDLE: PlayerSnapshot = { state: 'Idle', scenarioId: null, cursor: 0, total: 0, running: null, busy: false, speed: 1000, highlight: false, screen: null, failure: null, draft: false };
 const noSubscribe = () => () => {};
 const idleSnapshot = () => IDLE;
 
@@ -35,7 +36,11 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
   const [mockError, setMockError] = useState('');
   const [speed, setSpeed] = useLocalStorage('ddv.playerSpeed', 1000);
   const [opHighlight, setOpHighlight] = useLocalStorage('ddv.playerHighlight', false);
-  const [request, setRequest] = useState<{ id: string; play: boolean; seq: number }>({ id: '', play: false, seq: 0 });
+  const [request, setRequest] = useState<{ id: string; play: boolean; seq: number; draft?: { scenario: TdScenario; data: DraftData; seq: number } }>({ id: '', play: false, seq: 0 });
+  /** Seq of the preview (編集中の再生) being played here, 0 = none. */
+  const activePreview = useRef(0);
+  const endPreview = useRef(hub?.endPreview);
+  endPreview.current = hub?.endPreview;
   const [detail, setDetail] = useState<ScenarioDetail | null>(null);
   const [loadError, setLoadError] = useState('');
   const [loadedSeq, setLoadedSeq] = useState(-1);
@@ -73,6 +78,12 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
           .catch(() => {})
           .finally(() => refreshScenarios?.());
       },
+      // The data being edited: not reported as played (DD-TDEDIT 編集中の再生)
+      onDraftFinish: (r) => {
+        const seq = activePreview.current;
+        activePreview.current = 0;
+        if (seq) endPreview.current?.({ seq, ok: r.ok, failure: c.getSnapshot().failure });
+      },
     });
     setCtl(c);
     return () => {
@@ -106,6 +117,26 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
     root.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }, [playRequest, scenarios]);
 
+  // ▶ 再生（編集中のデータ） from the test data editor
+  const preview = hub?.preview;
+  const previewHandled = useRef(0);
+  useEffect(() => {
+    if (!preview || preview.seq === previewHandled.current) return;
+    if (!scenarios.some((s) => s.id === preview.id)) return;
+    previewHandled.current = preview.seq;
+    setTuning(false);
+    setRequest((r) => ({ id: preview.id, play: false, seq: r.seq + 1, draft: { scenario: preview.scenario, data: preview.data, seq: preview.seq } }));
+    root.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }, [preview, scenarios]);
+
+  // 再生終了 when the draft playback is stopped (リセット) or replaced (another scenario)
+  useEffect(() => {
+    const seq = activePreview.current;
+    if (!seq || (snap.draft && !(snap.state === 'Idle' && !snap.busy))) return;
+    activePreview.current = 0;
+    hub?.endPreview({ seq, ok: false, failure: null });
+  });
+
   useEffect(() => {
     if (!ctl || !request.id) return;
     let alive = true;
@@ -114,8 +145,14 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
       .scenario(request.id)
       .then((d) => {
         if (!alive) return;
-        setDetail(d);
+        const draft = request.draft;
+        setDetail(draft ? { ...d, scenario: draft.scenario } : d);
         setLoadedSeq(request.seq);
+        if (draft) {
+          activePreview.current = draft.seq;
+          ctl.playDraft({ id: d.id, fixtures: draft.scenario.fixtures ?? [], start: draft.scenario.start, steps: draft.scenario.steps ?? [] }, draft.data);
+          return;
+        }
         ctl.load(d.scenario ? { id: d.id, fixtures: d.scenario.fixtures ?? [], start: d.scenario.start, steps: d.scenario.steps ?? [] } : null);
         if (d.scenario && request.play && autoPlayed.current !== request.seq) {
           autoPlayed.current = request.seq;
@@ -127,6 +164,7 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
         setDetail(null);
         ctl.load(null);
         setLoadError(e.message);
+        if (request.draft) hub?.endPreview({ seq: request.draft.seq, ok: false, failure: null });
       });
     return () => {
       alive = false;
@@ -248,6 +286,16 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
           <button type="button" data-testid="trace-live-toggle" className={traceOpen ? 'is-active' : ''} aria-pressed={traceOpen} onClick={() => setTraceOpen((v) => !v)} title="再生中のステップの記録（API・DB の変化など）を表示">
             トレース
           </button>
+          {hub && request.id && (
+            <button type="button" data-testid="td-open" onClick={() => hub.openTestData(request.id)} title="このシナリオのテストデータ（入力値・期待値・fixtures）を表示・編集">
+              テストデータ
+            </button>
+          )}
+          {snap.draft && (
+            <span className="chip warn" data-testid="player-draft">
+              編集中のデータ
+            </span>
+          )}
           <span className="player-progress" data-testid="player-progress">
             {cursor} / {total}
           </span>

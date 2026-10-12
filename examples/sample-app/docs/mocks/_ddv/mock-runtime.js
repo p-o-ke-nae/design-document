@@ -6190,6 +6190,18 @@ function validHighlight(h) {
 	const ms = h.holdMs;
 	return typeof ms === "number" && Number.isFinite(ms) && ms >= 0 ? { holdMs: Math.min(ms, 1e4) } : null;
 }
+/** `ddv:reset` data: only plain objects of tables (arrays of row objects) are kept. */
+function validData(d) {
+	if (!d || typeof d !== "object" || Array.isArray(d)) return void 0;
+	const out = {};
+	for (const [name, tables] of Object.entries(d)) {
+		if (!tables || typeof tables !== "object" || Array.isArray(tables)) continue;
+		const t = {};
+		for (const [table, rows] of Object.entries(tables)) if (Array.isArray(rows)) t[table] = rows.filter((r) => !!r && typeof r === "object" && !Array.isArray(r));
+		out[name] = t;
+	}
+	return out;
+}
 var SupersededError = class extends Error {
 	constructor() {
 		super("後続のリセットにより中断しました");
@@ -6245,7 +6257,7 @@ var HostBridge = class {
 		if (!this.embedded || e.origin !== this.win.location.origin || e.source !== this.win.parent) return;
 		const m = e.data;
 		if (!m || typeof m !== "object") return;
-		if (m.type === "ddv:reset") this.reset(Array.isArray(m.fixtures) ? m.fixtures : [], m.start).catch(() => {});
+		if (m.type === "ddv:reset") this.reset(Array.isArray(m.fixtures) ? m.fixtures : [], m.start, validData(m.data)).catch(() => {});
 		else if (m.type === "ddv:step" && typeof m.index === "number" && m.step && typeof m.step === "object") this.step(m.step, m.index, validHighlight(m.highlight), m.trace === true);
 		else if (m.type === "ddv:tune" && typeof m.on === "boolean") this.engine.tune?.(m.on);
 		else if (m.type === "ddv:patch" && Array.isArray(m.path) && m.path.every((i) => Number.isInteger(i) && i >= 0)) {
@@ -6257,11 +6269,11 @@ var HostBridge = class {
 	start() {
 		return this.boot(null);
 	}
-	reset(fixtures, start) {
+	reset(fixtures, start, data) {
 		this.engine.cancel();
 		this.discard();
 		this.fire("reset");
-		return this.boot(fixtures, start);
+		return this.boot(fixtures, start, data);
 	}
 	discard() {
 		const items = [...this.current ? [this.current] : [], ...this.queue];
@@ -6277,10 +6289,10 @@ var HostBridge = class {
 			}
 		});
 	}
-	async boot(fixtures, start) {
+	async boot(fixtures, start, data) {
 		const g = ++this.gen;
 		try {
-			const r = await this.engine.boot(fixtures, start);
+			const r = await this.engine.boot(fixtures, start, data);
 			if (g !== this.gen) throw new SupersededError();
 			this.fire("loaded");
 			this.notify({
@@ -7761,6 +7773,7 @@ var RUNTIME_VERSION = {
 		"./playwright": "./src/playwright.ts",
 		"./tune": "./src/tune.ts",
 		"./tune-patch": "./src/tune-patch.ts",
+		"./yaml-patch": "./src/yaml-patch.ts",
 		"./trace": "./src/trace.ts",
 		"./trace-format": "./src/trace-format.ts"
 	},
@@ -7872,9 +7885,9 @@ var MockRuntime = class {
 		this.bridge.listen();
 	}
 	/** Re-initializes the DB with the fixtures (layered in order) and shows `start` (default: first data-screen). */
-	reset(fixtures = [], start) {
+	reset(fixtures = [], start, data) {
 		this.install();
-		return this.bridge.reset(fixtures, start);
+		return this.bridge.reset(fixtures, start, data);
 	}
 	step(step) {
 		return this.bridge.step(step);
@@ -7894,7 +7907,7 @@ var MockRuntime = class {
 	op(name, handler) {
 		this.ops.set(name, handler);
 	}
-	async boot(fixtures, start) {
+	async boot(fixtures, start, given) {
 		this.binder.cancel();
 		const apiText = await this.load("api.yaml");
 		const { spec, errors } = parseApiSpec(apiText === null ? null : parse(apiText));
@@ -7904,6 +7917,11 @@ var MockRuntime = class {
 		this.interceptor.install(this.router, spec.base);
 		const rows = [];
 		for (const name of fixtures ?? ["default"]) {
+			const draft = given?.[name];
+			if (draft) {
+				rows.push(draft);
+				continue;
+			}
 			const text = await this.load(`fixtures/${name}.yaml`);
 			if (text === null) {
 				if (fixtures === null) continue;

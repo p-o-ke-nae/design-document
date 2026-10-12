@@ -31,13 +31,13 @@ const NG: StepResult = { ok: false, screen: 'Input', failures: [{ key: 'screen',
 
 /** Steps resolve automatically from `results` unless `manual` is set. */
 class FakeTransport implements PlayerTransport {
-  resets: Array<{ fixtures: string[]; start?: string }> = [];
+  resets: Array<{ fixtures: string[]; start?: string; data?: unknown }> = [];
   steps: Array<{ index: number; d: Deferred<StepResult>; highlight?: { holdMs: number }; trace?: boolean }> = [];
   manual = false;
   hangReset = false;
   results: (i: number) => StepResult = (i) => OK(SCENARIO.steps[i].expect.screen);
-  reset(fixtures: string[], start?: string) {
-    this.resets.push({ fixtures, start });
+  reset(fixtures: string[], start?: string, data?: unknown) {
+    this.resets.push({ fixtures, start, ...(data ? { data } : {}) });
     return this.hangReset ? new Promise<{ screen: string | null }>(() => {}) : Promise.resolve({ screen: start ?? null });
   }
   step(index: number, _step: Step, highlight?: { holdMs: number }, trace?: boolean) {
@@ -518,5 +518,49 @@ describe('ライブ表示（LiveTrace）', () => {
     expect(c.liveTrace.draft).toBe(true);
     c.liveTrace.clear();
     expect(c.liveTrace.draft).toBe(false);
+  });
+});
+
+describe('編集中の再生（playDraft・DD-TDEDIT）', () => {
+  const DATA = { default: { orders: [{ id: 'A-1', customer: '編集中' }] } };
+
+  it('ddv:reset に data を付けて先頭から再生し、ライブ表示を「編集中」にする。完了は onDraftFinish（played に送らない）', async () => {
+    const transport = new FakeTransport();
+    const timer = new FakeTimer();
+    const finished: string[] = [];
+    const drafts: Array<{ id: string; ok: boolean }> = [];
+    const c = new PlayerController(transport, { timer, speed: 0, onFinish: (r) => finished.push(r.id), onDraftFinish: (r) => drafts.push({ id: r.id, ok: r.ok }) });
+    c.load(SCENARIO);
+    expect(c.playDraft(SCENARIO, DATA)).toBe(true);
+    expect(c.getSnapshot()).toMatchObject({ state: 'Playing', draft: true });
+    expect(c.liveTrace.draft).toBe(true);
+    await flush();
+    expect(transport.resets).toEqual([{ fixtures: ['default'], start: 'List', data: DATA }]);
+    expect(transport.steps.every((s) => s.trace)).toBe(true);
+    expect(c.getSnapshot().state).toBe('Done');
+    expect(c.liveTrace.draft).toBe(true);
+    expect(c.liveTrace.steps).toHaveLength(3);
+    expect(drafts).toEqual([{ id: SCENARIO.id, ok: true }]);
+    expect(finished).toEqual([]);
+  });
+
+  it('失敗も onDraftFinish に渡し、load で通常の再生（data なし・onFinish）に戻る', async () => {
+    const transport = new FakeTransport();
+    transport.results = (i) => (i === 1 ? NG : OK(SCENARIO.steps[i].expect.screen));
+    const finished: boolean[] = [];
+    const drafts: Array<{ ok: boolean; keys: string[] }> = [];
+    const c = new PlayerController(transport, { timer: new FakeTimer(), speed: 0, onFinish: (r) => finished.push(r.ok), onDraftFinish: (r) => drafts.push({ ok: r.ok, keys: r.failures.map((f) => f.key) }) });
+    c.playDraft(SCENARIO, DATA);
+    await flush();
+    expect(c.getSnapshot()).toMatchObject({ state: 'Failed', draft: true, failure: { index: 1 } });
+    expect(drafts).toEqual([{ ok: false, keys: ['screen'] }]);
+    c.load(SCENARIO);
+    expect(c.getSnapshot().draft).toBe(false);
+    expect(c.liveTrace.draft).toBe(false);
+    transport.results = (i) => OK(SCENARIO.steps[i].expect.screen);
+    c.play();
+    await flush();
+    expect(transport.resets.at(-1)).toEqual({ fixtures: ['default'], start: 'List' });
+    expect(finished).toEqual([true]);
   });
 });

@@ -2,11 +2,11 @@ import { parseMermaidGraph } from '@ddv/graph';
 import type { ParsedDoc } from './markdown.ts';
 
 /** Commentable element kinds (REVCMT ElementKind). */
-export type ElementKind = 'block' | 'tableRow' | 'node' | 'edge' | 'diagram' | 'matrixRow' | 'mockElement';
+export type ElementKind = 'block' | 'tableRow' | 'node' | 'edge' | 'diagram' | 'matrixRow' | 'mockElement' | 'testData';
 
 export interface ElementRef {
   kind: ElementKind;
-  /** heading slug / `L<line>` / `<diagramId>` / `<diagramId>#node:<id>` / `<diagramId>#edge:<GraphEdge.key>` / test ID / mock element path */
+  /** heading slug / `L<line>` / `<diagramId>` / `<diagramId>#node:<id>` / `<diagramId>#edge:<GraphEdge.key>` / test ID / mock element path / scenario ID or `fixtures/<name>` (testData) */
   key: string;
   label: string;
 }
@@ -100,11 +100,13 @@ export function toAnchor(doc: ParsedDoc, ref: ElementRef, opts: AnchorOptions = 
     }
     case 'mockElement':
       return range(opts.mockRange?.(ref.key));
+    case 'testData':
+      return undefined;
   }
 }
 
 // An edge line (A --> B) is the edge even when B first appears there.
-const PRIORITY: Record<ElementKind, number> = { edge: 0, node: 0.5, matrixRow: 0, mockElement: 0, tableRow: 1, block: 1, diagram: 2 };
+const PRIORITY: Record<ElementKind, number> = { edge: 0, node: 0.5, matrixRow: 0, mockElement: 0, testData: 0, tableRow: 1, block: 1, diagram: 2 };
 
 /** The smallest element whose line range contains `line` (edge / node → table row / block → diagram). */
 export function elementAt(elements: DocElement[], line: number): DocElement | undefined {

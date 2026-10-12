@@ -4,7 +4,7 @@ import { api, type DocResponse, type ElementRef, type PendingComment, type Revie
 import { docHref, useApp } from '../state.tsx';
 import { recalledSubmit, rememberSubmit, usePr } from './Pr.tsx';
 
-const KIND_LABEL: Record<string, string> = { block: 'ブロック', tableRow: '表の行', node: 'ノード', edge: '遷移', diagram: '図', matrixRow: 'マトリクス行', mockElement: 'モック要素' };
+const KIND_LABEL: Record<string, string> = { block: 'ブロック', tableRow: '表の行', node: 'ノード', edge: '遷移', diagram: '図', matrixRow: 'マトリクス行', mockElement: 'モック要素', testData: 'テストデータ' };
 const EVENT_LABEL: Record<ReviewEvent, string> = { COMMENT: 'Comment', APPROVE: 'Approve', REQUEST_CHANGES: 'Request changes' };
 
 const cache = new WeakMap<DocResponse, DocElement[]>();

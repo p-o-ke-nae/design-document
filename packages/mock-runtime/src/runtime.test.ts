@@ -229,6 +229,14 @@ describe('MockRuntime + DomDriver', () => {
     expect(r.state).toBe('Broken');
   });
 
+  it('reset の data は fixtures のファイルを読まずにその内容を使う（編集中の再生・DD-TDEDIT）', async () => {
+    const r = await boot({ 'api.yaml': API, 'fixtures/default.yaml': FIXTURE, 'fixtures/more.yaml': 'orders:\n  - { id: 2, customer: 追加 }\n' });
+    expect(await r.reset(['default', 'more'], undefined, { default: { orders: [{ id: 7, customer: '編集中' }] } })).toEqual({ screen: 'List' });
+    expect(r.db.list('orders').map((o) => o.customer)).toEqual(['編集中', '追加']);
+    expect(await r.reset(['draft-only'], undefined, { 'draft-only': { orders: [] } })).toEqual({ screen: 'List' });
+    expect(r.driver.count('orders')).toBe(0);
+  });
+
   it('api.yaml がなければルートなし（404）、fixtures/default.yaml がなければ空の DB で起動する', async () => {
     const r = await boot({});
     expect(r.state).toBe('Ready');

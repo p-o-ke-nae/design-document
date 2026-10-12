@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, type DocResponse } from '../api.ts';
 import { docHref, useApp } from '../state.tsx';
-import { MockHubProvider } from '../mockHub.tsx';
+import { MockHubProvider, useMockHub } from '../mockHub.tsx';
+import { TestDataEditor } from './TestDataEditor.tsx';
 import { Markdown } from './Markdown.tsx';
 import { Toc } from './Toc.tsx';
 import { MermaidView } from './MermaidView.tsx';
@@ -60,6 +61,7 @@ export function DocPage() {
   const errors = doc.issues.filter((i) => i.severity === 'error').length;
 
   return (
+    <MockHubProvider key={doc.path} version={version}>
     <div className="doc-layout">
       <div
         className="doc-scroll"
@@ -115,16 +117,27 @@ export function DocPage() {
               ))}
             </section>
           )}
-          <MockHubProvider key={doc.path} version={version}>
-            <Markdown text={doc.text} basePath={doc.path} doc={doc} review={review} />
-          </MockHubProvider>
+          <Markdown text={doc.text} basePath={doc.path} doc={doc} review={review} />
         </article>
         </CoverageProvider>
       </div>
+      <TestDataSide />
       <aside className="side">
         <Toc headings={doc.headings} scrollRoot={root} />
       </aside>
     </div>
+    </MockHubProvider>
+  );
+}
+
+/** テストデータの編集パネル（文書の右側。ハッシュは変えない）. */
+function TestDataSide() {
+  const hub = useMockHub();
+  if (!hub?.testData) return null;
+  return (
+    <aside className="td-side" data-testid="td-panel">
+      <TestDataEditor key={hub.testData.id} scenarioId={hub.testData.id} />
+    </aside>
   );
 }
 

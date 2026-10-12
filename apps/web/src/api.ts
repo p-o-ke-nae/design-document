@@ -278,9 +278,90 @@ export class ApiError extends Error {
     message: string,
     readonly status: number,
     readonly code?: string,
+    /** Response body of a refused request (test data save: errors / warnings). */
+    readonly body?: Record<string, unknown>,
   ) {
     super(message);
   }
+}
+
+// --- Test data editor (DD-TDEDIT) ---
+
+export type TdValue = string | number | boolean | null;
+export type TdRow = Record<string, TdValue>;
+export type FixtureTables = Record<string, TdRow[]>;
+export type TdWorkspaceKind = 'local' | 'pr' | 'branch';
+export type IssueCode = 'schema' | 'generated' | 'duplicateKey' | 'emptyKey' | 'unknownFixture' | 'conflict' | 'unknownElement' | 'unknownTable' | 'sharedFixture';
+
+export interface TdScenario {
+  id: string;
+  title: string;
+  fixtures?: string[];
+  start: string;
+  steps: Step[];
+}
+
+export interface FileData<T> {
+  name: string;
+  path: string;
+  hash: string;
+  data: T;
+}
+
+export interface MockField {
+  key: string;
+  kind: 'text' | 'number' | 'select' | 'checkbox';
+  required: boolean;
+  options: string[];
+}
+
+export interface TestDataBundle {
+  scenario: FileData<TdScenario>;
+  fixtures: FileData<FixtureTables>[];
+  availableFixtures: string[];
+  mock: { fields: MockField[]; testids: string[]; tables: Array<{ name: string; key: string }> };
+  editable: boolean;
+  readonlyReason?: string;
+  workspace: TdWorkspaceKind;
+  headSha?: string;
+  transitions: ScenarioTransition[];
+  retired: boolean;
+}
+
+export interface TestDataDraft {
+  scenarioId: string;
+  scenario: TdScenario;
+  fixtures: Record<string, FixtureTables>;
+  base: Record<string, string>;
+  headSha?: string;
+  comment?: string;
+}
+
+export interface DataIssue {
+  file: string;
+  path: string;
+  code: IssueCode;
+  message: string;
+}
+
+export interface LineHunk {
+  startLine: number;
+  endLine: number;
+  before: string[];
+  after: string[];
+}
+
+export interface ValidationResult {
+  errors: DataIssue[];
+  warnings: DataIssue[];
+  diff: Array<{ path: string; hunks: LineHunk[] }>;
+}
+
+export interface SaveResult {
+  mode: 'file' | 'suggestion';
+  files: string[];
+  comments: string[];
+  warnings?: string[];
 }
 
 export interface DepsTarget {
@@ -325,7 +406,7 @@ export async function json<T>(res: Response): Promise<T> {
   if (!res.ok && !(body && typeof body === 'object' && 'ok' in body)) {
     const b = body as { error?: string; message?: string; code?: string };
     if (res.status === 403 && b.code === 'untrusted') window.dispatchEvent(new CustomEvent('ddv-untrusted'));
-    throw new ApiError(b.message ?? b.error ?? `HTTP ${res.status}`, res.status, b.code);
+    throw new ApiError(b.message ?? b.error ?? `HTTP ${res.status}`, res.status, b.code, body && typeof body === 'object' ? (body as Record<string, unknown>) : undefined);
   }
   return body as T;
 }
@@ -366,6 +447,9 @@ export function createApi(ws: string) {
     scenarios: () => get<{ scenarios: ScenarioSummary[] }>('/api/mocks/scenarios'),
     scenario: (id: string) => get<ScenarioDetail>(`/api/mocks/scenario?id=${encodeURIComponent(id)}`),
     played: (body: { id: string; ok: boolean; failures?: StepFailure[] }) => post(A('/api/mocks/played'), body).then((r) => json<unknown>(r)),
+    testData: (scenario: string) => get<TestDataBundle>(`/api/testdata?scenario=${encodeURIComponent(scenario)}`),
+    validateTestData: (draft: TestDataDraft) => post(A('/api/testdata/validate'), draft).then((r) => json<ValidationResult>(r)),
+    saveTestData: (draft: TestDataDraft) => post(A('/api/testdata/save'), draft).then((r) => json<SaveResult>(r)),
     scaffold: (body: { mock?: string } = {}) => post(A('/api/mocks/scaffold'), body).then((r) => json<Record<string, unknown>>(r)),
     mockSource: (body: { mock: string; path: number[]; expect: { tag: string; testid?: string }; patch?: ElementPatch }) =>
       post(A('/api/mock-source'), body).then((r) => json<MockSourceResult>(r)),
@@ -527,7 +611,7 @@ export interface Thread {
 export type ReviewEvent = 'COMMENT' | 'APPROVE' | 'REQUEST_CHANGES';
 
 export interface ElementRef {
-  kind: 'block' | 'tableRow' | 'node' | 'edge' | 'diagram' | 'matrixRow' | 'mockElement';
+  kind: 'block' | 'tableRow' | 'node' | 'edge' | 'diagram' | 'matrixRow' | 'mockElement' | 'testData';
   key: string;
   label?: string;
 }
