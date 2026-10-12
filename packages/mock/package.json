@@ -8,6 +8,7 @@
     ".": "./src/index.ts",
     "./step": "./src/step.ts",
     "./browser": "./src/browser-safe.ts",
+    "./frame-protocol": "./src/frame-protocol.ts",
     "./playwright": "./src/playwright.ts",
     "./tune": "./src/tune.ts",
     "./tune-patch": "./src/tune-patch.ts",

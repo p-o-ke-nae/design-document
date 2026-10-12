@@ -20,6 +20,7 @@ export default defineConfig({
     alias: {
       '@ddv/mock/tune-patch': r('../mock/src/tune-patch.ts'),
       '@ddv/mock/step': r('../mock/src/step.ts'),
+      '@ddv/mock/frame-protocol': r('../mock/src/frame-protocol.ts'),
       '@ddv/mock/trace-format': r('../mock/src/trace-format.ts'),
     },
   },

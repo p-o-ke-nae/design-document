@@ -6,6 +6,7 @@ import { HostBridge, type BridgeEngine, type BridgeState, type FixtureData } fro
 import { MemoryDb, type Row } from './db.ts';
 import { DomDriver, type ExecOptions } from './driver.ts';
 import { FetchInterceptor } from './fetch.ts';
+import { detectHostMode, HostedFiles, type HostInfo } from './host.ts';
 import { ApiRouter, parseApiSpec, type ApiSpec, type RouteHandler } from './router.ts';
 import { ScreenController } from './screen.ts';
 import { TraceTap } from './trace-tap.ts';
@@ -32,6 +33,8 @@ export interface MockRuntimeOptions {
   stepTimeoutMs?: number;
   /** Wait used for the highlight hold (tests inject it). */
   sleep?: (ms: number) => Promise<void>;
+  /** How the page is hosted (default: detectHostMode(win)). */
+  host?: HostInfo;
 }
 
 /** Facade exposed as `window.__ddv` and as `mock` for mock.js. */
@@ -50,6 +53,9 @@ export class MockRuntime implements BridgeEngine {
   readonly tuner: Tuner;
   /** API / DB recording of a step (window.__ddv.trace). */
   readonly trace = new TraceTap(() => this.db);
+  readonly host: HostInfo;
+  /** srcdoc: files of ddv:init. */
+  readonly files = new HostedFiles();
   private spec: ApiSpec = { base: '/api', tables: [], routes: [] };
   private readonly hooks = new Map<string, Set<ScreenHandler>>();
   private readonly ops = new Map<string, OpHandler>();
@@ -62,7 +68,8 @@ export class MockRuntime implements BridgeEngine {
     this.doc = this.win.document;
     this.stepTimeoutMs = opts.stepTimeoutMs ?? 0;
     this.router = new ApiRouter(this.db, (m) => this.reportError(m));
-    this.interceptor = new FetchInterceptor(this.win);
+    this.host = opts.host ?? detectHostMode(this.win);
+    this.interceptor = new FetchInterceptor(this.win, this.host, this.files);
     this.interceptor.onCall = (c) => this.trace.record(c);
     this.screens = new ScreenController(this.doc);
     this.binder = new DeclarativeBinder({
@@ -74,9 +81,9 @@ export class MockRuntime implements BridgeEngine {
       onError: (m) => this.reportError(m),
     });
     this.driver = new DomDriver({ screens: this.screens, binder: this.binder, root: this.doc, invoke: (n) => this.invoke(n), sleep: opts.sleep });
-    this.bridge = new HostBridge(this.win, this);
+    this.bridge = new HostBridge(this.win, this, this.host);
     this.tuner = new Tuner(this.doc, (picked) => this.bridge.notify({ type: 'ddv:picked', ...picked }));
-    this.load = opts.load ?? ((rel) => this.fetchFile(rel));
+    this.load = opts.load ?? (this.host.mode === 'srcdoc' ? (rel) => this.files.read(rel) : (rel) => this.fetchFile(rel));
   }
 
   /** Resolves on the first successful boot (rejects when it fails). */
@@ -108,17 +115,31 @@ export class MockRuntime implements BridgeEngine {
     this.interceptor.uninstall();
     this.offScreen?.();
     this.offScreen = null;
+    this.offCsp?.();
+    this.offCsp = null;
     this.installed = false;
     this.started = null;
   }
 
   private offScreen: (() => void) | null = null;
+  private offCsp: (() => void) | null = null;
+  private readonly blocked = new Set<string>();
   private installed = false;
   private install() {
     if (this.installed) return;
     this.installed = true;
     this.binder.bind(this.doc);
     this.offScreen = this.screens.onChange((id) => this.onScreen(id));
+    if (this.host.mode === 'srcdoc') {
+      const onCsp = (e: Event) => {
+        const uri = (e as SecurityPolicyViolationEvent).blockedURI || '(inline)';
+        if (this.blocked.has(uri)) return;
+        this.blocked.add(uri);
+        this.bridge.error(`Pages 版では読み込めない参照です: ${uri}`);
+      };
+      this.doc.addEventListener('securitypolicyviolation', onCsp);
+      this.offCsp = () => this.doc.removeEventListener('securitypolicyviolation', onCsp);
+    }
     this.bridge.listen();
   }
 
@@ -204,6 +225,10 @@ export class MockRuntime implements BridgeEngine {
 
   traceTake(): TapResult {
     return this.trace.take(this.db);
+  }
+
+  init(files: Record<string, string>): void {
+    this.files.set(files);
   }
 
   observe(step: Step): Promise<ExpectObservation[]> {

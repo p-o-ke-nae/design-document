@@ -1,6 +1,10 @@
 import type { ExpectObservation, Step, StepResult } from '@ddv/mock/step';
 import type { LiveStepTrace, TapResult } from '@ddv/mock/trace-format';
 import type { ElementPatch, PatchIssue, PickedElement } from '@ddv/mock/tune-patch';
+import { acceptFrameMessage, FRAME_PROTOCOL, parseToFrame, validData, validHighlight, type FixtureData } from '@ddv/mock/frame-protocol';
+import type { HostInfo } from './host.ts';
+
+export { validData, validHighlight, type FixtureData };
 
 export type BridgeState = 'Booting' | 'Ready' | 'Running' | 'Broken';
 export type BridgeEvent = 'loaded' | 'failed' | 'step' | 'done' | 'reset';
@@ -20,7 +24,8 @@ export function bridgeTransition(state: BridgeState, ev: BridgeEvent): BridgeSta
 }
 
 export type OutMessage =
-  | { type: 'ddv:ready'; screen: string | null; version: string }
+  | { type: 'ddv:hello'; protocol: number; version: string }
+  | { type: 'ddv:ready'; screen: string | null; version: string; protocol?: number }
   | { type: 'ddv:result'; index: number; ok: boolean; screen: string | null; failures: StepResult['failures']; message?: string; trace?: LiveStepTrace }
   | { type: 'ddv:screen'; screen: string }
   | { type: 'ddv:error'; message: string }
@@ -31,10 +36,8 @@ export type InMessage =
   | { type: 'ddv:reset'; fixtures?: string[]; start?: string; data?: FixtureData }
   | { type: 'ddv:step'; index: number; step: Step; highlight?: { holdMs: number }; trace?: boolean }
   | { type: 'ddv:tune'; on: boolean }
-  | { type: 'ddv:patch'; path: number[]; patch: ElementPatch | null };
-
-/** Fixture name → table → rows. */
-export type FixtureData = Record<string, Record<string, Array<Record<string, unknown>>>>;
+  | { type: 'ddv:patch'; path: number[]; patch: ElementPatch | null }
+  | { type: 'ddv:init'; protocol: number; files: Record<string, string> };
 
 export const TUNING_MESSAGE = 'モックの調整中のため実行できません（調整を終了してください）';
 
@@ -56,6 +59,8 @@ export interface BridgeEngine {
   traceBegin?(): void;
   traceTake?(): TapResult;
   observe?(step: Step): Promise<ExpectObservation[]>;
+  /** srcdoc: the files of ddv:init (api.yaml, fixtures, files read by fetch). */
+  init?(files: Record<string, string>): void;
 }
 
 interface QueueItem {
@@ -64,26 +69,6 @@ interface QueueItem {
   highlight?: { holdMs: number } | null;
   trace?: boolean;
   resolve: (r: StepResult) => void;
-}
-
-/** Accepts { holdMs } with a finite, non-negative holdMs (capped at 10s); anything else = no highlight. */
-export function validHighlight(h: unknown): { holdMs: number } | null {
-  if (!h || typeof h !== 'object') return null;
-  const ms = (h as { holdMs?: unknown }).holdMs;
-  return typeof ms === 'number' && Number.isFinite(ms) && ms >= 0 ? { holdMs: Math.min(ms, 10_000) } : null;
-}
-
-/** `ddv:reset` data: only plain objects of tables (arrays of row objects) are kept. */
-export function validData(d: unknown): FixtureData | undefined {
-  if (!d || typeof d !== 'object' || Array.isArray(d)) return undefined;
-  const out: FixtureData = {};
-  for (const [name, tables] of Object.entries(d)) {
-    if (!tables || typeof tables !== 'object' || Array.isArray(tables)) continue;
-    const t: FixtureData[string] = {};
-    for (const [table, rows] of Object.entries(tables)) if (Array.isArray(rows)) t[table] = rows.filter((r): r is Record<string, unknown> => !!r && typeof r === 'object' && !Array.isArray(r));
-    out[name] = t;
-  }
-  return out;
 }
 
 export class SupersededError extends Error {
@@ -109,6 +94,8 @@ export class HostBridge {
   constructor(
     private readonly win: Window,
     private readonly engine: BridgeEngine,
+    /** From detectHostMode. Absent = Phase 5 behaviour (no ddv:hello / protocol, origin = location.origin). */
+    private readonly host?: HostInfo,
   ) {
     this.ready = new Promise<void>((res, rej) => {
       this.readyResolve = res;
@@ -127,6 +114,7 @@ export class HostBridge {
     if (this.abort) return;
     this.abort = new AbortController();
     this.win.addEventListener('message', (e) => this.onMessage(e as MessageEvent), { signal: this.abort.signal });
+    if (this.host) this.notify({ type: 'ddv:hello', protocol: FRAME_PROTOCOL, version: this.engine.version });
   }
 
   unlisten(): void {
@@ -135,24 +123,30 @@ export class HostBridge {
   }
 
   private get embedded(): boolean {
-    return this.win.parent !== this.win;
+    return this.host ? this.host.mode !== 'standalone' : this.win.parent !== this.win;
+  }
+
+  private get parentOrigin(): string {
+    return this.host?.origin ?? this.win.location.origin;
   }
 
   notify(msg: OutMessage): void {
     if (!this.embedded) return;
-    const origin = this.win.location.origin;
+    const origin = this.parentOrigin;
     this.win.parent.postMessage(msg, origin && origin !== 'null' ? origin : '*');
   }
 
   onMessage(e: MessageEvent): void {
-    if (!this.embedded || e.origin !== this.win.location.origin || e.source !== this.win.parent) return;
-    const m = e.data as InMessage | null;
-    if (!m || typeof m !== 'object') return;
-    if (m.type === 'ddv:reset') this.reset(Array.isArray(m.fixtures) ? m.fixtures : [], m.start, validData(m.data)).catch(() => {});
-    else if (m.type === 'ddv:step' && typeof m.index === 'number' && m.step && typeof m.step === 'object') void this.step(m.step, m.index, validHighlight(m.highlight), m.trace === true);
-    else if (m.type === 'ddv:tune' && typeof m.on === 'boolean') this.engine.tune?.(m.on);
-    else if (m.type === 'ddv:patch' && Array.isArray(m.path) && m.path.every((i) => Number.isInteger(i) && i >= 0)) {
-      const issues = this.engine.patch?.(m.path, m.patch && typeof m.patch === 'object' ? m.patch : null) ?? [];
+    if (!this.embedded) return;
+    const m = acceptFrameMessage(e, { source: this.win.parent, origin: this.parentOrigin }, parseToFrame);
+    if (!m) return;
+    if (m.type === 'ddv:init') {
+      if (this.host?.mode === 'srcdoc') this.engine.init?.(m.files);
+    } else if (m.type === 'ddv:reset') this.reset(m.fixtures, m.start, m.data).catch(() => {});
+    else if (m.type === 'ddv:step') void this.step(m.step, m.index, m.highlight, m.trace);
+    else if (m.type === 'ddv:tune') this.engine.tune?.(m.on);
+    else if (m.type === 'ddv:patch') {
+      const issues = this.engine.patch?.(m.path, m.patch) ?? [];
       if (issues.length) this.error(issues.map((i) => i.message).join('／'));
     }
   }
@@ -183,10 +177,11 @@ export class HostBridge {
       const r = await this.engine.boot(fixtures, start, data);
       if (g !== this.gen) throw new SupersededError();
       this.fire('loaded');
-      this.notify({ type: 'ddv:ready', screen: r.screen, version: this.engine.version });
+      this.notify({ type: 'ddv:ready', screen: r.screen, version: this.engine.version, ...(this.host ? { protocol: FRAME_PROTOCOL } : {}) });
       if (!this.firstBootDone) {
         this.firstBootDone = true;
         this.readyResolve();
+        this.flushHeld();
       }
       return r;
     } catch (e) {
@@ -197,6 +192,7 @@ export class HostBridge {
       if (!this.firstBootDone) {
         this.firstBootDone = true;
         this.readyReject(e);
+        this.flushHeld();
       }
       throw e;
     }
@@ -268,6 +264,18 @@ export class HostBridge {
   }
 
   error(message: string): void {
+    // srcdoc: the viewer treats ddv:error before the first ddv:ready as a boot failure, so warnings wait until then.
+    if (this.host?.mode === 'srcdoc' && !this.firstBootDone) {
+      this.held.push(message);
+      return;
+    }
     this.notify({ type: 'ddv:error', message });
+  }
+
+  private held: string[] = [];
+  private flushHeld() {
+    const ms = this.held;
+    this.held = [];
+    for (const message of ms) this.notify({ type: 'ddv:error', message });
   }
 }

@@ -23,6 +23,7 @@
       "@ddv/services": ["./packages/services/src/index.ts"],
       "@ddv/mock/step": ["./packages/mock/src/step.ts"],
       "@ddv/mock/browser": ["./packages/mock/src/browser-safe.ts"],
+      "@ddv/mock/frame-protocol": ["./packages/mock/src/frame-protocol.ts"],
       "@ddv/mock/playwright": ["./packages/mock/src/playwright.ts"],
       "@ddv/mock/tune": ["./packages/mock/src/tune.ts"],
       "@ddv/mock/tune-patch": ["./packages/mock/src/tune-patch.ts"],
