@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn, execFileSync, type ChildProcess } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -20,6 +20,16 @@ const DOC = (title: string, body: string) => `---\nid: REVIEW\nkind: basic\nstat
 // order.md of the PR head: L12 rewritten (added + base 「注文を受け付ける。」 removed), L14–16 added.
 const ORDER_V2 = '---\nid: SAMPLE\nkind: basic\nstatus: review\ntitle: 注文 基本設計\n---\n\n# 注文 基本設計\n\n## 概要\n\n注文を受け付け、内容を確認する。\n\n## 確認\n\n確認画面を表示する。\n';
 const ORDER = 'docs/design/basic/order.md';
+/** `owner/repo` of the sample's `origin`: the matrix's 「Actions で実行」 asks its Actions status (actions-run.md, Phase 6). */
+const LOCAL_ORIGIN = (() => {
+  try {
+    const url = execFileSync('git', ['remote', 'get-url', 'origin'], { cwd: 'examples/sample-app', encoding: 'utf8' }).trim();
+    return /github\.com[/:]([^/]+\/[^/]+?)(?:\.git)?$/.exec(url)?.[1] ?? null;
+  } catch {
+    return null;
+  }
+})();
+const isLocalActions = (call: string) => call === 'GET /user' || (!!LOCAL_ORIGIN && (call === `GET /repos/${LOCAL_ORIGIN}` || call.startsWith(`GET /repos/${LOCAL_ORIGIN}/`)));
 
 let tmp = '';
 let upstream: Upstream;
@@ -129,7 +139,7 @@ test('[BD-GHREV-SCREEN-T001] 手元の文書では GitHub に問い合わせな�
   await expect(page.getByTestId('doc-tree')).toContainText('注文画面 基本設計');
   await expect(page.getByTestId('ws-switch')).toHaveValue('');
   await expect(page.getByTestId('auth-status')).toHaveCount(0);
-  expect(state.calls.slice(before)).toEqual([]);
+  expect(state.calls.slice(before).filter((c) => !isLocalActions(c))).toEqual([]);
 });
 
 test('[BD-GHREV-SCREEN-T002][BD-GHREV-SCREEN-T003] 手元 → GitHub を開く → キャンセル → 手元の文書', async ({ page }) => {
