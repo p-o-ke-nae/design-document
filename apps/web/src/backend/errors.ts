@@ -1,5 +1,6 @@
 import { GitHubError } from '@ddv/github';
 import { ServiceError } from '@ddv/services';
+import { formatGitHubError } from '../pages/errors.ts';
 import { ApiError, type PatView } from './types.ts';
 
 /** Same as the local server's `host.ts`. */
@@ -22,7 +23,7 @@ export function toApiError(e: unknown, pat: PatView): ApiError {
     const message = e instanceof Error ? messageOf(e, pat) : String(e);
     return new ApiError(message, 500, undefined, { error: message });
   }
-  const message = messageOf(e, pat);
+  const message = formatGitHubError(e, pat);
   const err = (status: number, code: string, extra: Record<string, unknown> = {}) => new ApiError(message, status, code, { error: message, code, message, ...extra });
   switch (e.kind) {
     case 'auth':
