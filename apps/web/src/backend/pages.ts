@@ -193,6 +193,9 @@ export function pagesFeed(scope: string): PagesFeed {
 
 const NOT_READY = '対象を読み込んでいません';
 const NOT_PR = 'PR ではありません';
+/** No Actions service for the target (not wired / not a GitHub target): the Actions tab is not shown. */
+const ACTIONS_HIDDEN = { state: 'hidden', reason: '', workflow: null, canInit: false } as const;
+const NO_ACTIONS = 'Actions を使えません';
 
 const fail = (status: number, code: string, message: string): never => {
   throw new ApiError(message, status, code, { error: message, code, message });
@@ -211,6 +214,7 @@ export function createPagesBackend(scope: string, getContext: () => PagesContext
   const call = async <T>(op: OperationId | readonly OperationId[], fn: (s: Services) => unknown): Promise<T> => pagesCall(deps(), op, () => fn(svc()) as T | Promise<T>);
   const unsupported = async <T>(op: OperationId): Promise<T> => pagesCall(deps(), op, () => fail(405, 'unsupported', 'unsupported'));
   const prService = (s: Services) => s.pr ?? fail(404, 'not-found', NOT_PR);
+  const actions = (s: Services) => s.actions ?? fail(404, 'not-found', NO_ACTIONS);
   const review = async (s: Services) => {
     const c = ctx();
     if (!s.review || !c.prContext) return fail(404, 'not-found', NOT_PR);
@@ -335,6 +339,15 @@ export function createPagesBackend(scope: string, getContext: () => PagesContext
       }),
     replyThread: (id, body) => call('reply', (s) => prService(s).replyThread(id, body)),
     resolveThread: (id, resolved) => call('resolveThread', (s) => prService(s).resolveThread(id, resolved)),
+    // Actions (actions-run.md): the ActionsService of the target when the loader wired one (PagesActionsTarget), otherwise hidden.
+    actionsStatus: (refresh) => read((s) => (s.actions ? s.actions.status(refresh) : ACTIONS_HIDDEN)),
+    actionsRuns: () => read((s) => actions(s).runs()),
+    actionsDispatch: (body) => call('actionsDispatch', async (s) => ({ request: await actions(s).dispatch(body) })),
+    actionsRun: (id) => read((s) => actions(s).run(id)),
+    actionsApprove: (id, ids) => call('snapshotApprove', async (s) => ({ request: await actions(s).approve(id, ids) })),
+    // Placing the workflow writes a file of the local folder.
+    actionsInit: () => unsupported('scaffold'),
+    actionsFile: (id, p) => read((s) => blobUrl(`actions:${id}/${p}`, async () => new Blob([bytes(await actions(s).file(id, p))], { type: mimeOf(p) }))),
   };
 }
 

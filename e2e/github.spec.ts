@@ -6,14 +6,14 @@ import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { E2E_TOKEN, login } from './ddv-auth.ts';
+import { E2E_PORT, E2E_TOKEN, login } from './ddv-auth.ts';
 import { createUpstream, fakeGitHub, fakeGitHubState, type FakeGitHubState, type Upstream } from '../apps/server/src/github-fixture.ts';
 
 // Phase 1 (WSPACE) screen flow against a stub GitHub API and a local upstream repository. Never touches github.com.
 // Transitions and invalid events of BD-GHREV-SCREEN that involve the review (Phase 2) are linked when that part exists.
 
-const PORT = 5186;
-const NO_TOKEN_PORT = 5187;
+const PORT = E2E_PORT + 7;
+const NO_TOKEN_PORT = E2E_PORT + 8;
 const REPO = 'acme/order-app';
 const TOKEN = 'ghp_test_token';
 const DOC = (title: string, body: string) => `---\nid: REVIEW\nkind: basic\nstatus: review\ntitle: ${title}\n---\n\n# ${title}\n\n${body}\n`;

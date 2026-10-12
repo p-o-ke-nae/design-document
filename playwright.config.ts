@@ -18,7 +18,8 @@ export default defineConfig({
   webServer: {
     command: `npx tsx e2e/seed-history.ts && npx vite build apps/web && npx tsx apps/server/src/cli.ts serve --repo examples/sample-app --port ${PORT}`,
     url: `http://127.0.0.1:${PORT}/`,
-    env: { DDV_TOKEN: E2E_TOKEN, DDV_HOME: 'test-results/ddv-home' },
+    // The sample app lives in a repository with a GitHub origin: keep the Actions status off github.com.
+    env: { DDV_TOKEN: E2E_TOKEN, DDV_HOME: 'test-results/ddv-home', DDV_GITHUB_API: 'http://127.0.0.1:9', DDV_GITHUB_NO_GH: '1' },
     timeout: 120_000,
     reuseExistingServer: false,
   },

@@ -86,3 +86,33 @@ export class TestDataError extends ServiceError {
     this.name = 'TestDataError';
   }
 }
+
+export type ActionsErrorCode =
+  | 'no-remote'
+  | 'setup'
+  | 'readonly'
+  | 'fork'
+  | 'detached'
+  | 'not-pushed'
+  | 'workflow-missing-on-ref'
+  | 'ids-invalid'
+  | 'runner-unknown'
+  | 'run-id-invalid'
+  | 'path-invalid'
+  | 'not-found'
+  | 'not-pr'
+  | 'other-pr'
+  | 'trimmed';
+
+/** A rejected Actions operation (actions-run.md「エラー」). */
+export class ActionsError extends ServiceError {
+  constructor(
+    readonly status: 400 | 403 | 404 | 409,
+    readonly code: ActionsErrorCode,
+    message: string,
+    readonly extra: Record<string, unknown> = {},
+  ) {
+    super(status, code, message, extra);
+    this.name = 'ActionsError';
+  }
+}

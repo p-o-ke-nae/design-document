@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useReducer } from 'react';
+import type { TraceResponse } from '../api.ts';
 import { api } from '../backend/index.ts';
 import { ApiError } from '../backend/types.ts';
 import { viewHref } from '../state.tsx';
@@ -10,22 +11,33 @@ const fmtAt = (iso: string) => {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-/** `#/tests/trace/<runId>/<testId>` — one test id's trace in one run (DD-TRVIEW). */
-export function TraceView({ runId, testId }: { runId: string; testId: string }) {
+/** `#/tests/trace/<runId>/<testId>` — one test id's trace in one run (DD-TRVIEW). `load` / `shotUrl` read another source (an Actions run's files). */
+export function TraceView({
+  runId,
+  testId,
+  load,
+  shotUrl,
+  backHref,
+}: {
+  runId: string;
+  testId: string;
+  load?: () => Promise<TraceResponse>;
+  shotUrl?: (n: number) => Promise<string>;
+  backHref?: string;
+}) {
   const [state, dispatch] = useReducer(reduceTraceView, { runId, testId }, startTrace);
 
   useEffect(() => {
     const key = { runId, testId };
     dispatch({ type: 'open', key });
     let alive = true;
-    api
-      .trace(runId, testId)
+    (load ? load() : api.trace(runId, testId))
       .then((trace) => alive && dispatch({ type: 'fetched', key, trace }))
       .catch((e: Error) => alive && dispatch({ type: 'fetched', key, code: e instanceof ApiError ? (e.code ?? String(e.status)) : 'error', message: e.message }));
     return () => {
       alive = false;
     };
-  }, [runId, testId]);
+  }, [runId, testId, load]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -39,11 +51,11 @@ export function TraceView({ runId, testId }: { runId: string; testId: string }) 
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const back = () => goBack(viewHref('tests'));
+  const back = () => goBack(backHref ?? viewHref('tests'));
 
   const current = state.kind !== 'Loading' && state.kind !== 'None' ? state.trace.steps.find((s) => s.index === state.selected) : undefined;
   const shotIndex = current?.screenshot ? current.index : -1;
-  const shot = useMemo(() => (shotIndex >= 0 ? api.traceShot(runId, testId, shotIndex) : null), [runId, testId, shotIndex]);
+  const shot = useMemo(() => (shotIndex >= 0 ? (shotUrl ? shotUrl(shotIndex) : api.traceShot(runId, testId, shotIndex)) : null), [runId, testId, shotIndex, shotUrl]);
 
   if (state.kind === 'Loading')
     return (

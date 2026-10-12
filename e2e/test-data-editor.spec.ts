@@ -6,7 +6,7 @@ import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { E2E_TOKEN, login } from './ddv-auth.ts';
+import { E2E_PORT, E2E_TOKEN, login } from './ddv-auth.ts';
 import { createUpstream, fakeGitHub, fakeGitHubState, type FakeGitHubState } from '../apps/server/src/github-fixture.ts';
 
 // Phase 4 段階C テストデータ編集（BD-TDATA-EDITOR / DD-TDEDIT）. Saving tests restore the sample files byte-for-byte afterwards.
@@ -240,7 +240,7 @@ test('[BD-TDATA-EDITOR-P003] 再生ツールバーから開き、編集中のデ
 });
 
 test.describe('PR のワークスペース', () => {
-  const PORT = 5190;
+  const PORT = E2E_PORT + 11;
   const REPO = 'acme/order-app';
   const TOKEN = 'ghp_test_token';
   const WS = 'gh~acme~order-app~pr-12';

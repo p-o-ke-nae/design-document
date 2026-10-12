@@ -60,7 +60,8 @@ export interface ServerContext {
   /** The working folder (the file watcher invalidates it). */
   reader: FsRepoReader;
   writer: FsRepoWriter;
-  /** @ddv/services over eader (the route handlers call these). */
+  /** @ddv/services over 
+eader (the route handlers call these). */
   services: Services;
   history: HistoryService;
   traces: TraceService;
@@ -71,6 +72,8 @@ export interface ServerContext {
   /** GitHub workspaces: the kind (pr / branch) and review service for the test-data editor (DD-TDEDIT). Absent = the local workspace. */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   testData?: () => TestDataWorkspace<any> & { review?: Reviewer<any> };
+  /** The Actions feature (actions-api.ts `ActionsHost`): `actions` SSE subscribers. Set by the host. */
+  actions?: { subscribe(listener: (e: object) => void): () => void };
   close(): void;
 }
 
@@ -329,8 +332,13 @@ export function createApp(ctx: ServerContext): Hono {
   });
 
   app.get('/api/results/latest', async (c) => {
-    const out: Record<string, ReturnType<RunManager['latest']>[string] & { trace: boolean }> = {};
-    for (const [id, res] of Object.entries(ctx.runs.latest())) out[id] = { ...res, trace: !!ctx.runs.runs.get(res.runId)?.traces?.includes(id) && (await ctx.traces.exists(res.runId, id)) };
+    const out: Record<string, ReturnType<HistoryService['latest']>[string] & { trace: boolean }> = {};
+    for (const [id, res] of Object.entries(ctx.history.latest())) {
+      // Actions results: listed in `traces` is enough (actions-run.md「既存の API への追加」).
+      const r = res.source === 'actions' ? ctx.history.record(res.runId) : ctx.runs.runs.get(res.runId);
+      const listed = !!r?.traces?.includes(id);
+      out[id] = { ...res, trace: listed && (res.source === 'actions' || (await ctx.traces.exists(res.runId, id))) };
+    }
     return c.json(out);
   });
   app.get('/api/events', (c) =>
@@ -345,8 +353,10 @@ export function createApp(ctx: ServerContext): Hono {
         ctx.events.on('change', onChange);
         ctx.runs.on('end', onEnd);
         ctx.runs.on('run', onRun);
+        const offActions = ctx.actions?.subscribe((e) => void stream.writeSSE({ event: 'actions', data: JSON.stringify(e) }));
         stream.onAbort(() => {
           clearInterval(ping);
+          offActions?.();
           ctx.events.off('change', onChange);
           ctx.runs.off('end', onEnd);
           ctx.runs.off('run', onRun);

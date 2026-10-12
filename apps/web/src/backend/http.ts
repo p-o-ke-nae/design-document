@@ -227,6 +227,7 @@ export function createHttpBackend(scope: string): Backend {
     followRun: (id, handlers) => followRunEvents(apiPath(scope, `/api/runs/${id}/events`), handlers),
     traceShot: async (runId, id, n) => base.traceShot(runId, id, n),
     rawUrl: async (p) => rawPath(scope, p),
+    actionsFile: async (id, p) => base.actionsFile(id, p),
     repo: () => null,
   };
 }

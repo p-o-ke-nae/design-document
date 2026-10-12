@@ -6,7 +6,9 @@ export interface Route {
   path: string;
   heading: string;
   /** Tests tab: '' = list, 'history' = one test id's history, 'flaky' = flaky tests, 'trace' = one test id's trace in one run. */
-  sub?: '' | 'history' | 'flaky' | 'trace';
+  sub?: '' | 'history' | 'flaky' | 'trace' | 'actions';
+  /** Tests tab, `actions`: the part after `tests/actions/` ('' = list, 'setup', 'requests/<id>', 'runs/<id>', 'runs/<id>/trace/<testId>'). */
+  actions?: string;
   /** Tests tab, `history` / `trace`: the test id. */
   testId?: string;
   /** Tests tab, `trace`: the run id. */
@@ -16,4 +18,4 @@ export interface Route {
 }
 
 /** The part of a route an href points at (`state.tsx` helpers; Pages: `formatHostedHash`). */
-export type HrefView = Pick<Route, 'view' | 'path' | 'heading' | 'sub' | 'testId' | 'runId' | 'diff'>;
+export type HrefView = Pick<Route, 'view' | 'path' | 'heading' | 'sub' | 'actions' | 'testId' | 'runId' | 'diff'>;

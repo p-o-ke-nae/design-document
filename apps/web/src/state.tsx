@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { emitActionsEvent, resetActionsEvents } from './actionsApi.ts';
 import { api, workspace } from './backend/index.ts';
 import { ApiError } from './backend/types.ts';
 import type { CaseResult, DdvConfig, DepsMissingDetail, HistorySummary, RunSummary } from './api.ts';
@@ -44,6 +45,8 @@ export function parseHash(hash: string): Route {
   if (p === '/open') return { ws: '', view: 'open', path: '', heading: '' };
   if (p === '/folder') return { ws: '', view: 'folder', path: '', heading: '' };
   if (p === '/tests') return { ws, view: 'tests', path: '', heading: '' };
+  const am = /^\/tests\/actions(?:\/(.*))?$/.exec(p);
+  if (am) return { ws, view: 'tests', path: '', heading: '', sub: 'actions', actions: am[1] ?? '' };
   if (p === '/tests/flaky') return { ws, view: 'tests', path: '', heading: '', sub: 'flaky' };
   const hm = /^\/tests\/history\/([^/]+)$/.exec(p);
   if (hm) return { ws, view: 'tests', path: '', heading: '', sub: 'history', testId: decodeURIComponent(hm[1]) };
@@ -91,6 +94,12 @@ export function traceHref(runId: string, id: string): string {
 export function reviewHref(done = false): string {
   if (codec) return codec.href({ view: done ? 'done' : 'review', path: '', heading: '' });
   return `${wsBase()}/review${done ? '/done' : ''}`;
+}
+
+/** Actions tab of the tests view (actions-run.md「画面」): `part` = '' (list) / 'setup' / 'requests/<id>' / 'runs/<id>'. */
+export function actionsHref(part = ''): string {
+  if (codec) return codec.href({ view: 'tests', path: '', heading: '', sub: 'actions', actions: part });
+  return `${wsBase()}/tests/actions${part ? `/${part}` : ''}`;
 }
 
 export function useLocalStorage<T>(key: string, initial: T): [T, (v: T) => void] {
@@ -198,8 +207,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     refreshResults();
     const onHash = () => setRoute(parseRoute(location.hash));
     window.addEventListener('hashchange', onHash);
+    resetActionsEvents();
     const unsubscribe = api.subscribe((ev) => {
-      if (ev.type === 'change') setVersion((v) => v + 1);
+      if (ev.type === 'actions') {
+        emitActionsEvent(ev.data as never);
+        if (ev.data.type === 'history') refreshResults();
+      } else if (ev.type === 'change') setVersion((v) => v + 1);
       else if (ev.type === 'run-end') refreshResults();
       else if (ev.type === 'resync') {
         // Events may have been missed while reconnecting: the same as a change.

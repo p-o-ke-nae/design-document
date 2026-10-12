@@ -2,6 +2,7 @@ import { activeIds, type DiagramMatrix, type TestIdLock } from '@ddv/testid/core
 import { HistoryError } from './errors.ts';
 import type { CoverageService } from './coverage.ts';
 import type { TraceService } from './traces.ts';
+import { latestOf, mergeRunRecords, sourceOf } from './actions/merge.ts';
 
 export { HistoryError };
 
@@ -16,6 +17,22 @@ export interface CaseResult {
 }
 
 export type RunKind = 'test' | 'snapshot' | 'deps';
+
+/** Where a run was executed (actions-run.md「RunRecord の拡張」). Absent in a record = local. */
+export type RunSource = 'local' | 'actions';
+
+export interface StepResultMeta {
+  step: number;
+  status: string;
+  diffRatio?: number;
+}
+
+/** Actions: one scenario captured in the run. */
+export interface SnapshotOutcome {
+  id: string;
+  status: 'passed' | 'failed' | 'error';
+  steps: StepResultMeta[];
+}
 
 /** A run record (`.ddv/runs/<id>.json`; the server's `RunRecord`). */
 export interface RunRecord {
@@ -35,6 +52,13 @@ export interface RunRecord {
   attempt?: number;
   times?: number;
   traces?: string[];
+  source?: RunSource;
+  /** Actions: GITHUB_RUN_ID (`id` is the result id `<run id>-<attempt>`). */
+  actionsRunId?: string;
+  actionsRequest?: string;
+  ref?: string;
+  warnings?: string[];
+  snapshots?: SnapshotOutcome[];
 }
 
 export type Unsubscribe = () => void;
@@ -49,22 +73,19 @@ export interface LocalRuns {
 
 export const EMPTY_RUNS: LocalRuns = { list: () => [], failedIdsOfLatest: () => [], onEnd: () => () => {} };
 
-export type LatestResult = CaseResult & { runId: string; at: string };
+export type LatestResult = CaseResult & { runId: string; at: string; source?: RunSource; actionsRunId?: string };
 export type LatestResults = Record<string, LatestResult>;
 
 /** Latest result per test id of the runs (newest first): the most recent run that produced a result for it. */
 export function latestOfRuns(runs: RunRecord[]): LatestResults {
-  const out: LatestResults = {};
-  for (const r of [...runs].reverse()) for (const [id, res] of Object.entries(r.results)) out[id] = { ...res, runId: r.id, at: r.finishedAt ?? r.startedAt };
-  return out;
+  return latestOf(runs);
 }
 
-/** Local runs and the runs received by `setActionsRuns` (newest first, the same id once; the local record wins). */
+/** Local runs and the runs received by `setActionsRuns` (`mergeRunRecords`). */
 export function mergeRuns(local: RunRecord[], actions: RunRecord[]): RunRecord[] {
-  if (!actions.length) return local;
-  const seen = new Set(local.map((r) => r.id));
-  return [...local, ...actions.filter((r) => !seen.has(r.id))].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+  return mergeRunRecords(local, actions);
 }
+
 export type RecentMark = TestStatus | 'none';
 export type CoverageClass = 'unlinked' | 'unexecuted' | 'passed' | 'failed' | 'skipped';
 
@@ -80,12 +101,16 @@ export interface HistoryEntry {
   durationMs: number;
   message?: string;
   trace: boolean;
+  source?: RunSource;
+  actionsRunId?: string;
+  /** https://github.com/<o>/<r>/actions/runs/<id> */
+  actionsUrl?: string;
 }
 
 export interface TestSummary {
   recent: RecentMark[];
   /** Newest entries of `recent` (same order) for the dot tooltips. */
-  recentAt: Array<{ at: string; commit?: string; dirty?: boolean } | null>;
+  recentAt: Array<{ at: string; commit?: string; dirty?: boolean; source?: RunSource } | null>;
   flaky: boolean;
   flakyCommits: string[];
 }
@@ -113,6 +138,8 @@ export interface FlakyCommit {
   commit: string;
   passed: number;
   failed: number;
+  /** Sources of the runs in the group. */
+  sources?: RunSource[];
 }
 
 export interface FlakyEntry {
@@ -141,6 +168,8 @@ export interface DocCoverage {
   diagrams: Record<string, CoverageCount>;
   cases: Record<string, CoverageClass>;
   elements: Record<string, ElementCoverage>;
+  /** Source of the latest result of the ids in `cases` that have one. */
+  sources?: Record<string, RunSource>;
 }
 
 const isFail = (s: string) => s === 'failed' || s === 'error';
@@ -161,6 +190,8 @@ function toEntry(r: RunRecord, id: string, res: CaseResult, hasTrace: (runId: st
   if (r.dirty !== undefined) e.dirty = r.dirty;
   if (r.rerunOf !== undefined) Object.assign(e, { rerunOf: r.rerunOf, attempt: r.attempt, times: r.times });
   if (res.message !== undefined) e.message = res.message;
+  if (sourceOf(r) === 'actions') e.source = 'actions';
+  if (r.actionsRunId !== undefined) e.actionsRunId = r.actionsRunId;
   return e;
 }
 
@@ -196,14 +227,15 @@ export function firstFailure(entries: HistoryEntry[]): HistoryEntry | undefined 
   return candidate;
 }
 
-function flakyGroups(entries: HistoryEntry[]): Map<string, { passed: number; failed: number }> {
-  const groups = new Map<string, { passed: number; failed: number }>();
+function flakyGroups(entries: HistoryEntry[]): Map<string, { passed: number; failed: number; sources: Set<RunSource> }> {
+  const groups = new Map<string, { passed: number; failed: number; sources: Set<RunSource> }>();
   for (const e of entries) {
     if (!e.commit || e.dirty !== false) continue;
     if (e.status !== 'passed' && e.status !== 'failed') continue;
     let g = groups.get(e.commit);
-    if (!g) groups.set(e.commit, (g = { passed: 0, failed: 0 }));
+    if (!g) groups.set(e.commit, (g = { passed: 0, failed: 0, sources: new Set() }));
     g[e.status]++;
+    g.sources.add(e.source ?? 'local');
   }
   return groups;
 }
@@ -217,7 +249,9 @@ export function flakyCommits(entries: HistoryEntry[]): string[] {
 
 export function flakyCounts(entries: HistoryEntry[]): FlakyCommit[] {
   const groups = flakyGroups(entries);
-  return [...groups].filter(([, g]) => g.passed > 0 && g.failed > 0).map(([commit, g]) => ({ commit, ...g }));
+  return [...groups]
+    .filter(([, g]) => g.passed > 0 && g.failed > 0)
+    .map(([commit, g]) => ({ commit, passed: g.passed, failed: g.failed, ...(g.sources.has('actions') ? { sources: (['local', 'actions'] as const).filter((x) => g.sources.has(x)) } : {}) }));
 }
 
 export function recentMarks(entries: HistoryEntry[], n = 10): RecentMark[] {
@@ -287,14 +321,22 @@ export class HistoryService {
     });
   }
 
-  /** Run records of GitHub Actions (merged with the local ones). */
-  setActionsRuns(records: RunRecord[]): void {
+  private actionsRepo = '';
+
+  /** Run records of GitHub Actions (merged with the local ones). `repo` (`owner/repo`) gives the rows their Actions URL. */
+  setActionsRuns(records: RunRecord[], repo?: string): void {
     this.actionsRuns = records;
+    if (repo !== undefined) this.actionsRepo = repo;
     this.cache = {};
   }
 
   private runs(): RunRecord[] {
     return mergeRuns(this.local.list(), this.actionsRuns);
+  }
+
+  /** A merged run record by id (local id or Actions result id). */
+  record(id: string): RunRecord | undefined {
+    return this.runs().find((r) => r.id === id);
   }
 
   /** Latest result per test id. */
@@ -311,7 +353,7 @@ export class HistoryService {
       if (commits.length) flakyCount++;
       tests[id] = {
         recent: recentMarks(entries),
-        recentAt: Array.from({ length: 10 }, (_, i) => (entries[i] ? { at: entries[i].at, commit: entries[i].commit, dirty: entries[i].dirty } : null)),
+        recentAt: Array.from({ length: 10 }, (_, i) => (entries[i] ? { at: entries[i].at, commit: entries[i].commit, dirty: entries[i].dirty, ...(entries[i].source ? { source: entries[i].source } : {}) } : null)),
         flaky: commits.length > 0,
         flakyCommits: commits,
       };
@@ -326,8 +368,10 @@ export class HistoryService {
     const info = activeIds(lock).get(id);
     const runs = this.runs();
     const present = new Set<string>();
-    for (const r of runs) if (r.results[id] && r.traces?.includes(id) && (await this.traces.exists(r.id, id))) present.add(r.id);
+    // Actions rows: listed in `traces` is enough (a pruned file answers 404 when opened).
+    for (const r of runs) if (r.results[id] && r.traces?.includes(id) && (r.source === 'actions' || (await this.traces.exists(r.id, id)))) present.add(r.id);
     const entries = entriesOf(runs, id, (runId) => present.has(runId));
+    if (this.actionsRepo) for (const e of entries) if (e.actionsRunId) e.actionsUrl = `https://github.com/${this.actionsRepo}/actions/runs/${e.actionsRunId}`;
     if (!info && !entries.length) throw new HistoryError(404, 'unknown-id', `テストIDが見つかりません: ${id}`);
     const h: TestHistory = { id, known: !!info, entries, changed: changedRows(entries), flakyCommits: flakyCommits(entries) };
     if (info) Object.assign(h, { doc: info.doc, diagram: lock.diagrams[info.diagramKey]?.diagram, title: info.title });
@@ -351,7 +395,11 @@ export class HistoryService {
     return out;
   }
 
-  coverage(docPath: string): Promise<DocCoverage> {
-    return this.coverageService.coverage(docPath, this.latest());
+  async coverage(docPath: string): Promise<DocCoverage> {
+    const latest = this.latest();
+    const cov = await this.coverageService.coverage(docPath, latest);
+    const sources: Record<string, RunSource> = {};
+    for (const id of Object.keys(cov.cases)) if (latest[id]) sources[id] = latest[id].source ?? 'local';
+    return Object.values(sources).includes('actions') ? { ...cov, sources } : cov;
   }
 }

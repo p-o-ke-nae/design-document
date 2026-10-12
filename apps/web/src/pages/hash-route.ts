@@ -114,7 +114,8 @@ function routeOf(t: HostedTarget, rest: string[], params: URLSearchParams): Rout
     if (tail.length === 1 && tail[0] === 'flaky') return { ...tests, sub: 'flaky' };
     if (tail.length === 2 && tail[0] === 'history') return { ...tests, sub: 'history', testId: tail[1] };
     if (tail.length === 3 && tail[0] === 'trace') return { ...tests, sub: 'trace', runId: tail[1], testId: tail[2] };
-    return tests;
+        if (tail[0] === 'actions') return { ...tests, sub: 'actions', actions: tail.slice(1).map(encodeURIComponent).join('/') };
+        return tests;
   }
   if (head === 'review') {
     if (t.kind !== 'pr') return top;
@@ -183,6 +184,7 @@ export function formatHostedHash(t: HostedTarget, view?: Partial<HrefView>): str
       s += '/tests';
       if (view.sub === 'flaky') s += '/flaky';
       else if (view.sub === 'history') s += `/history/${enc(view.testId ?? '')}`;
+      else if (view.sub === 'actions') s += `/actions${view.actions ? `/${view.actions}` : ''}`;
       else if (view.sub === 'trace') s += `/trace/${enc(view.runId ?? '')}/${enc(view.testId ?? '')}`;
       break;
     case 'review':

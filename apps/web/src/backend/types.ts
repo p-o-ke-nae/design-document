@@ -91,9 +91,9 @@ type ApiMethods = ReturnType<typeof createApi>;
 
 /**
  * What the screens call (services.md「メソッド」): the same methods as `createApi(ws)` plus the members below.
- * `traceShot` / `rawUrl` resolve asynchronously (Pages makes `blob:` URLs).
+ * `traceShot` / `rawUrl` / `actionsFile` resolve asynchronously (Pages makes `blob:` URLs).
  */
-export type Backend = Omit<ApiMethods, 'traceShot'> & {
+export type Backend = Omit<ApiMethods, 'traceShot' | 'actionsFile'> & {
   readonly edition: Edition;
   readonly capabilities: Readonly<Record<OperationId, Availability>>;
   subscribe(listener: BackendListener): Unsubscribe;
@@ -101,6 +101,8 @@ export type Backend = Omit<ApiMethods, 'traceShot'> & {
   followRun(id: string, handlers: RunHandlers): Unsubscribe;
   traceShot(runId: string, id: string, n: number): Promise<string>;
   rawUrl(p: string): Promise<string>;
+  /** A file of an Actions run on the results branch (Pages: a `blob:` URL). */
+  actionsFile(id: string, path: string): Promise<string>;
   /** Pages: the target head's reader (MockFrame builds `srcdoc` from it). Local: `null`. */
   repo(): RepoReader | null;
 };
