@@ -19,6 +19,7 @@ plugin/
     docs/design/{requirements,basic,detailed}/sample.md
     docs/mocks/sample/          全画面モック（index.html）・疑似API（api.yaml）・fixtures・実アプリ用の対応表（scenarios/_map.yaml）
     e2e/ddv-hooks.ts            実アプリで E2E を実行するときのデータ投入・独自操作（任意）
+    .github/workflows/ddv-tests.yml  ビューアから Actions でテストを実行するワークフロー（任意。ddv actions init で配置）
 ```
 
 ## 前提
@@ -69,6 +70,25 @@ claude --plugin-dir ./plugin        # 開発中の読み込み
 | 受入 | 人間 | 要件の受入基準を ddv で確認 | 完了 |
 
 レビューは対象リポジトリで `npm --prefix "$DDV_HOME" run ddv -- serve --repo <対象の絶対パス>` を起動し、http://127.0.0.1:5178 で行う。
+
+## Actions でテストを実行する（任意）
+
+ビューア（Pages 版・ローカル版）から、対象リポジトリの GitHub Actions でテスト・スナップショット・トレースを実行できる。
+結果は対象リポジトリの `ddv-results` ブランチに保存される。
+
+1. 雛形を配置する（どちらか）
+   ```sh
+   npm --prefix "$DDV_HOME" run ddv -- actions init --repo <対象の絶対パス>
+   ```
+   または `templates/.github/workflows/ddv-tests.yml` を対象の `.github/workflows/` にコピーする
+2. `env` の `DDV_REF`（ddv のタグ）と保持件数（`DDV_MAX_RUNS`・`DDV_MAX_DAYS`・`DDV_MAX_TRACE_RUNS`）を必要なら直し、
+   .NET など npm 以外の依存があれば「対象の依存を導入」の後に step を足す
+3. コミットして **既定ブランチへマージ** する（既定ブランチに無いとビューアから起動できない）。
+   既存の PR のブランチは既定ブランチを取り込む
+4. `ddv-results` ブランチはブランチの保護（ルールセット）の対象にしない（ワークフローが毎回強制 push する）
+5. 基準画像の承認のコミットで PR の CI を動かしたいときは、contents: write の PAT（または GitHub App のトークン）を
+   リポジトリの secret `DDV_PUSH_TOKEN` に置く
+6. ビューアのテストタブ →「Actions」→「Actionsで実行」。Pages 版は Actions: Write を持つ fine-grained PAT が要る
 
 ## 今後の拡張（ロードマップ）
 

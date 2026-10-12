@@ -3,7 +3,9 @@ import path from 'node:path';
 import YAML from 'yaml';
 import { parseConfig, type DdvConfig } from '@ddv/core';
 import { CONFIG_FILES } from '@ddv/core/node';
-import { RETIRED_DIR } from './scaffold-cli.ts';
+import { mocksRootOf, RETIRED_DIR, scenarioIdOf } from './targets.ts';
+
+export { mocksRootOf, scenarioIdOf };
 
 export interface ScenarioEntry {
   /** Mock folder name under mocksRoot. */
@@ -24,8 +26,6 @@ export function loadConfigSync(repoRoot: string): DdvConfig {
   }
   return parseConfig({});
 }
-
-export const mocksRootOf = (config: DdvConfig) => config.mocksRoot.replace(/\\/g, '/').replace(/^\.?\/+/, '').replace(/\/+$/, '');
 
 const yamlFiles = (dir: string) => {
   try {
@@ -54,9 +54,4 @@ export function findScenarioFiles(repoRoot: string, config: DdvConfig, opts: { r
     if (opts.retired) for (const f of yamlFiles(path.join(repoRoot, dir, RETIRED_DIR))) out.push({ mock, file: `${dir}/${RETIRED_DIR}/${f}`, retired: true });
   }
   return out;
-}
-
-/** The `id:` value of a scenario text even when the file is otherwise invalid. */
-export function scenarioIdOf(text: string): string | null {
-  return /^id:\s*["']?([^"'#\s]+)/m.exec(text)?.[1] ?? null;
 }

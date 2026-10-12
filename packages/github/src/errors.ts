@@ -1,6 +1,11 @@
 export type GitHubErrorKind = 'auth' | 'forbidden' | 'notFound' | 'validation' | 'rateLimit' | 'network';
 
 export class GitHubError extends Error {
+  /** 403: value of `x-accepted-github-permissions` (fine-grained PAT). */
+  acceptedPermissions?: string;
+  /** 403: value of `x-github-sso` (SSO authorization required). */
+  sso?: string;
+
   constructor(
     readonly kind: GitHubErrorKind,
     readonly status: number,
@@ -29,7 +34,12 @@ export function toGitHubError(res: { status: number; headers: Headers }, body: u
       const at = Number.isFinite(reset) && reset > 0 ? new Date(reset * 1000) : undefined;
       return new GitHubError('rateLimit', s, `GitHub API の利用上限に達しました${at ? `（${at.toLocaleTimeString()} に再開）` : ''}`, at);
     }
-    return new GitHubError('forbidden', s, `権限がありません: ${msg}`);
+    const e = new GitHubError('forbidden', s, `権限がありません: ${msg}`);
+    const accepted = res.headers.get('x-accepted-github-permissions');
+    const sso = res.headers.get('x-github-sso');
+    if (accepted) e.acceptedPermissions = accepted;
+    if (sso) e.sso = sso;
+    return e;
   }
   if (s === 404) return new GitHubError('notFound', s, `見つかりません: ${msg}`);
   if (s === 422) {

@@ -1,24 +1,35 @@
 import { expect, test, type Page } from '@playwright/test';
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn, execFileSync, type ChildProcess } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { E2E_PORT, E2E_TOKEN, login } from './ddv-auth.ts';
 import { createUpstream, fakeGitHub, fakeGitHubState, type FakeGitHubState, type Upstream } from '../apps/server/src/github-fixture.ts';
 
 // Phase 1 (WSPACE) screen flow against a stub GitHub API and a local upstream repository. Never touches github.com.
 // Transitions and invalid events of BD-GHREV-SCREEN that involve the review (Phase 2) are linked when that part exists.
 
-const PORT = 5186;
-const NO_TOKEN_PORT = 5187;
+const PORT = E2E_PORT + 7;
+const NO_TOKEN_PORT = E2E_PORT + 8;
 const REPO = 'acme/order-app';
 const TOKEN = 'ghp_test_token';
 const DOC = (title: string, body: string) => `---\nid: REVIEW\nkind: basic\nstatus: review\ntitle: ${title}\n---\n\n# ${title}\n\n${body}\n`;
 // order.md of the PR head: L12 rewritten (added + base 「注文を受け付ける。」 removed), L14–16 added.
 const ORDER_V2 = '---\nid: SAMPLE\nkind: basic\nstatus: review\ntitle: 注文 基本設計\n---\n\n# 注文 基本設計\n\n## 概要\n\n注文を受け付け、内容を確認する。\n\n## 確認\n\n確認画面を表示する。\n';
 const ORDER = 'docs/design/basic/order.md';
+/** `owner/repo` of the sample's `origin`: the matrix's 「Actions で実行」 asks its Actions status (actions-run.md, Phase 6). */
+const LOCAL_ORIGIN = (() => {
+  try {
+    const url = execFileSync('git', ['remote', 'get-url', 'origin'], { cwd: 'examples/sample-app', encoding: 'utf8' }).trim();
+    return /github\.com[/:]([^/]+\/[^/]+?)(?:\.git)?$/.exec(url)?.[1] ?? null;
+  } catch {
+    return null;
+  }
+})();
+const isLocalActions = (call: string) => call === 'GET /user' || (!!LOCAL_ORIGIN && (call === `GET /repos/${LOCAL_ORIGIN}` || call.startsWith(`GET /repos/${LOCAL_ORIGIN}/`)));
 
 let tmp = '';
 let upstream: Upstream;
@@ -46,7 +57,7 @@ async function startDdv(port: number, env: Record<string, string>): Promise<void
   if (await fetch(`http://127.0.0.1:${port}/`).then(() => true, () => false)) throw new Error(`port ${port} is already in use`);
   // A single process (no tsx wrapper) so that kill() stops the server itself.
   const child = spawn(process.execPath, ['--import', 'tsx', 'apps/server/src/cli.ts', 'serve', '--repo', 'examples/sample-app', '--port', String(port)], {
-    env: { ...process.env, GITHUB_TOKEN: '', GH_TOKEN: '', ...env },
+    env: { ...process.env, GITHUB_TOKEN: '', GH_TOKEN: '', DDV_TOKEN: E2E_TOKEN, ...env },
     stdio: 'pipe',
   });
   servers.push(child);
@@ -54,7 +65,7 @@ async function startDdv(port: number, env: Record<string, string>): Promise<void
   child.stdout?.on('data', (d) => (log += d));
   child.stderr?.on('data', (d) => (log += d));
   for (let i = 0; i < 150; i++) {
-    const ok = await fetch(`http://127.0.0.1:${port}/api/config`).then((r) => r.ok, () => false);
+    const ok = await fetch(`http://127.0.0.1:${port}/`).then((r) => r.ok, () => false);
     if (ok) return;
     if (child.exitCode !== null) break;
     await new Promise((r) => setTimeout(r, 200));
@@ -104,6 +115,11 @@ test.afterAll(async () => {
 
 const BASE = `http://127.0.0.1:${PORT}`;
 
+test.beforeEach(async ({ page }) => {
+  await login(page, BASE);
+  await login(page, `http://127.0.0.1:${NO_TOKEN_PORT}`);
+});
+
 async function openForm(page: Page) {
   await page.getByTestId('open-github').click();
   await expect(page).toHaveURL(/#\/open$/);
@@ -123,7 +139,7 @@ test('[BD-GHREV-SCREEN-T001] 手元の文書では GitHub に問い合わせな�
   await expect(page.getByTestId('doc-tree')).toContainText('注文画面 基本設計');
   await expect(page.getByTestId('ws-switch')).toHaveValue('');
   await expect(page.getByTestId('auth-status')).toHaveCount(0);
-  expect(state.calls.slice(before)).toEqual([]);
+  expect(state.calls.slice(before).filter((c) => !isLocalActions(c))).toEqual([]);
 });
 
 test('[BD-GHREV-SCREEN-T002][BD-GHREV-SCREEN-T003] 手元 → GitHub を開く → キャンセル → 手元の文書', async ({ page }) => {

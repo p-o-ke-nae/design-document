@@ -36,15 +36,32 @@ flowchart LR
 ```powershell
 npm install
 npx playwright install chromium   # E2E / playwright ランナーを使う場合
-npm run serve:sample              # サンプルを表示 → http://127.0.0.1:5178
+npm run serve:sample              # サンプルを表示（表示された http://127.0.0.1:5178/?ddv-token=… を開く）
 ```
 
-任意のローカルリポジトリを表示する：
+任意のローカルフォルダを表示する：
 
 ```powershell
 npm run build
-npm run ddv -- serve --repo C:\path\to\your-repo [--port 5178]
+npm run ddv -- serve                              # 「フォルダの選択」から作業フォルダを開く
+npm run ddv -- serve --repo C:\path\to\your-repo  # 最初からそのフォルダを開く
+npm run ddv -- serve --last [--open]              # 最近開いたフォルダを開く（--open はブラウザも開く）
 ```
+
+- `--repo` は省略できます。ビューアの「フォルダの選択」でパスを入力するか、フォルダの一覧・最近開いたフォルダ（`~/.ddv/recent.json`、最大 10 件。`DDV_HOME` で場所を変更）から選んで開きます。文書のヘッダの「フォルダを選び直す」で別のフォルダに切り替えられます（テスト実行・スナップショット撮影・依存の導入中は不可）
+- 起動すると `[ddv] http://127.0.0.1:5178/?ddv-token=…` の形の URL を表示します。**この URL から開いてください**。トークンは起動ごとに変わり、開くとセッション Cookie に置き換わります（サーバを起動し直したら新しく表示された URL を開き直す）。Cookie の無いブラウザには「ddv serve が表示した URL から開いてください」と表示します
+- サーバは 127.0.0.1 だけで待ち受け、Host が `127.0.0.1` / `localhost` と待ち受けのポートでない要求（400）、ビューア以外の Origin からの要求（403）、セッション Cookie の無い API（401）を拒否します
+- `DDV_TOKEN` で起動トークンを固定できます（テスト用。16〜128 文字の英数字・`-`・`_`。警告を表示します）
+- `--port` の既定は 5178
+
+### Pages 版（インストール不要）
+
+<https://p-o-ke-nae.github.io/design-document/> を開き、`owner/repo` と PR 番号またはブランチを指定すると、GitHub 上の設計書をそのまま表示します（例：`#/gh/p-o-ke-nae/design-document`）。
+
+- 公開リポジトリは PAT なしで閲覧できます。非公開リポジトリ・レビュー・Actions での実行には fine-grained PAT が必要です（既定はタブを閉じると消える sessionStorage。「この端末に保存」を選んだときだけ localStorage）
+- PAT は `api.github.com` にだけ送ります。ローカルサーバ（`127.0.0.1`）は使いません
+- テストの実行は対象リポジトリの GitHub Actions（`ddv actions init` で `.github/workflows/ddv-tests.yml` を配置）で行い、結果は `ddv-results` ブランチから読みます
+- fork で公開する場合は Settings → Pages の Source を「GitHub Actions」にして `.github/workflows/pages.yml` を実行します（`master`・`main` への push で自動デプロイ）
 
 対象リポジトリのルートに `ddv.config.yaml` を置きます（雛形：[plugin/templates/ddv.config.yaml](plugin/templates/ddv.config.yaml)）。
 
@@ -187,8 +204,9 @@ npm run ddv-lint -- --repo <path> [--strict]           # 必須節・Mermaid 構
 ```powershell
 npm test            # Vitest（packages / apps/server）
 npm run typecheck
-npm run e2e         # ビューアの Playwright E2E（examples/sample-app を対象）
-npm run dev:server  # + 別端末で npm run dev:web
+npm run e2e         # ビューアの Playwright E2E（examples/sample-app を対象。ポートは DDV_E2E_PORT、既定 5179）
+npm run e2e:pages   # Pages 版の Playwright E2E（ビルドして 5400 で配信し、GitHub はスタブ）
+npm run dev:server  # + 別端末で npm run dev:web（dev:server が表示する「[ddv] 開発: http://localhost:5173/api/session?ddv-token=…」から開く）
 npm run ddv -- serve --repo .   # ddv 自身の設計書を表示し、ビューアからテストを実行
 ```
 
@@ -202,5 +220,5 @@ npm run ddv -- serve --repo .   # ddv 自身の設計書を表示し、ビュー
 | 3 | GitHub repo/branch 指定、PR 行コメント・Approve 連携、モックのレビュー調整 → suggestion | ✅（実 GitHub での受入確認は省略してクローズ。[受入チェックリスト](docs/acceptance/phase3-github.md)）：ワークスペース（PR・branch の取得と表示）、PR の差分・レビュースレッドの表示、コメント・送信・Approve＋status 連動・スレッド返信/解決、モックの調整 → suggestion、`ddv review comments`・`ddv-review-response` スキル（[要件](docs/design/requirements/github.md) / [基本設計](docs/design/basic/github-review.md) / 詳細設計：[ワークスペース](docs/design/detailed/workspace.md) / [レビューコメント](docs/design/detailed/review-comment.md) / [モック調整](docs/design/detailed/mock-tune.md)） |
 | 4 | テスト監視（履歴・フレーキー・カバレッジ）、テストデータ編集（シナリオの入力値・fixtures・期待値をビューアで編集）、トレースビュー | 設計中：[要件定義](docs/design/requirements/testops.md) ✅ → 基本設計（[テスト監視](docs/design/basic/test-monitoring.md)・[テストデータ編集](docs/design/basic/test-data-editor.md)・[トレースビュー](docs/design/basic/trace-view.md)）✅ → 詳細設計（[実行記録](docs/design/detailed/run-record.md)・[テスト履歴](docs/design/detailed/test-history.md)・[テストデータ編集](docs/design/detailed/test-data.md)・[トレース記録](docs/design/detailed/trace-recorder.md)・[トレース表示](docs/design/detailed/trace.md)）✅ → 実装済み ✅ |
 | 5 | .NET デスクトップ（XAML → CSS トークン、FlaUI エクスポート） | 未着手 |
-| 6 | ホスト型（GitHub Pages + API + Actions） | 未着手 |
+| 6 | ホスト型（GitHub Pages で公開するビューア＋GitHub API 直結（PAT）、Actions でのテスト実行・履歴、ローカル版の作業フォルダ選択） | ✅（実 GitHub での受入確認は省略。公開先：<https://p-o-ke-nae.github.io/design-document/>、`.github/workflows/pages.yml` で master から自動デプロイ）：[要件定義](docs/design/requirements/hosted.md) ✅ → 基本設計（[Pages 版ビューア](docs/design/basic/hosted-viewer.md)・[Actions でのテスト実行](docs/design/basic/actions-run.md)・[ローカル版の作業フォルダ選択](docs/design/basic/local-folder.md)）✅ → 詳細設計（[サービス層・Backend](docs/design/detailed/services.md)・[Pages 版ビューア](docs/design/detailed/pages-viewer.md)・[PAT・ビルド・デプロイ](docs/design/detailed/pat.md)・[モックの sandbox 再生](docs/design/detailed/mock-sandbox.md)・[Actions での実行](docs/design/detailed/actions-run.md)・[ddv ワークフロー・ddv ci](docs/design/detailed/actions-workflow.md)・[作業フォルダ・起動トークン](docs/design/detailed/local-folder.md)）✅ |
 | 7 | 品質ゲート（描画検査・改ざん検出・CI テンプレート）、プラグイン eval | 未着手 |

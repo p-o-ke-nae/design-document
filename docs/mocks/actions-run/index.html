@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>Actions でのテスト実行（モック）</title>
+  <link rel="stylesheet" href="../../../apps/web/src/styles.css" />
+  <style>
+    .page { padding: 12px; display: grid; gap: 10px; }
+    .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    table { border-collapse: collapse; font-size: 13px; }
+    th, td { border: 1px solid #d0d7de; padding: 4px 8px; text-align: left; }
+    .mockonly { border-style: dashed; }
+    .src { font-size: 11px; padding: 0 6px; border-radius: 10px; background: #ddf4ff; }
+    .ok { color: #1a7f37; } .ng { color: #cf222e; }
+    .note { font-size: 12px; color: #57606a; }
+    .steps li.done::before { content: "✔ "; color: #1a7f37; }
+    .steps li.now::before { content: "… "; }
+    .shots { display: flex; gap: 8px; }
+    .shots div { border: 1px solid #d0d7de; width: 140px; height: 90px; display: grid; place-items: center; font-size: 12px; color: #57606a; }
+  </style>
+  <script type="module" src="../_ddv/mock-runtime.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <span class="brand">ddv</span>
+      <span class="muted">テスト ＞ Actions</span>
+      <span class="spacer"></span>
+      <span class="muted">acme/order-app #12（feature/confirm-back・a1b2c3d）</span>
+    </header>
+
+    <!-- Actions の実行一覧 -->
+    <section data-screen="List">
+      <div class="page">
+        <div class="row">
+          <strong>Actions</strong>
+          <span class="note">ddv ワークフロー：ddv-tests.yml</span>
+          <span class="spacer"></span>
+          <button data-testid="setup-open" data-event="導入の案内" data-goto="Setup">導入の案内</button>
+        </div>
+        <div class="row">
+          <label for="runner">ランナー</label>
+          <select id="runner" data-testid="runner">
+            <option value="">すべて</option>
+            <option value="unit">unit</option>
+            <option value="e2e">e2e</option>
+          </select>
+          <label for="ids">テストID（空欄で全件）</label>
+          <input id="ids" data-testid="ids" maxlength="200" data-sample="BD-ORDER-SCREEN-P004" />
+          <label for="allowed">（モック）実行の可否</label>
+          <select id="allowed" class="mockonly" data-testid="allowed">
+            <option value="yes">実行できる</option>
+            <option value="readonly">書き込み権限なし</option>
+            <option value="fork">fork からの PR</option>
+          </select>
+          <button class="primary" data-testid="dispatch" data-event="Actionsで実行" data-submit="POST /actions/runs" data-ok="Dispatching">Actionsで実行</button>
+          <span class="error" data-testid="dispatch-error" data-error hidden></span>
+        </div>
+        <p class="note">未コミットの変更は Actions では実行されません（a1b2c3d を実行します）。</p>
+        <table data-testid="runs">
+          <thead><tr><th>日時</th><th>依頼者</th><th>コミット</th><th>状態</th><th>成功 / 失敗</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td><button class="link" data-testid="run-open" data-event="実行を選ぶ" data-goto="Detail">10/12 15:20</button></td>
+              <td>hanako</td><td>a1b2c3d</td><td class="ng">失敗</td><td>40 / 2</td><td><a href="#">Actions</a></td>
+            </tr>
+            <tr>
+              <td>10/12 11:02</td><td>taro</td><td>9f8e7d6</td><td class="ok">成功</td><td>42 / 0</td><td><a href="#">Actions</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 導入の案内 -->
+    <section data-screen="Setup" hidden>
+      <div class="page">
+        <div class="row">
+          <button data-testid="setup-back" data-event="一覧へ" data-goto="List">← 一覧へ</button>
+          <strong>ddv ワークフローの導入</strong>
+        </div>
+        <ol data-testid="setup-steps">
+          <li><code>ddv actions init</code> で <code>.github/workflows/ddv-tests.yml</code> を配置（ローカル版は下のボタンでも可）</li>
+          <li>コミットして既定ブランチにマージ</li>
+          <li>ビューアの「Actionsで実行」から実行（結果は <code>ddv-results</code> ブランチに保存）</li>
+        </ol>
+        <button data-testid="setup-init">配置する（ローカル版のみ）</button>
+        <p class="note">保持の既定：200 件・90 日・トレース 20 回分（ワークフローの入力で変更）</p>
+      </div>
+    </section>
+
+    <!-- 起動中 -->
+    <section data-screen="Dispatching" hidden>
+      <div class="page">
+        <strong>起動中</strong>
+        <p data-testid="request">依頼ID ddv-7f3a9c1e（経過 8 秒）</p>
+        <p class="muted">モックでは結果を下のボタンで選びます。</p>
+        <button class="mockonly" data-testid="detected" data-event="実行を検出" data-goto="Running">（モック）実行を検出</button>
+        <button class="mockonly" data-testid="dispatch-fail" data-event="起動失敗" data-goto="List">（モック）起動失敗</button>
+      </div>
+    </section>
+
+    <!-- 実行中 -->
+    <section data-screen="Running" hidden>
+      <div class="page">
+        <div class="row">
+          <button data-testid="running-back" data-event="一覧へ" data-goto="List">← 一覧へ</button>
+          <strong>実行中</strong>
+          <a href="#">Actions のログ</a>
+        </div>
+        <ul class="steps" data-testid="steps">
+          <li class="done">checkout（a1b2c3d）</li>
+          <li class="done">ddv の取得・依存の導入</li>
+          <li class="now">ddv ci run（unit・e2e）</li>
+          <li>結果ブランチへ保存</li>
+        </ul>
+        <button class="mockonly" data-testid="run-complete" data-event="実行完了" data-goto="Detail">（モック）実行完了</button>
+      </div>
+    </section>
+
+    <!-- 実行の結果 -->
+    <section data-screen="Detail" hidden>
+      <div class="page">
+        <div class="row">
+          <button data-testid="detail-back" data-event="一覧へ" data-goto="List">← 一覧へ</button>
+          <strong>10/12 15:20 の実行</strong>
+          <span class="src">Actions</span>
+          <span class="muted">a1b2c3d・40 / 2</span>
+        </div>
+        <table data-testid="results">
+          <thead><tr><th>テストID</th><th>結果</th><th>メッセージ</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>BD-ORDER-SCREEN-P004</td><td class="ng">失敗</td><td>expect.screen: Confirm でなく Input</td><td><button class="link">トレース</button></td></tr>
+            <tr><td>BD-ORDER-SCREEN-T003</td><td class="ok">成功</td><td></td><td></td></tr>
+          </tbody>
+        </table>
+        <h3>スナップショットの差分</h3>
+        <label><input type="checkbox" data-testid="approve-target" checked /> BD-ORDER-SCREEN-P002（2 枚に差分）</label>
+        <div class="shots"><div>基準</div><div>今回</div><div>差分</div></div>
+        <div><button class="primary" data-testid="approve" data-event="基準画像を承認" data-goto="Approving">基準画像を承認</button></div>
+      </div>
+    </section>
+
+    <!-- 基準画像の更新中 -->
+    <section data-screen="Approving" hidden>
+      <div class="page">
+        <strong>基準画像の更新中</strong>
+        <p data-testid="approve-status">承認のワークフローが PR のブランチ（feature/confirm-back）へコミットします</p>
+        <button class="mockonly" data-testid="approve-done" data-event="更新完了" data-goto="Detail">（モック）更新完了</button>
+        <button class="mockonly" data-testid="approve-fail" data-event="更新失敗" data-goto="Detail">（モック）更新失敗</button>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

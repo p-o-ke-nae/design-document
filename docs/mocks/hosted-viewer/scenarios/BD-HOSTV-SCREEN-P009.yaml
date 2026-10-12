@@ -1,0 +1,24 @@
+# ddv mock scaffold が生成。event / click / expect.screen は再生成で更新、それ以外は保持
+
+id: BD-HOSTV-SCREEN-P009
+title: 開始 → 対象の指定 → [開く [入力OK]] 取得中 → [PATが必要] PAT が必要 → [対象を変更] 対象の指定 → [開く [入力OK]] 取得中 → [取得完了] 文書 → 終了
+fixtures: [ default ]
+start: Open
+steps:
+  - event: 開く [入力OK]
+    input: { repo: acme/order-app, kind: pr, target: "12" }
+    click: open-submit
+    expect: { screen: Loading }
+  - event: PATが必要
+    click: loading-need-pat
+    expect: { screen: Token }
+  - event: 対象を変更
+    click: token-change
+    expect: { screen: Open }
+  - event: 開く [入力OK]
+    input: { repo: acme/order-app, kind: pr, target: "12" }
+    click: open-submit
+    expect: { screen: Loading }
+  - event: 取得完了
+    click: loading-done
+    expect: { screen: Doc }

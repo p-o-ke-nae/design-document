@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type InputHTMLAttributes, type ReactNode } from 'react';
-import { api, ApiError, type DataIssue, type MockField, type Step, type StepValue, type TdRow, type TdValue, type TestDataBundle, type ValidationResult } from '../api.ts';
+import { api } from '../backend/index.ts';
+import { ApiError } from '../backend/types.ts';
+import type { DataIssue, MockField, Step, StepValue, TdRow, TdValue, TestDataBundle, ValidationResult } from '../api.ts';
 import { useApp } from '../state.tsx';
 import { useMockHub } from '../mockHub.tsx';
 import { usePr } from './Pr.tsx';
+import { GateReason, useGate } from '../gate.tsx';
 import type { PlayerFailure } from '../player.ts';
 import {
   CONFIRM_DISCARD,
@@ -170,6 +173,9 @@ export function TestDataEditor({ scenarioId }: { scenarioId: string }) {
     fire('previewEnd');
     setFailure(previewResult.failure);
   }, [previewResult, previewSeq, fire]);
+  const saveFileGate = useGate('saveFile');
+  const suggestGate = useGate('suggestTestData');
+  const runGate = useGate('runLocal');
 
   if (loadError) return <Shell onClose={() => hub?.openTestData(null)} title={scenarioId}><div className="notice warn" data-testid="td-error">⚠ {loadError}</div></Shell>;
   if (!bundle) return <Shell onClose={() => hub?.openTestData(null)} title={scenarioId}><p className="muted">読み込み中…</p></Shell>;
@@ -182,7 +188,8 @@ export function TestDataEditor({ scenarioId }: { scenarioId: string }) {
   for (const i of serverErrors) cellErrors[issueCell(i)] ??= i.message;
   Object.assign(cellErrors, ds.errors);
   const formOk = !store.hasInputErrors && !serverErrors.some((i) => FORM_CODES.has(i.code));
-  const canSave = b.editable && ds.dirty && !store.hasInputErrors && !serverErrors.length && state === 'Editing';
+  const saveGate = pr ? suggestGate : saveFileGate;
+  const canSave = saveGate.enabled && b.editable && ds.dirty && !store.hasInputErrors && !serverErrors.length && state === 'Editing';
   const commentText = comment ?? (draft ? defaultComment(draft, b) : '');
 
   const startEdit = () => {
@@ -329,7 +336,7 @@ export function TestDataEditor({ scenarioId }: { scenarioId: string }) {
             <button type="button" data-testid="td-play" disabled={!hub?.hasScenario(scenarioId)} onClick={() => hub?.requestPlay(scenarioId)} title="保存済みの内容でモックを再生">
               ▶ 再生
             </button>
-            <button type="button" data-testid="td-run-e2e" disabled={!e2e || activeRun?.status === 'running'} onClick={() => void runTests({ ids: [scenarioId] })} title={e2e ? 'このシナリオの E2E テストを実行' : '紐づく playwright のテストがありません'}>
+            <button type="button" data-testid="td-run-e2e" disabled={!e2e || activeRun?.status === 'running' || !runGate.enabled} onClick={() => void runTests({ ids: [scenarioId] })} title={runGate.reason ?? (e2e ? 'このシナリオの E2E テストを実行' : '紐づく playwright のテストがありません')}>
               E2E を実行
             </button>
             <span className="spacer" />
@@ -346,9 +353,10 @@ export function TestDataEditor({ scenarioId }: { scenarioId: string }) {
             <button type="button" data-testid="cancel" disabled={state !== 'Editing'} onClick={cancel}>
               取消
             </button>
-            <button type="button" className="primary" data-testid="save" disabled={!canSave} onClick={() => void save()} title={b.editable ? (ds.dirty ? '' : '変更がありません') : b.readonlyReason}>
+            <button type="button" className="primary" data-testid="save" disabled={!canSave} onClick={() => void save()} title={saveGate.reason ?? (b.editable ? (ds.dirty ? '' : '変更がありません') : b.readonlyReason)}>
               {state === 'Saving' ? '保存中…' : pr ? 'suggestion に追加' : '保存'}
             </button>
+            <GateReason gate={saveGate} />
           </>
         )}
       </div>

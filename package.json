@@ -20,7 +20,9 @@
     "serve:sample": "npm run build && tsx apps/server/src/cli.ts serve --repo examples/sample-app",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "e2e:pages": "playwright test -c playwright.pages.config.ts",
+    "check:pages-dist": "tsx apps/web/scripts/check-pages-dist.ts apps/web/dist"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",

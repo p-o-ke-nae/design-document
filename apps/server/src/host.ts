@@ -3,19 +3,27 @@ import path from 'node:path';
 import { Hono, type Context } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { GitHubError, type TokenResolver } from '@ddv/github';
-import { createApp, mimeOf, type ServerContext } from './app.ts';
+import { createApp, createContext, mimeOf, serviceErrorBody, type ServerContext } from './app.ts';
 import { normalizePath } from '@ddv/core';
-import { guard } from './guard.ts';
-import { DiffService } from './pr-diff.ts';
-import { PendingStore, ReviewService } from './review.ts';
-import { ReviewError } from './review-error.ts';
-import { StatusCommitter } from './status-commit.ts';
-import { ThreadService } from './threads.ts';
-import { OpenRequestError, parseRepo, toPullInfo, WorkspaceError, type WorkspaceEvent, type WorkspaceManager } from './workspaces.ts';
+import { listDirs } from './folders.ts';
+import { guard, type SessionAuth } from './guard.ts';
+import { LocalError, LocalWorkspace, type LocalEvent } from './local.ts';
+import { DiffService, latestReviews, ReviewError, ReviewService, ServiceError, StatusCommitter, ThreadService, type PrContext, type RawReview, type ReviewerState } from '@ddv/services';
+import { gitChanges } from './pr-context.ts';
+import { NoFolderError, ReaderFactory } from './readers.ts';
+import { RecentFolders } from './recent.ts';
+import { PendingStore } from './review.ts';
+import { OpenRequestError, parseRepo, toPullInfo, WorkspaceError, type Workspace, type WorkspaceEvent, type WorkspaceManager } from './workspaces.ts';
+import type { RunRecord } from './runs.ts';
+import { ActionsHost, registerActionsRoutes } from './actions-api.ts';
+import { RepoRemote } from './repo-remote.ts';
+import type { TrackerIntervals } from '@ddv/services';
+
+export { latestReviews, type ReviewerState } from '@ddv/services';
 
 export interface ServerAppOptions {
-  /** The local workspace (`serve --repo`); absent when only GitHub workspaces are served. */
-  local?: ServerContext;
+  /** The local workspace (one folder, chosen at start-up or in the viewer). Absent = an empty one with `<home>/recent.json`. */
+  local?: LocalWorkspace;
   manager: WorkspaceManager;
   tokens: TokenResolver;
   /** Port the server listens on (Host check). */
@@ -23,6 +31,17 @@ export interface ServerAppOptions {
   devOrigins?: string[];
   /** Built viewer (apps/web/dist) served for any other GET. */
   dist?: string;
+  /** Start token / session cookie check (`ddv serve`); absent = Host / Origin only. */
+  auth?: SessionAuth;
+  /** Polling intervals of the Actions trackers (tests shorten them). */
+  actionsIntervals?: Partial<TrackerIntervals>;
+}
+
+/** `<meta name="ddv-auth" content="required">` right after `<head>`: the viewer shows TokenRequired without calling the API. */
+export function markTokenRequired(html: string): string {
+  const meta = '<meta name="ddv-auth" content="required">';
+  if (/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, (m) => `${m}${meta}`);
+  return /^\s*<!doctype[^>]*>/i.test(html) ? html.replace(/^\s*<!doctype[^>]*>/i, (m) => `${m}${meta}`) : `${meta}${html}`;
 }
 
 /** POSTs that run code from the workspace; refused until the workspace is trusted. */
@@ -36,35 +55,6 @@ const GITHUB_STATUS: Record<GitHubError['kind'], 401 | 403 | 404 | 422 | 429 | 5
   rateLimit: 429,
   network: 502,
 };
-
-interface RawReview {
-  user: { login: string } | null;
-  state: string;
-  submitted_at?: string;
-}
-
-export interface ReviewerState {
-  login: string;
-  state: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED';
-  submittedAt?: string;
-}
-
-/** Latest review state per reviewer; a later COMMENTED keeps an earlier APPROVED / CHANGES_REQUESTED (as on GitHub). */
-export function latestReviews(list: RawReview[]): ReviewerState[] {
-  const out = new Map<string, ReviewerState>();
-  for (const r of list) {
-    const login = r.user?.login;
-    if (!login || !['APPROVED', 'CHANGES_REQUESTED', 'COMMENTED', 'DISMISSED'].includes(r.state)) continue;
-    const prev = out.get(login);
-    if (r.state === 'DISMISSED') {
-      out.set(login, { login, state: 'COMMENTED', submittedAt: r.submitted_at });
-      continue;
-    }
-    if (r.state === 'COMMENTED' && prev && prev.state !== 'COMMENTED') continue;
-    out.set(login, { login, state: r.state as ReviewerState['state'], submittedAt: r.submitted_at });
-  }
-  return [...out.values()];
-}
 
 /** Rewrites the request URL path, keeping the query, method, headers and body. */
 function rewrite(req: Request, pathname: string): Request {
@@ -81,28 +71,99 @@ export function createServerApp(opts: ServerAppOptions): Hono {
   const { manager, tokens } = opts;
   const app = new Hono();
   const apps = new Map<string, { gen: number; app: Hono }>();
-  const local = opts.local ? createApp(opts.local) : null;
-  const diffs = new DiffService(manager.git);
+  const local = opts.local ?? new LocalWorkspace({ recent: new RecentFolders(path.join(manager.home, 'recent.json')), createContext: (d) => createContext(d) });
+  const dist = opts.dist && existsSync(opts.dist) ? opts.dist : undefined;
+  const readers = new ReaderFactory({ workspaces: manager, git: manager.git, local });
+  const changes = gitChanges(manager.git);
+  const diffs = new DiffService(changes);
   const threads = new ThreadService(manager.github);
   const review = new ReviewService({
     store: new PendingStore(manager.home),
     github: manager.github,
-    git: manager.git,
+    changes,
     committer: new StatusCommitter(manager.github),
     refresh: (id) => manager.refresh(id),
     pull: (id) => manager.pull(id),
     onChange: (id) => threads.invalidate(id),
   });
 
-  app.use('*', guard({ port: opts.port, devOrigins: opts.devOrigins }));
+  // --- GitHub Actions (actions-run.md) ---
+  const remote = new RepoRemote();
+  const hasToken = async () => (await tokens.status()).source !== 'none';
+  const actionsHosts = new WeakMap<ServerContext, ActionsHost>();
+  const actionsDeps = { client: manager.github, hasToken, remote, intervals: opts.actionsIntervals };
+  const localActions = (ctx: ServerContext): ActionsHost => {
+    let h = actionsHosts.get(ctx);
+    if (!h) {
+      h = new ActionsHost(ctx, { kind: 'local', root: ctx.repoRoot }, actionsDeps);
+      actionsHosts.set(ctx, h);
+      ctx.actions = h;
+    }
+    return h;
+  };
+  const workspaceActions = (id: string): ActionsHost => {
+    const { ctx } = manager.context(id);
+    let h = actionsHosts.get(ctx);
+    if (!h) {
+      h = new ActionsHost(ctx, { kind: 'workspace', ws: () => manager.context(id).ws, onApproved: () => manager.checkHead(id, true).catch(() => false) }, actionsDeps);
+      actionsHosts.set(ctx, h);
+      ctx.actions = h;
+    }
+    return h;
+  };
+
+  const tokenPage = async () => (dist ? markTokenRequired(await fs.readFile(path.join(dist, 'index.html'), 'utf8').catch(() => '')) || null : null);
+  app.use('*', guard({ port: opts.port, devOrigins: opts.devOrigins, auth: opts.auth, tokenPage }));
 
   app.onError((err, c) => {
+    if (err instanceof LocalError) return c.json(err.toJSON(), err.status);
     if (err instanceof OpenRequestError) return c.json({ error: err.message, code: err.code, message: err.message }, 400);
     if (err instanceof WorkspaceError) return c.json({ error: err.message, code: err.code }, err.status);
     if (err instanceof GitHubError) return c.json({ error: err.message, code: `github-${err.kind}` }, GITHUB_STATUS[err.kind]);
+    if (err instanceof ServiceError) return c.json(serviceErrorBody(err), err.status as 400);
+    if (err instanceof NoFolderError) return c.json({ error: err.message, code: err.code }, err.status);
     console.error(err);
     return c.json({ error: err.message }, 500);
   });
+
+  /** A PR context that follows the workspace (head SHA / merge base change on refresh); readers come from the ReaderFactory. */
+  const live = new WeakMap<Workspace, PrContext>();
+  const prOf = (ws: Workspace): PrContext => {
+    let p = live.get(ws);
+    if (!p) {
+      p = {
+        get id() {
+          return ws.id;
+        },
+        get target() {
+          return ws.target;
+        },
+        get headSha() {
+          return ws.headSha;
+        },
+        get mergeBase() {
+          return ws.mergeBase;
+        },
+        get pr() {
+          return ws.pr ?? null;
+        },
+        get head() {
+          return readers.readerOf(ws, 'RIGHT')!;
+        },
+        get base() {
+          return readers.readerOf(ws, 'LEFT');
+        },
+      };
+      live.set(ws, p);
+    }
+    return p;
+  };
+  /** Validates the workspace (404 / 409) and returns its PR context. */
+  const prContext = (id: string) => {
+    const { ws, ctx } = manager.context(id);
+    readers.forWorkspace(id, 'RIGHT');
+    return { ws, ctx, pc: prOf(ws) };
+  };
 
   const appFor = (id: string) => {
     const { ws, ctx } = manager.context(id);
@@ -110,13 +171,77 @@ export function createServerApp(opts: ServerAppOptions): Hono {
     if (!entry || entry.gen !== ws.generation) {
       ctx.testData = () => {
         const cur = manager.context(id).ws;
-        return cur.target.pr ? { kind: 'pr', target: cur, review } : { kind: 'branch' };
+        return cur.target.pr ? { kind: 'pr', target: prOf(cur), review } : { kind: 'branch' };
       };
+      workspaceActions(id);
       entry = { gen: ws.generation, app: createApp(ctx) };
       apps.set(id, entry);
     }
     return { ws, app: entry.app };
   };
+
+  // --- local workspace (LOCALF) ---
+  const pathBody = async (c: Context): Promise<string> => {
+    const b = (await c.req.json().catch(() => null)) as { path?: unknown } | null;
+    if (!b || typeof b !== 'object' || typeof b.path !== 'string') throw new LocalError(400, 'bad-request', 'path（文字列）を指定してください');
+    return b.path;
+  };
+
+  app.get('/api/local', async (c) => c.json(await local.info()));
+
+  app.post('/api/local/open', async (c) => c.json(await local.open(await pathBody(c))));
+
+  app.post('/api/local/close', async (c) => {
+    await local.close();
+    return c.json({ ok: true });
+  });
+
+  app.delete('/api/local/recent', async (c) => c.json({ recent: await local.removeRecent(await pathBody(c)) }));
+
+  app.get('/api/fs/dirs', async (c) => c.json(await listDirs(c.req.query('path'), local.env)));
+
+  // Change / run notifications of whichever folder is open; `local` when the folder is swapped or closed.
+  app.get('/api/events', (c) =>
+    streamSSE(c, async (stream) => {
+      await stream.writeSSE({ event: 'hello', data: '{}' });
+      await new Promise<void>((resolve) => {
+        let detach = () => {};
+        const attach = () => {
+          detach();
+          detach = () => {};
+          const ctx = local.ctx;
+          if (!ctx) return;
+          const onChange = (paths: string[]) => void stream.writeSSE({ event: 'change', data: JSON.stringify(paths) });
+          const onEnd = (id: string, run?: { kind?: string }) => void stream.writeSSE({ event: 'run-end', data: JSON.stringify({ id, kind: run?.kind ?? 'test' }) });
+          const onRun = (id: string, run: RunRecord) =>
+            void stream.writeSSE({ event: 'run', data: JSON.stringify({ id, kind: 'test', rerunOf: run.rerunOf, attempt: run.attempt, times: run.times }) });
+          ctx.events.on('change', onChange);
+          ctx.runs.on('end', onEnd);
+          ctx.runs.on('run', onRun);
+          const offActions = localActions(ctx).subscribe((e) => void stream.writeSSE({ event: 'actions', data: JSON.stringify(e) }));
+          detach = () => {
+            offActions();
+            ctx.events.off('change', onChange);
+            ctx.runs.off('end', onEnd);
+            ctx.runs.off('run', onRun);
+          };
+        };
+        const onLocal = (ev: LocalEvent) => {
+          attach();
+          void stream.writeSSE({ event: 'local', data: JSON.stringify(ev) });
+        };
+        attach();
+        local.events.on('local', onLocal);
+        const ping = setInterval(() => void stream.writeSSE({ event: 'ping', data: '' }), 25000);
+        stream.onAbort(() => {
+          clearInterval(ping);
+          detach();
+          local.events.off('local', onLocal);
+          resolve();
+        });
+      });
+    }),
+  );
 
   // --- GitHub ---
   app.get('/api/github/auth', async (c) => c.json(await tokens.status()));
@@ -131,7 +256,7 @@ export function createServerApp(opts: ServerAppOptions): Hono {
   });
 
   // --- workspaces ---
-  app.get('/api/workspaces', (c) => c.json({ local: Boolean(local), workspaces: manager.list() }));
+  app.get('/api/workspaces', (c) => c.json({ local: local.ctx !== null, workspaces: manager.list() }));
 
   app.post('/api/workspaces', async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -170,7 +295,7 @@ export function createServerApp(opts: ServerAppOptions): Hono {
     const ws = manager.get(id)!;
     void manager
       .refresh(id)
-      .then(() => (ws.state === 'Ready' && ws.target.pr ? review.relocate(ws).then(() => undefined) : undefined))
+      .then(() => (ws.state === 'Ready' && ws.target.pr ? review.relocate(prOf(ws)).then(() => undefined) : undefined))
       .catch(() => undefined);
     return c.json(manager.info(ws), 202);
   });
@@ -210,19 +335,19 @@ export function createServerApp(opts: ServerAppOptions): Hono {
   });
 
   app.get('/api/w/:ws/pr/files', async (c) => {
-    const { ws, ctx } = manager.context(c.req.param('ws'));
-    return c.json(await diffs.files(ws, ctx.config));
+    const { ctx, pc } = prContext(c.req.param('ws'));
+    return c.json(await diffs.files(pc, ctx.config));
   });
 
   app.get('/api/w/:ws/pr/diff', async (c) => {
-    const { ws, ctx } = manager.context(c.req.param('ws'));
-    return c.json(await diffs.docDiff(ws, ctx.config, normalizePath(c.req.query('path') ?? '')));
+    const { ctx, pc } = prContext(c.req.param('ws'));
+    return c.json(await diffs.docDiff(pc, ctx.config, normalizePath(c.req.query('path') ?? '')));
   });
 
   app.get('/api/w/:ws/pr/threads', async (c) => {
-    const { ws } = manager.context(c.req.param('ws'));
+    const { pc } = prContext(c.req.param('ws'));
     const p = c.req.query('path');
-    return c.json(await threads.list(ws, p ? normalizePath(p) : undefined));
+    return c.json(await threads.list(pc, p ? normalizePath(p) : undefined));
   });
 
   /*
@@ -260,53 +385,58 @@ export function createServerApp(opts: ServerAppOptions): Hono {
     return b as Record<string, unknown>;
   };
 
-  app.get('/api/w/:ws/review', (c) => guarded(c, async () => c.json(await review.get(manager.context(c.req.param('ws')).ws))));
+  app.get('/api/w/:ws/review', (c) => guarded(c, async () => c.json(await review.get(prContext(c.req.param('ws')).pc))));
 
   app.post('/api/w/:ws/review/comments', (c) =>
     guarded(c, async () => {
-      const { ws } = manager.context(c.req.param('ws'));
-      return c.json(await review.add(ws, await jsonBody(c)), 201);
+      const { pc } = prContext(c.req.param('ws'));
+      return c.json(await review.add(pc, await jsonBody(c)), 201);
     }),
   );
 
   app.patch('/api/w/:ws/review/comments/:id', (c) =>
     guarded(c, async () => {
-      const { ws } = manager.context(c.req.param('ws'));
-      return c.json(await review.update(ws, c.req.param('id'), await jsonBody(c)));
+      const { pc } = prContext(c.req.param('ws'));
+      return c.json(await review.update(pc, c.req.param('id'), await jsonBody(c)));
     }),
   );
 
   app.delete('/api/w/:ws/review/comments/:id', (c) =>
     guarded(c, async () => {
-      const { ws } = manager.context(c.req.param('ws'));
-      await review.remove(ws, c.req.param('id'));
+      const { pc } = prContext(c.req.param('ws'));
+      await review.remove(pc, c.req.param('id'));
       return c.json({ ok: true });
     }),
   );
 
   app.post('/api/w/:ws/review/submit', (c) =>
     guarded(c, async () => {
-      const { ws } = manager.context(c.req.param('ws'));
+      const { pc } = prContext(c.req.param('ws'));
       const b = await jsonBody(c);
-      return c.json(await review.submit(ws, b.event, b.body, b.approveDocs));
+      return c.json(await review.submit(pc, b.event, b.body, b.approveDocs));
     }),
   );
 
   app.post('/api/w/:ws/pr/threads/:id/replies', (c) =>
     guarded(c, async () => {
-      const { ws } = manager.context(c.req.param('ws'));
-      return c.json(await threads.reply(ws, c.req.param('id'), (await jsonBody(c)).body), 201);
+      const { pc } = prContext(c.req.param('ws'));
+      return c.json(await threads.reply(pc, c.req.param('id'), (await jsonBody(c)).body), 201);
     }),
   );
 
   app.post('/api/w/:ws/pr/threads/:id/resolve', (c) =>
     guarded(c, async () => {
-      const { ws } = manager.context(c.req.param('ws'));
+      const { pc } = prContext(c.req.param('ws'));
       const b = await jsonBody(c);
       if (typeof b.resolved !== 'boolean') throw new ReviewError(422, 'bad-request', 'resolved（真偽値）が必要です');
-      return c.json(await threads.resolve(ws, c.req.param('id'), b.resolved));
+      return c.json(await threads.resolve(pc, c.req.param('id'), b.resolved));
     }),
   );
+
+  registerActionsRoutes(app, '/api/w/:ws/actions', (c) => {
+    appFor(c.req.param('ws')!);
+    return workspaceActions(c.req.param('ws')!);
+  }, (c) => c.json({ error: 'not found', code: 'not-found' }, 404));
 
   app.all('/api/w/:ws/*', async (c) => {
     const id = c.req.param('ws');
@@ -327,21 +457,19 @@ export function createServerApp(opts: ServerAppOptions): Hono {
   });
 
   // --- local workspace ---
-  if (local) {
-    app.all('/api/*', (c) => local.fetch(c.req.raw));
-    app.get('/raw/*', (c) => local.fetch(c.req.raw));
-  } else {
-    app.all('/api/*', (c) => c.json({ error: '手元のワークスペースはありません（--repo を指定して起動してください）', code: 'no-local' }, 404));
-    app.get('/raw/*', (c) => c.json({ error: 'no local workspace', code: 'no-local' }, 404));
-  }
+  registerActionsRoutes(app, '/api/actions', () => (local.ctx ? localActions(local.ctx) : null), (c) => local.fetch(c.req.raw));
+  app.all('/api/*', (c) => local.fetch(c.req.raw));
+  app.get('/raw/*', (c) => local.fetch(c.req.raw));
 
-  const dist = opts.dist;
-  if (dist && existsSync(dist)) {
+  if (dist) {
     app.get('*', async (c) => {
       const rel = decodeURIComponent(c.req.path).replace(/^\/+/, '');
       let abs = path.resolve(dist, rel);
       if (!abs.startsWith(dist) || !(await fs.stat(abs).catch(() => null))?.isFile()) abs = path.join(dist, 'index.html');
-      return new Response(await fs.readFile(abs), { headers: { 'content-type': mimeOf(abs) } });
+      if (abs !== path.join(dist, 'index.html')) return new Response(await fs.readFile(abs), { headers: { 'content-type': mimeOf(abs) } });
+      const html = await fs.readFile(abs, 'utf8');
+      const session = opts.auth ? opts.auth.valid(c.req.header('cookie')) : true;
+      return new Response(session ? html : markTokenRequired(html), { headers: { 'content-type': mimeOf(abs), 'cache-control': 'no-store' } });
     });
   }
 

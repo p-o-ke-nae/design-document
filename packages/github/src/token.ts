@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { toGitHubError } from './errors.ts';
 import { redact } from './redact.ts';
+import type { TokenProvider } from './provider.ts';
 
 export type TokenSource = 'gh' | 'env' | 'none';
 
@@ -55,7 +56,7 @@ export function runGhAuthToken(timeoutMs = GH_TIMEOUT_MS): Promise<{ code: numbe
 }
 
 /** Resolves the GitHub token lazily (TOKEN): `gh auth token` → GITHUB_TOKEN → none, then verifies it with GET /user. */
-export class TokenResolver {
+export class TokenResolver implements TokenProvider {
   private cached: ResolvedToken | null = null;
   private inflight: Promise<ResolvedToken> | null = null;
   private lastReason: AuthStatus['reason'] = 'missing';
@@ -79,6 +80,12 @@ export class TokenResolver {
 
   invalidate(): void {
     this.cached = null;
+  }
+
+  /** A 401 invalidates the cached token so the client retries once. */
+  unauthorized(): boolean {
+    this.invalidate();
+    return true;
   }
 
   async status(): Promise<AuthStatus> {

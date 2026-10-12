@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { api, rawUrl, type ScenarioDetail } from '../api.ts';
+import { api } from '../backend/index.ts';
+import type { ScenarioDetail } from '../api.ts';
 import { useApp, useLocalStorage } from '../state.tsx';
 import { playableScenarios, useMockHub } from '../mockHub.tsx';
 import { PlayerController, SPEEDS, STATE_LABEL, createFrameTransport, type DraftData, type FrameTransport, type PlayerSnapshot, type TuneMessage } from '../player.ts';
@@ -8,6 +9,8 @@ import type { PickedElement } from '@ddv/mock/tune-patch';
 import { SnapshotPanel } from './SnapshotPanel.tsx';
 import { TunePanel } from './TunePanel.tsx';
 import { LiveTracePanel } from './LiveTracePanel.tsx';
+import { EDITION, useMockSource, type MockSource } from '../mockSource.ts';
+import { ISSUE_LABEL, MockDocumentBuilder, type BuildIssue } from '../mockDocument.ts';
 
 const SIZES: Array<[string, number | null]> = [
   ['可変', null],
@@ -25,9 +28,15 @@ const idleSnapshot = () => IDLE;
 const show = (v: unknown) => (v === undefined ? '（なし）' : typeof v === 'string' ? v : JSON.stringify(v));
 
 /** `::mock[path]{scenario=...}` — live mock preview with the scenario player (BD-MOCK-PLAYER). */
-export function MockFrame({ target, attrs }: { target: string; attrs: Record<string, string> }) {
+export function MockFrame({ target, attrs, source }: { target: string; attrs: Record<string, string>; source?: MockSource }) {
   const { config, route } = useApp();
   const hub = useMockHub();
+  const ctxSource = useMockSource();
+  const mockSource = source ?? ctxSource;
+  const pages = EDITION === 'pages';
+  /** Pages: the built srcdoc of the current ⟳ (DD-MOCKSB). */
+  const [built, setBuilt] = useState<{ srcdoc: string; issues: BuildIssue[] } | null>(null);
+  const htmlPath = config ? `${config.mocksRoot.replace(/\/$/, '')}/${target.replace(/^\//, '')}` : '';
   const [width, setWidth] = useState<number | null>(null);
   const [nonce, setNonce] = useState(0);
   const frame = useRef<HTMLIFrameElement>(null);
@@ -69,8 +78,31 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
           setPicked((p) => ({ el, seq: (p?.seq ?? 0) + 1 }));
         }
       },
+      edition: EDITION,
+      onSession: (s) => {
+        if (s.state === 'Failed') setMockError(s.failure);
+      },
     });
     transport.current = t;
+    let alive = true;
+    if (pages) {
+      setBuilt(null);
+      const build = async () => {
+        if (!mockSource) throw new Error('モックの読み込み元がありません');
+        const { MOCK_RUNTIME_JS } = await import('../mockRuntime.ts');
+        return new MockDocumentBuilder(mockSource.reader, MOCK_RUNTIME_JS, window.location.origin).build(htmlPath);
+      };
+      build().then(
+        (b) => {
+          if (!alive) return;
+          setBuilt({ srcdoc: b.srcdoc, issues: b.issues });
+          t.built(b.files);
+        },
+        (e: Error) => {
+          if (alive) t.buildFailed(e?.message ?? String(e));
+        },
+      );
+    }
     const c = new PlayerController(t, {
       onFinish: (r) => {
         void api
@@ -87,11 +119,13 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
     });
     setCtl(c);
     return () => {
+      alive = false;
       c.dispose();
       t.dispose();
       if (transport.current === t) transport.current = null;
     };
-  }, [nonce, refreshScenarios]);
+    // htmlPath/mockSource only matter for the Pages edition; ⟳ (nonce) rebuilds
+  }, [nonce, refreshScenarios, pages ? htmlPath : '', pages ? mockSource : null]);
 
   const snap = useSyncExternalStore(ctl?.subscribe ?? noSubscribe, ctl?.getSnapshot ?? idleSnapshot);
 
@@ -195,8 +229,20 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
 
   const select = useCallback((id: string) => setRequest((r) => ({ id, play: false, seq: r.seq + 1 })), []);
 
+  // Local: the mock's URL (Pages builds srcdoc from the target's reader instead).
+  const [src, setSrc] = useState('');
+  useEffect(() => {
+    // `EDITION` (not `pages`) so that the Pages bundle drops the local `/raw/` URL
+    if (EDITION === 'pages' || !htmlPath) return;
+    let alive = true;
+    void api.rawUrl(`/raw/${htmlPath}`).then((u) => alive && setSrc(u));
+    return () => {
+      alive = false;
+    };
+  }, [pages, htmlPath]);
+
   if (!config) return null;
-  const src = rawUrl(`/raw/${config.mocksRoot.replace(/\/$/, '')}/${target.replace(/^\//, '')}`);
+  const tabUrl = pages ? mockSource?.blobUrl?.(htmlPath) : src || undefined;
   const steps = detail?.scenario?.steps ?? [];
   const { state, busy, cursor, total, failure } = snap;
   // Disabled until the latest selection (even of the same scenario) has been loaded into the controller
@@ -241,9 +287,11 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
         >
           ⟳
         </button>
-        <a href={src} target="_blank" rel="noreferrer">
-          別タブ ↗
-        </a>
+        {tabUrl && (
+          <a href={tabUrl} target="_blank" rel="noreferrer">
+            別タブ ↗
+          </a>
+        )}
       </div>
       {hasPlayer && (
         <div className="player" data-testid="player">
@@ -312,6 +360,18 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
       )}
       {loadError && <div className="notice warn">⚠ シナリオを読み込めません: {loadError}</div>}
       {mockError && <div className="notice warn">⚠ モック: {mockError}</div>}
+      {pages && built && built.issues.length > 0 && (
+        <details className="notice warn" data-testid="mock-build-issues">
+          <summary>⚠ Pages 版では読み込めない参照があります（{built.issues.length} 件）</summary>
+          <ul>
+            {built.issues.map((i, n) => (
+              <li key={n}>
+                <code>{i.ref}</code>（<code>{i.from}</code>）: {ISSUE_LABEL[i.kind]}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       {tuning && <TunePanel mock={target} picked={picked} send={sendTune} onEnd={() => setTuning(false)} />}
       {detail?.issues?.map((m, i) => (
         <div key={i} className="notice warn">
@@ -355,7 +415,19 @@ export function MockFrame({ target, attrs }: { target: string; attrs: Record<str
       )}
       <div className={`mock-body${hasPlayer ? ' with-steps' : ''}`}>
         <div className="mock-stage">
-          <iframe key={nonce} ref={frame} title={target} src={src} style={{ width: width ? `${width}px` : '100%' }} />
+          {pages ? (
+            <iframe
+              key={nonce}
+              ref={frame}
+              title={target}
+              srcDoc={built?.srcdoc ?? ''}
+              sandbox="allow-scripts"
+              referrerPolicy="no-referrer"
+              style={{ width: width ? `${width}px` : '100%' }}
+            />
+          ) : (
+            src && <iframe key={nonce} ref={frame} title={target} src={src} style={{ width: width ? `${width}px` : '100%' }} />
+          )}
         </div>
         {hasPlayer && (
           <ol className="player-steps" data-testid="player-steps" aria-label="ステップ（クリックでそこまで巻き戻し）">

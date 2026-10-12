@@ -2064,3 +2064,113 @@ svg path.ddv-cov-unlinked {
 .td-newfield {
   width: 72px;
 }
+/* Local folder picker (LOCALF) */
+.folder-picker,
+.token-required {
+  padding: 12px 16px;
+  display: grid;
+  gap: 10px;
+  max-width: 820px;
+  align-content: start;
+}
+.folder-picker .row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.folder-picker input.path {
+  min-width: 420px;
+  flex: 1;
+}
+.folder-picker h3 {
+  margin: 0;
+}
+.folder-picker .dirs,
+.folder-picker .recent {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 360px;
+  overflow: auto;
+}
+.folder-picker .dirs li,
+.folder-picker .recent-path {
+  cursor: pointer;
+  user-select: none;
+}
+.folder-picker .dirs li {
+  padding: 2px 4px;
+}
+.folder-picker .dirs li:hover {
+  background: #f6f8fa;
+}
+.folder-picker .cfg {
+  margin-left: 6px;
+  font-size: 11px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #dafbe1;
+}
+.local-root {
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Actions (actions-run.md「画面」) */
+.tests-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.tests-tabs a {
+  padding: 2px 12px;
+  border: 1px solid #d0d7de;
+  border-radius: 12px;
+  text-decoration: none;
+}
+.tests-tabs a.is-active {
+  background: #ddf4ff;
+  font-weight: 600;
+}
+.actions-page {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.actions-page .steps {
+  margin: 0;
+}
+.actions-page .shots {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.actions-page .shots figure {
+  margin: 0;
+  border: 1px solid #d0d7de;
+}
+.actions-page .shots img {
+  max-width: 240px;
+  display: block;
+}
+.dot.dot-actions {
+  outline: 2px solid #0969da;
+  outline-offset: 1px;
+}
+
+/* PAT menu (Pages edition, pat.md) */
+.pat-menu { position: relative; }
+.pat-menu .menu { position: absolute; right: 0; z-index: 10; background: #fff; border: 1px solid #d0d7de; border-radius: 6px; padding: 8px; display: grid; gap: 6px; width: 320px; }
+.pat-form { display: grid; gap: 6px; max-width: 480px; }
+
+/* Pages edition (pages-viewer.md「画面」) */
+.target-header { padding: 6px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.target-header .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.target-header .warn { margin: 4px 0 0; }
+.topbar .edition { font-size: 12px; opacity: 0.85; }
+.topbar .rate.warn { color: var(--warn); background: var(--warn-bg); padding: 0 4px; border-radius: 4px; }
+.disabled-reason { margin-left: 6px; font-size: 12px; color: var(--muted, #6e7781); }
+.pages-open .form, .pages-token .form { display: grid; gap: 6px; max-width: 480px; }

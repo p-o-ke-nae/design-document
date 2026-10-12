@@ -7,6 +7,7 @@ import { idPattern, scanTestLinks, type TestLink } from '@ddv/testid';
 import { executeRunner, type CaseResult } from './runner.ts';
 import { RepoStateReader } from './repo-state.ts';
 import { Pruner, TRACES_DIR, traceDirs, type PrunePlan } from './prune.ts';
+import type { StepResultMeta } from './snapshots.ts';
 
 export interface RunRequest {
   ids?: string[];
@@ -52,6 +53,24 @@ export interface RunRecord {
   times?: number;
   /** Test ids whose trace was written in this run (kept after the traces are pruned). */
   traces?: string[];
+  /** Where the run was executed; absent = local (RunManager never writes it). */
+  source?: 'local' | 'actions';
+  /** Actions: GITHUB_RUN_ID (`id` is `<run id>-<attempt>`). */
+  actionsRunId?: string;
+  /** Actions: request id given by the viewer. */
+  actionsRequest?: string;
+  /** Actions: the branch / tag the workflow ran on. */
+  ref?: string;
+  /** Actions: warnings of the workflow (e.g. the commit differs from the branch head). */
+  warnings?: string[];
+  /** Actions: scenarios captured in the run. */
+  snapshots?: SnapshotOutcome[];
+}
+
+export interface SnapshotOutcome {
+  id: string;
+  status: 'passed' | 'failed' | 'error';
+  steps: StepResultMeta[];
 }
 
 export interface RerunSession {
@@ -77,6 +96,44 @@ export const BUSY_MESSAGE = '別のテスト実行が進行中です';
 
 export interface RunManagerOptions {
   repoState?: RepoStateReader;
+}
+
+/** Runs the configured runners for `run.request` and sets `run.runners` / `results` / `status` (the body of a test run, shared with `ddv ci run`). Throws on unexpected failures. */
+export async function runTests(repoRoot: string, config: DdvConfig, run: RunRecord, log: (line: string) => void): Promise<void> {
+  const links: TestLink[] = await scanTestLinks(repoRoot, config);
+  const idRe = idPattern(Object.values(config.idPrefix));
+  const requested = run.request.ids?.length ? run.request.ids : null;
+  const runners = config.runners.filter((r) => !run.request.runner || r.name === run.request.runner);
+  for (const r of runners) {
+    let ids: string[] | null = null;
+    if (requested) {
+      ids = [...new Set(links.filter((l) => l.runner === r.name && requested.includes(l.id)).map((l) => l.id))];
+      if (!ids.length) continue;
+    }
+    log(`── ${r.name} (${r.type}, ${r.level}) ──`);
+    const res = await executeRunner(repoRoot, r, ids, links, idRe, log, run.id);
+    run.runners.push({ name: r.name, command: res.command, exitCode: res.exitCode, error: res.error });
+    if (res.error) log(`! ${res.error}`);
+    Object.assign(run.results, res.results);
+    const startFailed = res.error ?? (res.exitCode === null && !Object.keys(res.results).length ? 'プロセスを起動できませんでした' : undefined);
+    if (startFailed) {
+      const message = `ランナー ${r.name} を起動できませんでした: ${startFailed}`;
+      const failedIds = ids ?? [...new Set(links.filter((l) => l.runner === r.name).map((l) => l.id))];
+      for (const id of failedIds) run.results[id] ??= { status: 'error', durationMs: 0, message, runner: r.name, test: '' };
+    }
+  }
+  if (requested) {
+    for (const id of requested) {
+      if (!run.results[id]) run.results[id] = { status: 'error', durationMs: 0, message: '紐づくテストが無いか、結果が見つかりませんでした', runner: '', test: '' };
+    }
+  }
+  const statuses = Object.values(run.results).map((r) => r.status);
+  const runnerFailed = run.runners.some((r) => r.error || r.exitCode === null);
+  run.status = runnerFailed || statuses.includes('error') ? (statuses.includes('failed') ? 'failed' : 'error') : statuses.includes('failed') ? 'failed' : 'passed';
+  if (!run.runners.length) {
+    run.status = 'error';
+    log('! 実行対象のランナーがありません');
+  }
 }
 
 export const RUNS_DIR = '.ddv/runs';
@@ -120,6 +177,17 @@ export class RunManager extends EventEmitter {
   /** Test runs, newest first (task runs such as snapshots are kept in memory only and not listed). */
   list(): RunRecord[] {
     return [...this.runs.values()].filter((r) => (r.kind ?? 'test') === 'test').sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+  }
+
+  get(id: string): RunRecord | undefined {
+    return this.runs.get(id);
+  }
+
+  /** `LocalRuns.onEnd` (services): called when any run ends; returns the unsubscribe function. */
+  onEnd(listener: (id: string) => void): () => void {
+    const h = (id: string) => listener(id);
+    this.on('end', h);
+    return () => this.off('end', h);
   }
 
   /** Latest result per test id (most recent run that produced a result for it). */
@@ -228,40 +296,7 @@ export class RunManager extends EventEmitter {
     try {
       const state = await this.repoState.read(this.repoRoot);
       if (state) Object.assign(run, { commit: state.commit, dirty: state.dirty });
-      const links: TestLink[] = await scanTestLinks(this.repoRoot, config);
-      const idRe = idPattern(Object.values(config.idPrefix));
-      const requested = run.request.ids?.length ? run.request.ids : null;
-      const runners = config.runners.filter((r) => !run.request.runner || r.name === run.request.runner);
-      for (const r of runners) {
-        let ids: string[] | null = null;
-        if (requested) {
-          ids = [...new Set(links.filter((l) => l.runner === r.name && requested.includes(l.id)).map((l) => l.id))];
-          if (!ids.length) continue;
-        }
-        this.log(run, `── ${r.name} (${r.type}, ${r.level}) ──`);
-        const res = await executeRunner(this.repoRoot, r, ids, links, idRe, (l) => this.log(run, l), run.id);
-        run.runners.push({ name: r.name, command: res.command, exitCode: res.exitCode, error: res.error });
-        if (res.error) this.log(run, `! ${res.error}`);
-        Object.assign(run.results, res.results);
-        const startFailed = res.error ?? (res.exitCode === null && !Object.keys(res.results).length ? 'プロセスを起動できませんでした' : undefined);
-        if (startFailed) {
-          const message = `ランナー ${r.name} を起動できませんでした: ${startFailed}`;
-          const failedIds = ids ?? [...new Set(links.filter((l) => l.runner === r.name).map((l) => l.id))];
-          for (const id of failedIds) run.results[id] ??= { status: 'error', durationMs: 0, message, runner: r.name, test: '' };
-        }
-      }
-      if (requested) {
-        for (const id of requested) {
-          if (!run.results[id]) run.results[id] = { status: 'error', durationMs: 0, message: '紐づくテストが無いか、結果が見つかりませんでした', runner: '', test: '' };
-        }
-      }
-      const statuses = Object.values(run.results).map((r) => r.status);
-      const runnerFailed = run.runners.some((r) => r.error || r.exitCode === null);
-      run.status = runnerFailed || statuses.includes('error') ? (statuses.includes('failed') ? 'failed' : 'error') : statuses.includes('failed') ? 'failed' : 'passed';
-      if (!run.runners.length) {
-        run.status = 'error';
-        this.log(run, '! 実行対象のランナーがありません');
-      }
+      await runTests(this.repoRoot, config, run, (l) => this.log(run, l));
     } catch (e) {
       run.status = 'error';
       this.log(run, `! ${(e as Error).stack ?? e}`);

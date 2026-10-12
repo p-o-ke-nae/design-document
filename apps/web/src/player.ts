@@ -1,6 +1,7 @@
 import type { Step, StepFailure } from './api.ts';
 import type { ElementPatch, PickedElement } from '@ddv/mock/tune-patch';
 import type { LiveStepTrace, TraceStep } from '@ddv/mock/trace-format';
+import { FRAME_PROTOCOL, acceptFrameMessage, parseFromFrame, type FromFrame } from '@ddv/mock/frame-protocol';
 
 /** BD-MOCK-PLAYER (docs/design/basic/mock-player.md#プレイヤー). */
 export type PlayerState = 'Idle' | 'Playing' | 'Paused' | 'Done' | 'Failed';
@@ -505,54 +506,190 @@ export class PlayerController {
   }
 }
 
-export type MockMessage =
-  | { type: 'ddv:ready'; screen: string; version: string }
-  | { type: 'ddv:result'; index: number; ok: boolean; screen: string | null; failures: StepFailure[]; message?: string; trace?: LiveStepTrace }
-  | { type: 'ddv:screen'; screen: string }
-  | { type: 'ddv:error'; message: string }
-  | ({ type: 'ddv:picked' } & PickedElement);
+export type MockMessage = FromFrame;
 
 /** Tune mode messages to the mock (DD-TUNE). */
 export type TuneMessage = { type: 'ddv:tune'; on: boolean } | { type: 'ddv:patch'; path: number[]; patch: ElementPatch | null };
 
+/** Build-time edition of the viewer: `local` = /raw/ iframe, `pages` = sandboxed srcdoc (DD-MOCKSB). */
+export type Edition = 'local' | 'pages';
+
+export type FrameSessionState = 'Building' | 'Loading' | 'Initializing' | 'Ready' | 'Running' | 'Failed';
+export type FrameSessionEvent = 'show' | 'built' | 'buildFailed' | 'hello' | 'ready' | 'timeout' | 'error' | 'step' | 'result' | 'reload';
+
+export const VERSION_MISMATCH = 'モックの runtime の版が合いません';
+export const BUILD_FAILED = 'モックの HTML を読めません';
+
+/** Connection with the mock iframe (DD-MOCKSB HANDSHAKE). `null` = the pair is not in the diagram (ignored). */
+export function frameSessionTransition(state: FrameSessionState | null, event: FrameSessionEvent, edition: Edition): FrameSessionState | null {
+  const pages = edition === 'pages';
+  if (state === null) return event === 'show' ? (pages ? 'Building' : 'Loading') : null;
+  switch (`${state}|${event}`) {
+    case 'Building|built':
+      return 'Loading';
+    case 'Building|buildFailed':
+      return 'Failed';
+    case 'Loading|hello':
+      return pages ? 'Initializing' : null;
+    case 'Loading|ready':
+      return pages ? null : 'Ready';
+    case 'Loading|timeout':
+      return pages ? 'Failed' : null;
+    case 'Initializing|ready':
+      return 'Ready';
+    case 'Initializing|error':
+    case 'Initializing|timeout':
+      return 'Failed';
+    case 'Ready|step':
+      return 'Running';
+    case 'Running|result':
+      return 'Ready';
+    case 'Ready|hello':
+    case 'Running|hello':
+      return pages ? 'Initializing' : null;
+    case 'Ready|reload':
+    case 'Running|reload':
+    case 'Failed|reload':
+      return pages ? 'Building' : 'Loading';
+    default:
+      return null;
+  }
+}
+
+/** State holder of {@link frameSessionTransition} with the failure message. */
+export class FrameSession {
+  state: FrameSessionState | null = null;
+  failure = '';
+  private listeners = new Set<() => void>();
+
+  constructor(readonly edition: Edition) {}
+
+  /** Applies the event; returns false (state unchanged) when the diagram has no such transition. */
+  fire(event: FrameSessionEvent, failure?: string): boolean {
+    const next = frameSessionTransition(this.state, event, this.edition);
+    if (!next) return false;
+    this.state = next;
+    this.failure = next === 'Failed' ? (failure ?? '') : '';
+    for (const f of [...this.listeners]) f();
+    return true;
+  }
+
+  subscribe(f: () => void): () => void {
+    this.listeners.add(f);
+    return () => this.listeners.delete(f);
+  }
+
+  /** Resolves once Ready/Running, rejects with the failure message once Failed. */
+  whenReady(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const check = () => {
+        if (this.state === 'Ready' || this.state === 'Running') resolve();
+        else if (this.state === 'Failed') reject(new Error(this.failure || NO_RESPONSE));
+        else return false;
+        off();
+        return true;
+      };
+      const off = this.subscribe(() => void check());
+      check();
+    });
+  }
+}
+
 export interface FrameTransport extends PlayerTransport {
   send(msg: TuneMessage): void;
   dispose(): void;
+  readonly session: FrameSession;
+  /** Pages: the srcdoc has been set on the iframe (Building → Loading). */
+  built(files: Record<string, string>): void;
+  /** Pages: MockDocumentBuilder failed (Building → Failed). */
+  buildFailed(reason: string): void;
+  /** ⟳ of MockFrame. */
+  reload(): void;
+}
+
+export interface FrameTransportOptions {
+  onMessage?: (m: MockMessage) => void;
+  win?: Window;
+  bootWaitMs?: number;
+  /** Default `local` (Phase 5 behaviour). */
+  edition?: Edition;
+  /** Pages: no answer in Loading/Initializing (default RESPONSE_TIMEOUT_MS). */
+  timeoutMs?: number;
+  onSession?: (s: FrameSession) => void;
 }
 
 /** postMessage transport to the mock iframe (mock-runtime HostBridge). */
-export function createFrameTransport(
-  getFrame: () => HTMLIFrameElement | null,
-  opts: { onMessage?: (m: MockMessage) => void; win?: Window; bootWaitMs?: number } = {},
-): FrameTransport {
+export function createFrameTransport(getFrame: () => HTMLIFrameElement | null, opts: FrameTransportOptions = {}): FrameTransport {
   const win = opts.win ?? window;
+  const edition = opts.edition ?? 'local';
+  const pages = edition === 'pages';
+  const session = new FrameSession(edition);
   let loaded = false;
+  let files: Record<string, string> = {};
   let readyWaiters: Array<(screen: string | null) => void> = [];
   const stepWaiters = new Map<number, { resolve(r: StepResult): void; reject(e: Error): void }>();
   let chain: Promise<unknown> = Promise.resolve();
+  let timer: ReturnType<typeof setTimeout> | undefined;
 
   const target = () => getFrame()?.contentWindow ?? null;
-  const post = (msg: unknown) => target()?.postMessage(JSON.parse(JSON.stringify(msg)), win.location.origin);
+  // An opaque-origin (sandboxed srcdoc) frame can only be addressed with '*'; nothing secret is sent
+  const post = (msg: unknown) => target()?.postMessage(JSON.parse(JSON.stringify(msg)), pages ? '*' : win.location.origin);
+
+  const notifySession = () => opts.onSession?.(session);
+  session.subscribe(notifySession);
+  const stopTimer = () => {
+    if (timer !== undefined) clearTimeout(timer);
+    timer = undefined;
+  };
+  const startTimer = () => {
+    stopTimer();
+    timer = setTimeout(() => {
+      timer = undefined;
+      session.fire('timeout', NO_RESPONSE);
+    }, opts.timeoutMs ?? RESPONSE_TIMEOUT_MS);
+  };
+  const dropSteps = (why: string) => {
+    for (const w of stepWaiters.values()) w.reject(new Error(why));
+    stepWaiters.clear();
+  };
+  session.subscribe(() => {
+    if (session.state !== 'Loading' && session.state !== 'Initializing') stopTimer();
+    if (session.state === 'Failed') dropSteps(session.failure || NO_RESPONSE);
+  });
 
   const onMessage = (e: MessageEvent) => {
     const w = target();
-    if (!w || e.source !== w || e.origin !== win.location.origin) return;
-    const d = e.data as MockMessage | null;
-    if (!d || typeof d !== 'object' || typeof d.type !== 'string' || !d.type.startsWith('ddv:')) return;
-    if (d.type === 'ddv:ready') {
+    if (!w) return;
+    const d = acceptFrameMessage(e, { source: w, origin: pages ? 'null' : win.location.origin }, parseFromFrame);
+    if (!d) return;
+    if (d.type === 'ddv:hello') {
+      if (session.fire('hello')) {
+        dropSteps('reset');
+        if (d.protocol !== FRAME_PROTOCOL) session.fire('error', VERSION_MISMATCH);
+        else {
+          startTimer();
+          post({ type: 'ddv:init', protocol: FRAME_PROTOCOL, files });
+        }
+      }
+    } else if (d.type === 'ddv:ready') {
       loaded = true;
+      session.fire('ready');
       const ws = readyWaiters;
       readyWaiters = [];
       ws.forEach((f) => f(d.screen ?? null));
     } else if (d.type === 'ddv:result') {
+      session.fire('result');
       const w2 = stepWaiters.get(d.index);
       stepWaiters.delete(d.index);
       const trace = d.trace && typeof d.trace === 'object' ? d.trace : undefined;
       w2?.resolve({ ok: !!d.ok, screen: d.screen ?? null, failures: Array.isArray(d.failures) ? d.failures : [], message: d.message, ...(trace ? { trace } : {}) });
+    } else if (d.type === 'ddv:error') {
+      session.fire('error', d.message);
     }
     opts.onMessage?.(d);
   };
   win.addEventListener('message', onMessage);
+  session.fire('show');
 
   const nextReady = (ms: number) =>
     new Promise<string | null>((resolve, reject) => {
@@ -568,12 +705,13 @@ export function createFrameTransport(
     });
 
   return {
+    session,
     reset(fixtures, start, data) {
       const run = async () => {
+        if (pages) await session.whenReady();
         // Initial load: wait for the runtime to announce itself (it may already have, unseen)
-        if (!loaded) await nextReady(opts.bootWaitMs ?? 3000).catch(() => {});
-        for (const w of stepWaiters.values()) w.reject(new Error('reset'));
-        stepWaiters.clear();
+        else if (!loaded) await nextReady(opts.bootWaitMs ?? 3000).catch(() => {});
+        dropSteps('reset');
         const p = nextReady(RESPONSE_TIMEOUT_MS);
         post({ type: 'ddv:reset', fixtures, ...(start ? { start } : {}), ...(data ? { data } : {}) });
         return { screen: await p };
@@ -584,18 +722,36 @@ export function createFrameTransport(
     },
     step(index, step, highlight, trace) {
       return new Promise<StepResult>((resolve, reject) => {
+        if (pages && session.state !== 'Ready' && session.state !== 'Running') {
+          reject(new Error(session.failure || NO_RESPONSE));
+          return;
+        }
         stepWaiters.get(index)?.reject(new Error('superseded'));
         stepWaiters.set(index, { resolve, reject });
+        session.fire('step');
         post({ type: 'ddv:step', index, step, ...(highlight ? { highlight } : {}), ...(trace ? { trace: true } : {}) });
       });
     },
     send(msg) {
       post(msg);
     },
+    built(f) {
+      files = f;
+      if (session.fire('built')) startTimer();
+    },
+    buildFailed(reason) {
+      session.fire('buildFailed', `${BUILD_FAILED}: ${reason}`);
+    },
+    reload() {
+      if (!session.fire('reload')) return;
+      loaded = false;
+      dropSteps('reset');
+      stopTimer();
+    },
     dispose() {
       win.removeEventListener('message', onMessage);
-      for (const w of stepWaiters.values()) w.reject(new Error('disposed'));
-      stepWaiters.clear();
+      stopTimer();
+      dropSteps('disposed');
       readyWaiters = [];
     },
   };

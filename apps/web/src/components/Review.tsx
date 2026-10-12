@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { elementsOf, type DocElement, type ParsedDoc } from '@ddv/core';
-import { api, type DocResponse, type ElementRef, type PendingComment, type ReviewEvent, type TreeDoc } from '../api.ts';
-import { docHref, useApp } from '../state.tsx';
+import { api } from '../backend/index.ts';
+import type { DocResponse, ElementRef, PendingComment, ReviewEvent, TreeDoc } from '../api.ts';
+import { docHref, reviewHref, useApp, viewHref } from '../state.tsx';
 import { recalledSubmit, rememberSubmit, usePr } from './Pr.tsx';
+import { GateReason, useGate } from '../gate.tsx';
 
 const KIND_LABEL: Record<string, string> = { block: 'ブロック', tableRow: '表の行', node: 'ノード', edge: '遷移', diagram: '図', matrixRow: 'マトリクス行', mockElement: 'モック要素', testData: 'テストデータ' };
 const EVENT_LABEL: Record<ReviewEvent, string> = { COMMENT: 'Comment', APPROVE: 'Approve', REQUEST_CHANGES: 'Request changes' };
@@ -34,12 +36,14 @@ const same = (a: ElementRef, b: ElementRef) => a.kind === b.kind && a.key === b.
 /** 💬 of one element; opens the comment form. Renders nothing outside a PR workspace. */
 export function CommentGutter({ path, element, inline }: { path: string; element: ElementRef; inline?: boolean }) {
   const pr = usePr();
+  const gate = useGate('comment');
   if (!pr) return null;
   return (
     <button
       type="button"
       className={`cmt-btn${inline ? ' inline' : ''}`}
-      title="この要素にコメント"
+      disabled={!gate.enabled}
+      title={gate.reason ?? 'この要素にコメント'}
       data-testid="comment-gutter"
       data-key={element.key}
       aria-label="この要素にコメント"
@@ -109,6 +113,7 @@ function ComposerForm() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const inPr = !!pr.changeOf(path);
+  const gate = useGate('comment');
 
   const add = async () => {
     if (!body.trim()) return setError('コメントを入力してください');
@@ -152,9 +157,10 @@ function ComposerForm() {
         </div>
       )}
       <div className="row">
-        <button type="button" className="primary" disabled={busy} onClick={() => void add()} data-testid="add-comment">
+        <button type="button" className="primary" disabled={busy || !gate.enabled} title={gate.reason} onClick={() => void add()} data-testid="add-comment">
           保留に追加
         </button>
+        <GateReason gate={gate} />
         <button type="button" disabled={busy} onClick={() => pr.openComposer(null)} data-testid="comment-cancel">
           キャンセル
         </button>
@@ -277,9 +283,11 @@ export function ReviewPage({ lastDoc }: { lastDoc: string }) {
         .filter((x) => x.doc && x.doc.status !== 'approved'),
     [pr?.files, tree],
   );
+  const submitGate = useGate('submitReview');
+  const statusGate = useGate('approveStatus');
   if (!pr) return <div className="empty muted">レビューは GitHub の PR で使えます</div>;
 
-  const close = lastDoc ? docHref(lastDoc) : `#/w/${encodeURIComponent(route.ws)}/`;
+  const close = lastDoc ? docHref(lastDoc) : viewHref('root');
   const changeEvent = (e: ReviewEvent) => {
     setEvent(e);
     if (e !== 'APPROVE') setApprove([]);
@@ -295,7 +303,7 @@ export function ReviewPage({ lastDoc }: { lastDoc: string }) {
       const result = await api.submitReview({ event, body: body.trim() ? body : undefined, approveDocs: event === 'APPROVE' ? approve : undefined });
       rememberSubmit(route.ws, event, result);
       // The page may be replaced when a status commit moved head; the hash carries the way to the result.
-      location.hash = `#/w/${encodeURIComponent(route.ws)}/review/done`;
+      location.hash = reviewHref(true);
       void pr.reloadReview();
       pr.reloadReviews();
     } catch (e) {
@@ -336,14 +344,14 @@ export function ReviewPage({ lastDoc }: { lastDoc: string }) {
           <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} maxLength={5000} data-testid="body" />
         </label>
         {candidates.length > 0 && (
-          <fieldset className="approve-docs" disabled={event !== 'APPROVE'}>
+          <fieldset className="approve-docs" disabled={event !== 'APPROVE' || !statusGate.enabled} title={statusGate.reason}>
             <legend>Approve と一緒に status を approved にする文書</legend>
             {candidates.map(({ path, doc }) => (
               <label key={path} className="toggle">
                 <input
                   type="checkbox"
                   checked={approve.includes(path)}
-                  disabled={event !== 'APPROVE'}
+                  disabled={event !== 'APPROVE' || !statusGate.enabled}
                   onChange={(e) => setApprove(e.target.checked ? [...approve, path] : approve.filter((p) => p !== path))}
                   data-testid="approve-status"
                   data-path={path}
@@ -351,6 +359,7 @@ export function ReviewPage({ lastDoc }: { lastDoc: string }) {
                 {doc?.title ?? path} <code>{path}</code> <span className="muted">（{doc?.status}）</span>
               </label>
             ))}
+            <GateReason gate={statusGate} />
           </fieldset>
         )}
         {error && (
@@ -359,9 +368,10 @@ export function ReviewPage({ lastDoc }: { lastDoc: string }) {
           </div>
         )}
         <div className="row">
-          <button type="button" className="primary" disabled={busy} onClick={() => void submit()} data-testid="review-submit">
+          <button type="button" className="primary" disabled={busy || !submitGate.enabled} title={submitGate.reason} onClick={() => void submit()} data-testid="review-submit">
             {EVENT_LABEL[event]} として送信
           </button>
+          <GateReason gate={submitGate} />
           <button type="button" onClick={() => (location.hash = close)} data-testid="review-close">
             閉じる
           </button>
@@ -376,7 +386,7 @@ export function DonePage({ lastDoc }: { lastDoc: string }) {
   const pr = usePr();
   const { route } = useApp();
   const r = recalledSubmit(route.ws);
-  const back = lastDoc ? docHref(lastDoc) : `#/w/${encodeURIComponent(route.ws)}/`;
+  const back = lastDoc ? docHref(lastDoc) : viewHref('root');
   useEffect(() => {
     if (!r) location.hash = back;
   }, [r, back]);

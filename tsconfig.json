@@ -18,8 +18,12 @@
       "@ddv/core/node": ["./packages/core/src/node-index.ts"],
       "@ddv/graph": ["./packages/graph/src/index.ts"],
       "@ddv/github": ["./packages/github/src/index.ts"],
+      "@ddv/testid/core": ["./packages/testid/src/core.ts"],
       "@ddv/testid": ["./packages/testid/src/index.ts"],
+      "@ddv/services": ["./packages/services/src/index.ts"],
       "@ddv/mock/step": ["./packages/mock/src/step.ts"],
+      "@ddv/mock/browser": ["./packages/mock/src/browser-safe.ts"],
+      "@ddv/mock/frame-protocol": ["./packages/mock/src/frame-protocol.ts"],
       "@ddv/mock/playwright": ["./packages/mock/src/playwright.ts"],
       "@ddv/mock/tune": ["./packages/mock/src/tune.ts"],
       "@ddv/mock/tune-patch": ["./packages/mock/src/tune-patch.ts"],
@@ -27,9 +31,11 @@
       "@ddv/mock/trace-format": ["./packages/mock/src/trace-format.ts"],
       "@ddv/mock/trace": ["./packages/mock/src/trace.ts"],
       "@ddv/mock-runtime": ["./packages/mock-runtime/src/index.ts"],
-      "@ddv/mock": ["./packages/mock/src/index.ts"]
+      "@ddv/mock": ["./packages/mock/src/index.ts"],
+      "#backend-impl": ["./apps/web/src/backend/http.ts"],
+      "#app-impl": ["./apps/web/src/App.tsx"]
     }
   },
-  "include": ["./packages/*/src", "apps/*/src", "e2e", "vitest.config.ts", "playwright.config.ts"]
+  "include": ["./packages/*/src", "apps/*/src", "apps/web/scripts", "e2e", "e2e-pages", "vitest.config.ts", "playwright.config.ts", "playwright.pages.config.ts"]
 }
 

@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
-import { api, ApiError, type HistoryEntry, type RecentMark, type RunSummary, type TestHistory, type TestSummary } from '../api.ts';
-import { docHref, traceHref, useApp, viewHref } from '../state.tsx';
+import { api } from '../backend/index.ts';
+import { ApiError } from '../backend/types.ts';
+import type { HistoryEntry, RecentMark, RunSummary, TestHistory, TestSummary } from '../api.ts';
+import { actionsHref, docHref, traceHref, useApp, viewHref } from '../state.tsx';
 import { StatusBadge } from './StatusBadge.tsx';
 
 const RESULT: Record<string, string> = { passed: '成功', failed: '失敗', skipped: 'スキップ', error: 'エラー', none: '未実行' };
+
+/** Fields of the merged history (actions-run.md「履歴の統合」; absent on older servers / local-only histories). */
+type Sourced = { source?: 'local' | 'actions'; actionsRunId?: string; actionsUrl?: string };
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -26,9 +31,10 @@ export function RecentDots({ summary }: { summary?: TestSummary }) {
   return (
     <span className="dots" data-testid="test-dots">
       {marks.map((m, i) => {
-        const at = summary?.recentAt?.[i];
-        const title = at ? `${formatAt(at.at)}・${formatCommit(at)}・${RESULT[m]}` : RESULT.none;
-        return <span key={i} className={`dot dot-${m}`} title={title} data-mark={m} />;
+        const at = summary?.recentAt?.[i] as (NonNullable<TestSummary['recentAt'][number]> & Sourced) | null | undefined;
+        const actions = at?.source === 'actions';
+        const title = at ? `${formatAt(at.at)}・${formatCommit(at)}・${RESULT[m]}${actions ? '（Actions）' : ''}` : RESULT.none;
+        return <span key={i} className={`dot dot-${m}${actions ? ' dot-actions' : ''}`} title={title} data-mark={m} data-source={actions ? 'actions' : undefined} />;
       })}
     </span>
   );
@@ -130,6 +136,7 @@ export function TestHistoryView({ id }: { id: string }) {
           <thead>
             <tr>
               <th>実行日時</th>
+              <th>出所</th>
               <th>コミット</th>
               <th>結果</th>
               <th>所要時間</th>
@@ -138,11 +145,21 @@ export function TestHistoryView({ id }: { id: string }) {
             </tr>
           </thead>
           <tbody>
-            {h.entries.map((e) => {
+            {h.entries.map((e: HistoryEntry & Sourced) => {
+              const actions = e.source === 'actions';
               const changed = h.changed.includes(e.runId);
               return (
                 <tr key={e.runId} data-testid="history-row" data-run-id={e.runId} data-changed={changed ? '' : undefined} className={`${changed ? 'changed' : ''} ${ff?.runId === e.runId ? 'first-failure' : ''}`.trim() || undefined}>
                   <td className="nowrap">{formatAt(e.at)}</td>
+                  <td className="nowrap" data-testid="history-source" data-source={actions ? 'actions' : 'local'}>
+                    {actions ? (
+                      <a href={actionsHref(`runs/${encodeURIComponent(e.runId)}`)} title={e.actionsUrl}>
+                        Actions
+                      </a>
+                    ) : (
+                      '手元'
+                    )}
+                  </td>
                   <td className="nowrap">{formatCommit(e)}</td>
                   <td>
                     <StatusBadge status={e.status} />
@@ -151,7 +168,7 @@ export function TestHistoryView({ id }: { id: string }) {
                   <td title={e.message}>{firstLine(e.message)}</td>
                   <td>
                     {e.trace && (
-                      <a className="button" href={traceHref(e.runId, id)} data-testid="history-trace">
+                      <a className="button" href={actions ? actionsHref(`runs/${encodeURIComponent(e.runId)}/trace/${encodeURIComponent(id)}`) : traceHref(e.runId, id)} data-testid="history-trace">
                         トレース
                       </a>
                     )}

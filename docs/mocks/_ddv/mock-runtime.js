@@ -6172,18 +6172,11 @@ var DeclarativeBinder = class {
 		}
 	}
 };
-//#endregion
-//#region src/bridge.ts
-/** Transitions of the bridge (detailed design: BRIDGE). Returns null when the event does not change the state. */
-function bridgeTransition(state, ev) {
-	switch (state) {
-		case "Booting": return ev === "loaded" ? "Ready" : ev === "failed" ? "Broken" : null;
-		case "Ready": return ev === "step" ? "Running" : ev === "reset" ? "Booting" : null;
-		case "Running": return ev === "done" ? "Ready" : ev === "reset" ? "Booting" : null;
-		case "Broken": return ev === "reset" ? "Booting" : null;
-	}
-}
-var TUNING_MESSAGE = "モックの調整中のため実行できません（調整を終了してください）";
+/** `ddv:screen` / `ddv:error` / `ddv:result.message` are cut at this length. */
+var FRAME_TEXT_MAX = 4e3;
+var isObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+var isIndex = (v) => typeof v === "number" && Number.isInteger(v) && v >= 0;
+var cut = (s) => s.length > 4e3 ? s.slice(0, FRAME_TEXT_MAX) : s;
 /** Accepts { holdMs } with a finite, non-negative holdMs (capped at 10s); anything else = no highlight. */
 function validHighlight(h) {
 	if (!h || typeof h !== "object") return null;
@@ -6202,6 +6195,144 @@ function validData(d) {
 	}
 	return out;
 }
+/** `ddv:init` files: string values, ≤ INIT_FILES_MAX in total, keys relative without `..`. */
+function validFiles(f) {
+	if (!isObject(f)) return null;
+	const out = {};
+	let total = 0;
+	for (const [k, v] of Object.entries(f)) {
+		if (typeof v !== "string") return null;
+		if (!k || k.startsWith("/") || k.includes("\\") || /^[a-z][a-z0-9+.-]*:/i.test(k) || k.split("/").some((s) => s === "..")) return null;
+		total += v.length;
+		if (total > 10485760) return null;
+		out[k] = v;
+	}
+	return out;
+}
+function parser(types, fn) {
+	const set = new Set(types);
+	const parse = (data) => {
+		if (!isObject(data) || typeof data.type !== "string" || !set.has(data.type)) return null;
+		return fn(data.type, data);
+	};
+	return Object.assign(parse, { types: set });
+}
+/** Messages the runtime accepts (viewer → iframe). */
+var parseToFrame = parser([
+	"ddv:init",
+	"ddv:reset",
+	"ddv:step",
+	"ddv:tune",
+	"ddv:patch"
+], (type, d) => {
+	switch (type) {
+		case "ddv:init": {
+			const files = validFiles(d.files);
+			return Number.isInteger(d.protocol) && files ? {
+				type,
+				protocol: d.protocol,
+				files
+			} : null;
+		}
+		case "ddv:reset": {
+			const data = validData(d.data);
+			return {
+				type,
+				fixtures: Array.isArray(d.fixtures) ? d.fixtures.filter((f) => typeof f === "string") : [],
+				...typeof d.start === "string" ? { start: d.start } : {},
+				...data ? { data } : {}
+			};
+		}
+		case "ddv:step": return typeof d.index === "number" && isObject(d.step) ? {
+			type,
+			index: d.index,
+			step: d.step,
+			highlight: validHighlight(d.highlight),
+			trace: d.trace === true
+		} : null;
+		case "ddv:tune": return typeof d.on === "boolean" ? {
+			type,
+			on: d.on
+		} : null;
+		case "ddv:patch": return Array.isArray(d.path) && d.path.every(isIndex) ? {
+			type,
+			path: d.path,
+			patch: isObject(d.patch) ? d.patch : null
+		} : null;
+	}
+	return null;
+});
+parser([
+	"ddv:hello",
+	"ddv:ready",
+	"ddv:result",
+	"ddv:screen",
+	"ddv:error",
+	"ddv:picked"
+], (type, d) => {
+	switch (type) {
+		case "ddv:hello": return Number.isInteger(d.protocol) && typeof d.version === "string" ? {
+			type,
+			protocol: d.protocol,
+			version: d.version
+		} : null;
+		case "ddv:ready":
+			if (!(typeof d.screen === "string" || d.screen === null) || typeof d.version !== "string") return null;
+			return {
+				type,
+				screen: d.screen,
+				version: d.version,
+				...Number.isInteger(d.protocol) ? { protocol: d.protocol } : {}
+			};
+		case "ddv:result":
+			if (!isIndex(d.index) || typeof d.ok !== "boolean" || !Array.isArray(d.failures)) return null;
+			return {
+				type,
+				index: d.index,
+				ok: d.ok,
+				screen: typeof d.screen === "string" ? d.screen : null,
+				failures: d.failures,
+				...typeof d.message === "string" ? { message: cut(d.message) } : {},
+				...isObject(d.trace) ? { trace: d.trace } : {}
+			};
+		case "ddv:screen": return typeof d.screen === "string" ? {
+			type,
+			screen: cut(d.screen)
+		} : null;
+		case "ddv:error": return typeof d.message === "string" ? {
+			type,
+			message: cut(d.message)
+		} : null;
+		case "ddv:picked": return Array.isArray(d.path) && d.path.every(isIndex) && typeof d.tag === "string" ? {
+			...d,
+			type
+		} : null;
+	}
+	return null;
+});
+/** Checks source, origin, shape, known type and payload (DD-MOCKSB RECV). Unknown / malformed messages → null. */
+function acceptFrameMessage(e, expect, parse, warn = (m) => console.warn(m)) {
+	if (!expect.source || e.source !== expect.source) return null;
+	if (e.origin !== expect.origin) return null;
+	const d = e.data;
+	if (!isObject(d) || typeof d.type !== "string" || !d.type.startsWith("ddv:")) return null;
+	if (!parse.types.has(d.type)) return null;
+	const m = parse(d);
+	if (m === null) warn(`[ddv] 形式の違うメッセージを無視しました: ${d.type}`);
+	return m;
+}
+//#endregion
+//#region src/bridge.ts
+/** Transitions of the bridge (detailed design: BRIDGE). Returns null when the event does not change the state. */
+function bridgeTransition(state, ev) {
+	switch (state) {
+		case "Booting": return ev === "loaded" ? "Ready" : ev === "failed" ? "Broken" : null;
+		case "Ready": return ev === "step" ? "Running" : ev === "reset" ? "Booting" : null;
+		case "Running": return ev === "done" ? "Ready" : ev === "reset" ? "Booting" : null;
+		case "Broken": return ev === "reset" ? "Booting" : null;
+	}
+}
+var TUNING_MESSAGE = "モックの調整中のため実行できません（調整を終了してください）";
 var SupersededError = class extends Error {
 	constructor() {
 		super("後続のリセットにより中断しました");
@@ -6212,6 +6343,7 @@ var SupersededError = class extends Error {
 var HostBridge = class {
 	win;
 	engine;
+	host;
 	state = "Booting";
 	gen = 0;
 	queue = [];
@@ -6222,9 +6354,10 @@ var HostBridge = class {
 	firstBootDone = false;
 	/** Resolves on the first successful boot; rejects when the first boot fails. */
 	ready;
-	constructor(win, engine) {
+	constructor(win, engine, host) {
 		this.win = win;
 		this.engine = engine;
+		this.host = host;
 		this.ready = new Promise((res, rej) => {
 			this.readyResolve = res;
 			this.readyReject = rej;
@@ -6240,28 +6373,41 @@ var HostBridge = class {
 		if (this.abort) return;
 		this.abort = new AbortController();
 		this.win.addEventListener("message", (e) => this.onMessage(e), { signal: this.abort.signal });
+		if (this.host) this.notify({
+			type: "ddv:hello",
+			protocol: 2,
+			version: this.engine.version
+		});
 	}
 	unlisten() {
 		this.abort?.abort();
 		this.abort = null;
 	}
 	get embedded() {
-		return this.win.parent !== this.win;
+		return this.host ? this.host.mode !== "standalone" : this.win.parent !== this.win;
+	}
+	get parentOrigin() {
+		return this.host?.origin ?? this.win.location.origin;
 	}
 	notify(msg) {
 		if (!this.embedded) return;
-		const origin = this.win.location.origin;
+		const origin = this.parentOrigin;
 		this.win.parent.postMessage(msg, origin && origin !== "null" ? origin : "*");
 	}
 	onMessage(e) {
-		if (!this.embedded || e.origin !== this.win.location.origin || e.source !== this.win.parent) return;
-		const m = e.data;
-		if (!m || typeof m !== "object") return;
-		if (m.type === "ddv:reset") this.reset(Array.isArray(m.fixtures) ? m.fixtures : [], m.start, validData(m.data)).catch(() => {});
-		else if (m.type === "ddv:step" && typeof m.index === "number" && m.step && typeof m.step === "object") this.step(m.step, m.index, validHighlight(m.highlight), m.trace === true);
-		else if (m.type === "ddv:tune" && typeof m.on === "boolean") this.engine.tune?.(m.on);
-		else if (m.type === "ddv:patch" && Array.isArray(m.path) && m.path.every((i) => Number.isInteger(i) && i >= 0)) {
-			const issues = this.engine.patch?.(m.path, m.patch && typeof m.patch === "object" ? m.patch : null) ?? [];
+		if (!this.embedded) return;
+		const m = acceptFrameMessage(e, {
+			source: this.win.parent,
+			origin: this.parentOrigin
+		}, parseToFrame);
+		if (!m) return;
+		if (m.type === "ddv:init") {
+			if (this.host?.mode === "srcdoc") this.engine.init?.(m.files);
+		} else if (m.type === "ddv:reset") this.reset(m.fixtures, m.start, m.data).catch(() => {});
+		else if (m.type === "ddv:step") this.step(m.step, m.index, m.highlight, m.trace);
+		else if (m.type === "ddv:tune") this.engine.tune?.(m.on);
+		else if (m.type === "ddv:patch") {
+			const issues = this.engine.patch?.(m.path, m.patch) ?? [];
 			if (issues.length) this.error(issues.map((i) => i.message).join("／"));
 		}
 	}
@@ -6298,11 +6444,13 @@ var HostBridge = class {
 			this.notify({
 				type: "ddv:ready",
 				screen: r.screen,
-				version: this.engine.version
+				version: this.engine.version,
+				...this.host ? { protocol: 2 } : {}
 			});
 			if (!this.firstBootDone) {
 				this.firstBootDone = true;
 				this.readyResolve();
+				this.flushHeld();
 			}
 			return r;
 		} catch (e) {
@@ -6316,6 +6464,7 @@ var HostBridge = class {
 			if (!this.firstBootDone) {
 				this.firstBootDone = true;
 				this.readyReject(e);
+				this.flushHeld();
 			}
 			throw e;
 		}
@@ -6416,7 +6565,20 @@ var HostBridge = class {
 		});
 	}
 	error(message) {
+		if (this.host?.mode === "srcdoc" && !this.firstBootDone) {
+			this.held.push(message);
+			return;
+		}
 		this.notify({
+			type: "ddv:error",
+			message
+		});
+	}
+	held = [];
+	flushHeld() {
+		const ms = this.held;
+		this.held = [];
+		for (const message of ms) this.notify({
 			type: "ddv:error",
 			message
 		});
@@ -6640,19 +6802,75 @@ var DomDriver = class {
 };
 //#endregion
 //#region src/fetch.ts
+var CONTENT_TYPES = {
+	json: "application/json; charset=utf-8",
+	yaml: "text/yaml; charset=utf-8",
+	yml: "text/yaml; charset=utf-8",
+	csv: "text/csv; charset=utf-8",
+	txt: "text/plain; charset=utf-8"
+};
+var safeDecode = (s) => {
+	try {
+		return decodeURIComponent(s);
+	} catch {
+		return null;
+	}
+};
+var contentTypeOf = (path) => CONTENT_TYPES[path.slice(path.lastIndexOf(".") + 1).toLowerCase()] ?? "text/plain; charset=utf-8";
 /** Replaces `window.fetch`; requests under `base` (same origin) go to the router, others to the original fetch. */
 var FetchInterceptor = class {
 	win;
+	host;
+	files;
 	original = null;
 	raw = null;
+	prefix = null;
 	/** Called with each request answered by the router (TraceTap.record). */
 	onCall = null;
-	constructor(win) {
+	constructor(win, host, files) {
 		this.win = win;
+		this.host = host;
+		this.files = files;
+	}
+	get srcdoc() {
+		return this.host?.mode === "srcdoc" && !!this.host.virtualBase;
+	}
+	/** URL the request's relative URLs are resolved against. */
+	get baseUrl() {
+		return this.srcdoc ? this.host.virtualBase : this.win.location.href;
 	}
 	/** The fetch before install (bound to the window). */
 	get originalFetch() {
 		return this.original ?? this.win.fetch.bind(this.win);
+	}
+	/** Resolves a request URL (relative to the page) to its absolute form. */
+	resolve(input) {
+		return new URL(input, this.baseUrl);
+	}
+	route(url, method) {
+		const prefix = this.prefix ?? "";
+		const origin = this.srcdoc ? new URL(this.host.virtualBase).origin : this.win.location.origin;
+		if (url.origin !== origin) return { kind: "original" };
+		if (this.prefix !== null && (prefix === "" || url.pathname === prefix || url.pathname.startsWith(`${prefix}/`))) return {
+			kind: "api",
+			prefix
+		};
+		if (!this.srcdoc) return { kind: "original" };
+		if (method !== "GET" && method !== "HEAD") return {
+			kind: "status",
+			status: 405
+		};
+		const dir = new URL(this.host.virtualBase).pathname;
+		const rel = url.pathname.startsWith(dir) ? safeDecode(url.pathname.slice(dir.length)) : null;
+		const text = rel === null ? void 0 : this.files?.get(rel);
+		return text === void 0 || rel === null ? {
+			kind: "status",
+			status: 404
+		} : {
+			kind: "file",
+			rel,
+			text
+		};
 	}
 	install(router, base) {
 		this.uninstall();
@@ -6660,12 +6878,19 @@ var FetchInterceptor = class {
 		const original = this.win.fetch.bind(this.win);
 		this.original = original;
 		const win = this.win;
-		const prefix = base === "/" ? "" : base;
+		this.prefix = base === "/" ? "" : base;
 		win.fetch = async (input, init) => {
 			const req = typeof input === "object" && "url" in input && !(input instanceof URL) ? input : null;
-			const url = new URL(req ? req.url : String(input), win.location.href);
-			if (!(url.origin === win.location.origin && (prefix === "" || url.pathname === prefix || url.pathname.startsWith(`${prefix}/`)))) return original(input, init);
+			const url = this.resolve(req ? req.url : String(input));
 			const method = (init?.method ?? req?.method ?? "GET").toUpperCase();
+			const r = this.route(url, method);
+			if (r.kind === "original") return original(input, init);
+			if (r.kind === "status") return new Response(null, { status: r.status });
+			if (r.kind === "file") return new Response(method === "HEAD" ? null : r.text, {
+				status: 200,
+				headers: { "content-type": contentTypeOf(r.rel) }
+			});
+			const prefix = r.prefix;
 			let text = null;
 			if (init?.body !== void 0 && init.body !== null) text = typeof init.body === "string" ? init.body : await new Response(init.body).text();
 			else if (req && method !== "GET" && method !== "HEAD") text = await req.text();
@@ -6705,6 +6930,62 @@ var FetchInterceptor = class {
 			this.original = null;
 			this.raw = null;
 		}
+		this.prefix = null;
+	}
+};
+//#endregion
+//#region src/host.ts
+var isUrl = (s, base = false) => {
+	if (typeof s !== "string") return false;
+	try {
+		const u = new URL(s);
+		return (u.protocol === "https:" || u.protocol === "http:") && (!base || u.href === s);
+	} catch {
+		return false;
+	}
+};
+function detectHostMode(win, log = console) {
+	const origin = win.location.origin;
+	if (win.parent === win || !win.parent) return {
+		mode: "standalone",
+		origin
+	};
+	const spec = win.__ddvHost;
+	if (spec === void 0 || spec === null) return {
+		mode: "embedded",
+		origin
+	};
+	const s = spec;
+	if (typeof spec === "object" && s.mode === "srcdoc" && isUrl(s.origin) && new URL(s.origin).origin === s.origin && isUrl(s.base, true)) return {
+		mode: "srcdoc",
+		origin: s.origin,
+		virtualBase: s.base
+	};
+	log.error("[ddv] __ddvHost の形式が正しくないため、親との通信をせずに起動します", spec);
+	return {
+		mode: "standalone",
+		origin
+	};
+}
+/** Files sent by the viewer with ddv:init (keys are relative to the mock's HTML). `read` waits for the first set. */
+var HostedFiles = class {
+	files = null;
+	waiters = [];
+	set(files) {
+		this.files = { ...files };
+		const ws = this.waiters;
+		this.waiters = [];
+		ws.forEach((f) => f());
+	}
+	get received() {
+		return this.files !== null;
+	}
+	get(rel) {
+		return this.files ? Object.hasOwn(this.files, rel) ? this.files[rel] : void 0 : void 0;
+	}
+	async read(rel) {
+		if (!this.files) await new Promise((r) => this.waiters.push(r));
+		return this.get(rel) ?? null;
 	}
 };
 //#endregion
@@ -7770,6 +8051,7 @@ var RUNTIME_VERSION = {
 	exports: {
 		".": "./src/index.ts",
 		"./step": "./src/step.ts",
+		"./frame-protocol": "./src/frame-protocol.ts",
 		"./playwright": "./src/playwright.ts",
 		"./tune": "./src/tune.ts",
 		"./tune-patch": "./src/tune-patch.ts",
@@ -7807,6 +8089,9 @@ var MockRuntime = class {
 	tuner;
 	/** API / DB recording of a step (window.__ddv.trace). */
 	trace = new TraceTap(() => this.db);
+	host;
+	/** srcdoc: files of ddv:init. */
+	files = new HostedFiles();
 	spec = {
 		base: "/api",
 		tables: [],
@@ -7822,7 +8107,8 @@ var MockRuntime = class {
 		this.doc = this.win.document;
 		this.stepTimeoutMs = opts.stepTimeoutMs ?? 0;
 		this.router = new ApiRouter(this.db, (m) => this.reportError(m));
-		this.interceptor = new FetchInterceptor(this.win);
+		this.host = opts.host ?? detectHostMode(this.win);
+		this.interceptor = new FetchInterceptor(this.win, this.host, this.files);
 		this.interceptor.onCall = (c) => this.trace.record(c);
 		this.screens = new ScreenController(this.doc);
 		this.binder = new DeclarativeBinder({
@@ -7840,12 +8126,12 @@ var MockRuntime = class {
 			invoke: (n) => this.invoke(n),
 			sleep: opts.sleep
 		});
-		this.bridge = new HostBridge(this.win, this);
+		this.bridge = new HostBridge(this.win, this, this.host);
 		this.tuner = new Tuner(this.doc, (picked) => this.bridge.notify({
 			type: "ddv:picked",
 			...picked
 		}));
-		this.load = opts.load ?? ((rel) => this.fetchFile(rel));
+		this.load = opts.load ?? (this.host.mode === "srcdoc" ? (rel) => this.files.read(rel) : (rel) => this.fetchFile(rel));
 	}
 	/** Resolves on the first successful boot (rejects when it fails). */
 	get ready() {
@@ -7872,16 +8158,30 @@ var MockRuntime = class {
 		this.interceptor.uninstall();
 		this.offScreen?.();
 		this.offScreen = null;
+		this.offCsp?.();
+		this.offCsp = null;
 		this.installed = false;
 		this.started = null;
 	}
 	offScreen = null;
+	offCsp = null;
+	blocked = /* @__PURE__ */ new Set();
 	installed = false;
 	install() {
 		if (this.installed) return;
 		this.installed = true;
 		this.binder.bind(this.doc);
 		this.offScreen = this.screens.onChange((id) => this.onScreen(id));
+		if (this.host.mode === "srcdoc") {
+			const onCsp = (e) => {
+				const uri = e.blockedURI || "(inline)";
+				if (this.blocked.has(uri)) return;
+				this.blocked.add(uri);
+				this.bridge.error(`Pages 版では読み込めない参照です: ${uri}`);
+			};
+			this.doc.addEventListener("securitypolicyviolation", onCsp);
+			this.offCsp = () => this.doc.removeEventListener("securitypolicyviolation", onCsp);
+		}
 		this.bridge.listen();
 	}
 	/** Re-initializes the DB with the fixtures (layered in order) and shows `start` (default: first data-screen). */
@@ -7957,6 +8257,9 @@ var MockRuntime = class {
 	}
 	traceTake() {
 		return this.trace.take(this.db);
+	}
+	init(files) {
+		this.files.set(files);
 	}
 	observe(step) {
 		return observeExpect(this.driver, step.expect);

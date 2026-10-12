@@ -6,50 +6,19 @@ import { loadDocs, safeJoin, type DocEntry } from '@ddv/core/node';
 import { diagramKeyOf, readLock, type TestIdLock } from '@ddv/testid';
 import { analyzeMockHtml, type MockModel } from './analyze.ts';
 import { mergeScenario, type MergeSource } from './merge.ts';
-import { mockRefs, pathSpecs, screenDiagram } from './paths.ts';
+import { pathSpecs } from './paths.ts';
+import { mockTargets, scenariosDir, targetDiagram, RETIRED_DIR, type MockTarget } from './targets.ts';
+
+export { mockTargets, scenariosDir, targetDiagram, RETIRED_DIR, type MockTarget };
 import { scaffoldScenario, type TodoPath } from './scaffold.ts';
 import { collectTodos, parseScenarioFile, TODO_MARK } from './scenario.ts';
 import { SCREEN_MAP_FILE } from './map.ts';
 import type { PathSpec, Scenario, Step } from './types.ts';
 
 export const SCENARIO_HEADER = ' ddv mock scaffold が生成。event / click / expect.screen は再生成で更新、それ以外は保持';
-export const RETIRED_DIR = '_retired';
 const KEY_ORDER = ['id', 'title', 'fixtures', 'start', 'steps'];
 const STEP_ORDER = ['event', 'input', 'click', 'do', 'wait', 'expect'];
 const TODO_COMMENT = ` ${TODO_MARK}`;
-
-export interface MockTarget {
-  name: string;
-  /** html path relative to mocksRoot */
-  target: string;
-  doc: DocEntry;
-  /** screen transition diagram id given by `{diagram=<id>}` */
-  diagram?: string;
-}
-
-/**
- * Mocks referenced from documents (`::mock[name/index.html]`). A reference from a basic design owns the mock
- * (other references, e.g. from detailed designs, only display it); otherwise the first reference wins.
- */
-export function mockTargets(docs: DocEntry[]): MockTarget[] {
-  const out = new Map<string, MockTarget>();
-  for (const owner of [true, false])
-    for (const doc of docs) {
-      if ((doc.kind === 'basic') !== owner) continue;
-      for (const r of mockRefs(doc))
-        if (r.name && !out.has(r.name)) out.set(r.name, { name: r.name, target: r.target, doc, ...(r.diagram ? { diagram: r.diagram } : {}) });
-    }
-  return [...out.values()];
-}
-
-/** The screen transition diagram of a mock target. */
-export function targetDiagram(t: MockTarget) {
-  return screenDiagram(t.doc, t.diagram);
-}
-
-export function scenariosDir(config: DdvConfig, mock: string): string {
-  return `${config.mocksRoot.replace(/\\/g, '/').replace(/\/$/, '')}/${mock}/scenarios`;
-}
 
 /** Scenario files (repo-relative) of a mock, excluding `_map.yaml`, `_retired/` and other `_` files. */
 export async function listScenarioFiles(repoRoot: string, config: DdvConfig, mock: string): Promise<string[]> {

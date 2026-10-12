@@ -6,6 +6,7 @@ import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { E2E_PORT, E2E_TOKEN, login } from './ddv-auth.ts';
 import { createUpstream, fakeGitHub, fakeGitHubState, type FakeGitHubState } from '../apps/server/src/github-fixture.ts';
 
 // Phase 4 段階C テストデータ編集（BD-TDATA-EDITOR / DD-TDEDIT）. Saving tests restore the sample files byte-for-byte afterwards.
@@ -239,7 +240,7 @@ test('[BD-TDATA-EDITOR-P003] 再生ツールバーから開き、編集中のデ
 });
 
 test.describe('PR のワークスペース', () => {
-  const PORT = 5190;
+  const PORT = E2E_PORT + 11;
   const REPO = 'acme/order-app';
   const TOKEN = 'ghp_test_token';
   const WS = 'gh~acme~order-app~pr-12';
@@ -287,6 +288,7 @@ test.describe('PR のワークスペース', () => {
         DDV_GITHUB_GIT_URL: `${pathToFileURL(path.join(tmp, 'remote')).href}/{owner}/{repo}`,
         DDV_GITHUB_NO_GH: '1',
         DDV_GITHUB_POLL: '0',
+        DDV_TOKEN: E2E_TOKEN,
       },
       stdio: 'pipe',
     });
@@ -294,11 +296,15 @@ test.describe('PR のワークスペース', () => {
     ddv.stdout?.on('data', (d) => (log += d));
     ddv.stderr?.on('data', (d) => (log += d));
     for (let i = 0; i < 150; i++) {
-      if (await fetch(`http://127.0.0.1:${PORT}/api/config`).then((r) => r.ok, () => false)) return;
+      if (await fetch(`http://127.0.0.1:${PORT}/`).then((r) => r.ok, () => false)) return;
       if (ddv.exitCode !== null) break;
       await new Promise((r) => setTimeout(r, 200));
     }
     throw new Error(`ddv did not start\n${log}`);
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await login(page, `http://127.0.0.1:${PORT}`);
   });
 
   test.afterAll(async () => {

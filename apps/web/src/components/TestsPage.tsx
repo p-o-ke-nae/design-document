@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { api, type RunSummary, type TestsResponse } from '../api.ts';
+import { api } from '../backend/index.ts';
+import type { RunSummary, TestsResponse } from '../api.ts';
 import { docHref, flakyHref, historyHref, traceHref, useApp, useLocalStorage } from '../state.tsx';
 import { scenarioLinked } from '../trace-view.ts';
 import { StatusBadge } from './StatusBadge.tsx';
+import { GateReason, useGate } from '../gate.tsx';
+import { TestsTabs } from './ActionsPanel.tsx';
 import { FlakyMark, RecentDots, RerunPanel, formatCommit } from './TestHistory.tsx';
 
 type Filter = 'all' | 'linked' | 'unlinked' | 'failed' | 'passed' | 'never';
@@ -20,6 +23,7 @@ export function TestsPage() {
   const [rerunError, setRerunError] = useState('');
   const logRef = useRef<HTMLPreElement>(null);
   const running = activeRun?.status === 'running';
+  const runGate = useGate('runLocal');
 
   useEffect(() => {
     api.tests().then(setData);
@@ -73,11 +77,12 @@ export function TestsPage() {
   const runnable = (ids: string[]) => ids.filter((id) => data.cases.find((c) => c.id === id)?.links.length);
   const allChecked = rows.length > 0 && rows.every((r) => checked.has(r.id));
   const rerunnable = history?.rerunnable ?? 0;
-  const rerunBlocked = running ? 'テストの実行中は再実行できません' : !rerunnable ? '直近の実行に失敗したテストはありません' : '';
+  const rerunBlocked = !runGate.enabled ? runGate.reason ?? '' : running ? 'テストの実行中は再実行できません' : !rerunnable ? '直近の実行に失敗したテストはありません' : '';
   const rerunning = !!activeRun?.rerunOf && (running || (activeRun.attempt ?? 0) < (activeRun.times ?? 0));
 
   return (
     <div className="tests-page" data-testid="tests-page">
+      <TestsTabs actions={false} />
       <section className="summary">
         <Stat label="テストケース" value={summary.total} />
         <Stat label="実装済み(紐づけ)" value={summary.linked} sub={`${summary.total ? Math.round((summary.linked / summary.total) * 100) : 0}%`} />
@@ -103,7 +108,7 @@ export function TestsPage() {
           <option value="integration">結合</option>
         </select>
         <span className="spacer" />
-        <button type="button" disabled={running || !runnable([...checked]).length} onClick={() => runTests({ ids: runnable([...checked]) })} data-testid="run-selected">
+        <button type="button" disabled={running || !runnable([...checked]).length || !runGate.enabled} title={runGate.reason} onClick={() => runTests({ ids: runnable([...checked]) })} data-testid="run-selected">
           選択を実行 ({runnable([...checked]).length})
         </button>
         <button type="button" disabled={rerunning} title={rerunning ? '失敗の再実行中は開けません' : undefined} onClick={() => (location.hash = flakyHref())} data-testid="flaky-open">
@@ -126,13 +131,14 @@ export function TestsPage() {
           失敗を再実行 ({rerunnable})
         </button>
         {data.runners.map((r) => (
-          <button key={r.name} type="button" disabled={running} onClick={() => runTests({ runner: r.name })} title={`${r.type} @ ${r.cwd}`}>
+          <button key={r.name} type="button" disabled={running || !runGate.enabled} onClick={() => runTests({ runner: r.name })} title={runGate.reason ?? `${r.type} @ ${r.cwd}`}>
             {r.name} を全実行
           </button>
         ))}
-        <button type="button" className="primary" disabled={running || !data.runners.length} onClick={() => runTests({})} data-testid="run-all">
+        <button type="button" className="primary" disabled={running || !data.runners.length || !runGate.enabled} title={runGate.reason} onClick={() => runTests({})} data-testid="run-all">
           一括実行
         </button>
+        <GateReason gate={runGate} />
       </section>
 
       {runError && <div className="notice warn">{runError}</div>}

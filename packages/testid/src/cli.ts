@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import path from 'node:path';
 import { loadConfig } from '@ddv/core/node';
-import { activeIds, generateAll, readLock } from './matrix.ts';
+import { activeIds } from './matrix.ts';
+import { generateAll, readLock } from './lock-io.ts';
 import { scanTestLinks } from './scan.ts';
 import { LOCK_PATH } from './lock.ts';
 

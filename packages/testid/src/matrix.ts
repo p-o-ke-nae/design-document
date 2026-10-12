@@ -1,9 +1,6 @@
-import { promises as fs, existsSync } from 'node:fs';
-import path from 'node:path';
 import { generateMatrix, parseMermaidGraph, type Graph, type MatrixOptions, type StateEventTable } from '@ddv/graph';
-import type { DdvConfig, DiagramBlock } from '@ddv/core';
-import { loadDocs, safeJoin, type DocEntry } from '@ddv/core/node';
-import { assignIds, emptyLock, LOCK_PATH, sanitizeCode, type AssignedCase, type TestIdLock } from './lock.ts';
+import type { DdvConfig, DiagramBlock, DocEntry } from '@ddv/core';
+import { assignIds, emptyLock, sanitizeCode, type AssignedCase, type TestIdLock } from './lock.ts';
 
 export interface DiagramMatrix {
   doc: string;
@@ -17,17 +14,15 @@ export interface DiagramMatrix {
   warnings: string[];
 }
 
-export async function readLock(repoRoot: string): Promise<TestIdLock> {
-  const p = safeJoin(repoRoot, LOCK_PATH);
-  if (!existsSync(p)) return emptyLock();
-  return JSON.parse(await fs.readFile(p, 'utf8')) as TestIdLock;
+/** Parses the lock file text; null (no file) is an empty lock. */
+export function parseLock(text: string | null): TestIdLock {
+  return text === null ? emptyLock() : (JSON.parse(text) as TestIdLock);
 }
 
-export async function writeLock(repoRoot: string, lock: TestIdLock): Promise<void> {
-  const p = safeJoin(repoRoot, LOCK_PATH);
-  await fs.mkdir(path.dirname(p), { recursive: true });
+/** Serializes the lock with sorted diagram keys (the on-disk form). */
+export function formatLock(lock: TestIdLock): string {
   const sorted: TestIdLock = { version: 1, diagrams: Object.fromEntries(Object.entries(lock.diagrams).sort(([a], [b]) => a.localeCompare(b))) };
-  await fs.writeFile(p, JSON.stringify(sorted, null, 2) + '\n', 'utf8');
+  return JSON.stringify(sorted, null, 2) + '\n';
 }
 
 export function diagramKeyOf(doc: Pick<DocEntry, 'kind' | 'id'>, diagram: DiagramBlock, config: DdvConfig): string {
@@ -79,11 +74,9 @@ export interface GenerateResult {
   changed: boolean;
 }
 
-/** Generates matrices for all documents; when `write` is true the lock file is updated. */
-export async function generateAll(repoRoot: string, config: DdvConfig, opts: { write: boolean }): Promise<GenerateResult> {
-  const original = await readLock(repoRoot);
+/** Generates matrices for all documents against `original` (not mutated). */
+export function generateFrom(docs: DocEntry[], config: DdvConfig, original: TestIdLock): GenerateResult {
   const lock = structuredClone(original);
-  const docs = await loadDocs(repoRoot, config);
   const matrices = docs.flatMap((d) => docMatrices(d, config, lock));
   // Diagrams that disappeared entirely: retire their cases.
   const live = new Set(matrices.map((m) => m.diagramKey));
@@ -92,7 +85,6 @@ export async function generateAll(repoRoot: string, config: DdvConfig, opts: { w
     for (const c of Object.values(entry.cases)) c.status = 'retired';
   }
   const changed = JSON.stringify(original) !== JSON.stringify(lock);
-  if (opts.write && changed) await writeLock(repoRoot, lock);
   return { matrices, lock, changed };
 }
 

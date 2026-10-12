@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react';
-import { api, type CoverageClass, type Matrix, type MatrixCase, type TestSummary } from '../api.ts';
-import { historyHref, traceHref, useApp } from '../state.tsx';
+import { api } from '../backend/index.ts';
+import type { CoverageClass, Matrix, MatrixCase, TestSummary } from '../api.ts';
+import { actionsHref, historyHref, traceHref, useApp } from '../state.tsx';
+import { dispatchFromMatrix, useActionsStatus } from './ActionsPanel.tsx';
 import { scenarioLinked } from '../trace-view.ts';
 import { useCoverage } from './CoverageBadge.tsx';
 import { FlakyMark } from './TestHistory.tsx';
 import { useMockHub } from '../mockHub.tsx';
 import { StatusBadge } from './StatusBadge.tsx';
 import { CommentGutter } from './Review.tsx';
+import { GateReason, useGate } from '../gate.tsx';
 
 type Tab = 'all' | 'P' | 'T' | 'S' | 'X' | 'table';
 
@@ -15,6 +18,7 @@ const COVERAGE_LABEL: Record<CoverageClass, string> = { passed: '成功', failed
 
 export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; selected: string | null; onSelect(id: string | null): void }) {
   const { latest, runTests, activeRun, history } = useApp();
+  const actionsReady = useActionsStatus()?.state === 'ready';
   const coverage = useCoverage();
   const hub = useMockHub();
   const [tab, setTab] = useState<Tab>('all');
@@ -37,6 +41,8 @@ export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; se
     setChecked(n);
   };
   const run = (ids: string[]) => void runTests({ ids });
+  const runGate = useGate('runLocal');
+  const idGate = useGate('generateTestIds');
 
   return (
     <section className="matrix" data-testid="matrix" data-diagram-key={matrix.diagramKey}>
@@ -52,7 +58,8 @@ export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; se
           <button
             type="button"
             className="primary"
-            title="未採番(仮ID)のケースにIDを確定し .ddv/testids.lock.json を更新します"
+            disabled={!idGate.enabled}
+            title={idGate.reason ?? '未採番(仮ID)のケースにIDを確定し .ddv/testids.lock.json を更新します'}
             onClick={async () => {
               const r = await api.generateIds();
               setMsg(`ロックを更新しました（追加 ${r.added.length} / 欠番 ${r.retired.length}）`);
@@ -61,12 +68,14 @@ export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; se
             IDを確定（{provisional.length}）
           </button>
         )}
-        <button type="button" disabled={running || !checked.size} onClick={() => run([...checked].filter((id) => matrix.cases.find((c) => c.id === id)?.links.length))}>
+        {provisional.length > 0 && <GateReason gate={idGate} />}
+        <button type="button" disabled={running || !checked.size || !runGate.enabled} title={runGate.reason} onClick={() => run([...checked].filter((id) => matrix.cases.find((c) => c.id === id)?.links.length))}>
           選択を実行
         </button>
-        <button type="button" disabled={running || !linked.length} onClick={() => run(linked.map((c) => c.id))}>
+        <button type="button" disabled={running || !linked.length || !runGate.enabled} title={runGate.reason} onClick={() => run(linked.map((c) => c.id))}>
           紐づくテストを全て実行
         </button>
+        <GateReason gate={runGate} />
       </header>
       {msg && <div className="notice">{msg}</div>}
       {matrix.warnings.map((w, i) => (
@@ -118,6 +127,7 @@ export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; se
                   summary={history?.tests[c.id]}
                   running={running}
                   onRun={() => run([c.id])}
+                  onRunActions={actionsReady && c.links.length ? () => dispatchFromMatrix([c.id]) : undefined}
                   onPlayMock={
                     hub?.hasScenario(c.id)
                       ? () => {
@@ -158,6 +168,7 @@ function MatrixRow({
   result,
   running,
   onRun,
+  onRunActions,
   onPlayMock,
   onTestData,
   doc,
@@ -170,14 +181,16 @@ function MatrixRow({
   checked: boolean;
   onCheck(): void;
   onSelect(): void;
-  result?: { status: string; message?: string; durationMs: number; runId?: string };
+  result?: { status: string; message?: string; durationMs: number; runId?: string; source?: string };
   running: boolean;
   onRun(): void;
+  onRunActions?: () => void;
   onPlayMock?: () => void;
   onTestData?: () => void;
   coverage?: CoverageClass;
   summary?: TestSummary;
 }) {
+  const runGate = useGate('runLocal');
   const executed = !!result || !!summary?.recent.some((m) => m !== 'none');
   return (
     <tr className={`${selected ? 'is-selected' : ''}`} onClick={onSelect} data-testid="matrix-row" data-test-id={c.id}>
@@ -215,12 +228,22 @@ function MatrixRow({
             {COVERAGE_LABEL[coverage]}
           </span>
         )}
+        {result?.source === 'actions' && (
+          <span className="chip" data-testid="matrix-source" title="最新の結果は GitHub Actions の実行">
+            Actions
+          </span>
+        )}
         {summary?.flaky && <span data-testid="matrix-flaky"><FlakyMark commits={summary.flakyCommits} /></span>}
       </td>
       <td onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="run" disabled={!c.links.length || running} onClick={onRun} data-testid="run-case" title={c.links.length ? 'このテストを実行' : '紐づくテストがありません'}>
+        <button type="button" className="run" disabled={!c.links.length || running || !runGate.enabled} onClick={onRun} data-testid="run-case" title={runGate.reason ?? (c.links.length ? 'このテストを実行' : '紐づくテストがありません')}>
           ▶ 実行
         </button>
+        {onRunActions && (
+          <button type="button" className="run" onClick={onRunActions} data-testid="matrix-run-actions" title="このテストを GitHub Actions で実行">
+            Actionsで実行
+          </button>
+        )}
         {onPlayMock && (
           <button type="button" className="run play-mock" onClick={onPlayMock} data-testid="matrix-play-mock" title="この経路のシナリオを同じ文書のモックで再生">
             ▶ モック
@@ -235,7 +258,7 @@ function MatrixRow({
           履歴
         </button>
         {result?.runId && scenarioLinked(c.links) && (
-          <button type="button" className="run" onClick={() => (location.hash = traceHref(result.runId!, c.id))} data-testid="trace-open" title="直近の実行のトレース（ステップごとの記録）">
+          <button type="button" className="run" onClick={() => (location.hash = result.source === 'actions' ? actionsHref(`runs/${encodeURIComponent(result.runId!)}/trace/${encodeURIComponent(c.id)}`) : traceHref(result.runId!, c.id))} data-testid="trace-open" title="直近の実行のトレース（ステップごとの記録）">
             トレース
           </button>
         )}

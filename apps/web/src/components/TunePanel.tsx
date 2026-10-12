@@ -13,9 +13,12 @@ import {
   type PatchIssue,
   type PickedElement,
 } from '@ddv/mock/tune-patch';
-import { ApiError, api, workspace, type MockSourceResult, type MockSuggestion, type PendingComment } from '../api.ts';
+import { api, workspace } from '../backend/index.ts';
+import { ApiError } from '../backend/types.ts';
+import type { MockSourceResult, MockSuggestion, PendingComment } from '../api.ts';
 import type { TuneMessage } from '../player.ts';
 import { usePr } from './Pr.tsx';
+import { GateReason, useGate } from '../gate.tsx';
 
 /** BD-GHREV-TUNE: Off (panel hidden) → Picking ⇄ Editing. */
 type Mode = 'Picking' | 'Editing';
@@ -150,6 +153,8 @@ export function TunePanel({ mock, picked, send, onEnd }: { mock: string; picked:
   // Patches applied to the DOM in this session (`pick` reports the patched DOM, so keep the original element)
   const applied = useRef(new Map<string, Stored>());
   const review = pr?.review;
+  const suggestGate = useGate('suggestMock');
+  const addGate = pr ? suggestGate : { enabled: true };
 
   const select = useCallback(
     async (picked: PickedElement, explicit?: ElementPatch) => {
@@ -430,9 +435,10 @@ export function TunePanel({ mock, picked, send, onEnd }: { mock: string; picked:
             <button type="button" data-testid="t-cancel" onClick={cancel}>
               取消
             </button>
-            <button type="button" className="primary" data-testid="t-add" disabled={!ready || busy} onClick={() => void add()}>
+            <button type="button" className="primary" data-testid="t-add" disabled={!ready || busy || !addGate.enabled} title={addGate.reason} onClick={() => void add()}>
               {pr ? (pendingOf(key) ? '保留を更新' : '保留に追加') : 'HTML をコピー'}
             </button>
+            <GateReason gate={addGate} />
           </div>
         </div>
       )}

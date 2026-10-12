@@ -2,6 +2,8 @@ import type { Graph, GraphDiff, StateEventTable, TestCase } from '@ddv/graph';
 import type { DdvConfig, DiagramBlock, DirectiveRef, DocElement, Heading, SourceBlock, TocEntry } from '@ddv/core';
 import type { ElementPatch } from '@ddv/mock/tune-patch';
 import type { TraceFile } from '@ddv/mock/trace-format';
+import type { ActionsRunDetail, ActionsRunList, ActionsStatus } from '@ddv/services';
+import { ApiError } from './backend/types.ts';
 
 export type { Graph, GraphDiff, StateEventTable, TestCase, DdvConfig, DiagramBlock, DocElement, Heading, SourceBlock, TocEntry };
 
@@ -273,17 +275,8 @@ export interface SnapshotInfo {
   steps: SnapshotStep[];
 }
 
-export class ApiError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-    readonly code?: string,
-    /** Response body of a refused request (test data save: errors / warnings). */
-    readonly body?: Record<string, unknown>,
-  ) {
-    super(message);
-  }
-}
+export { ApiError } from './backend/types.ts';
+
 
 // --- Test data editor (DD-TDEDIT) ---
 
@@ -406,6 +399,7 @@ export async function json<T>(res: Response): Promise<T> {
   if (!res.ok && !(body && typeof body === 'object' && 'ok' in body)) {
     const b = body as { error?: string; message?: string; code?: string };
     if (res.status === 403 && b.code === 'untrusted') window.dispatchEvent(new CustomEvent('ddv-untrusted'));
+    if (res.status === 401 && (b.code === 'session-required' || b.code === 'bad-token')) window.dispatchEvent(new CustomEvent('ddv-session-required'));
     throw new ApiError(b.message ?? b.error ?? `HTTP ${res.status}`, res.status, b.code, body && typeof body === 'object' ? (body as Record<string, unknown>) : undefined);
   }
   return body as T;
@@ -460,6 +454,7 @@ export function createApi(ws: string) {
         steps: s.steps.map((st) => ({ ...st, images: Object.fromEntries(Object.entries(st.images).map(([k, v]) => [k, v && A(v)])) })),
       })),
     approveSnapshots: (body: { id: string; steps?: number[] }) => post(A('/api/snapshots/approve'), body).then((r) => json<unknown>(r)),
+    pr: () => get<PrInfo>('/api/pr'),
     prFiles: () => get<ChangedFiles>('/api/pr/files'),
     prDiff: (path: string) => get<DocDiff>(`/api/pr/diff?path=${encodeURIComponent(path)}`),
     prThreads: (path?: string) => get<Thread[]>(path ? `/api/pr/threads?path=${encodeURIComponent(path)}` : '/api/pr/threads'),
@@ -471,31 +466,19 @@ export function createApi(ws: string) {
     reviews: () => get<ReviewerState[]>('/api/reviews'),
     replyThread: (id: string, body: string) => post(A(`/api/pr/threads/${encodeURIComponent(id)}/replies`), { body }).then((r) => json<ThreadComment>(r)),
     resolveThread: (id: string, resolved: boolean) => post(A(`/api/pr/threads/${encodeURIComponent(id)}/resolve`), { resolved }).then((r) => json<{ id: string; resolved: boolean }>(r)),
+    // Actions (actions-run.md「API」)
+    actionsStatus: (refresh = false) => get<ActionsStatus>(`/api/actions${refresh ? '?refresh=1' : ''}`),
+    actionsRuns: () => get<ActionsRunList>('/api/actions/runs'),
+    actionsDispatch: (body: { ids?: string[]; runner?: string }) => post(A('/api/actions/runs'), body).then((r) => json<{ request: string }>(r)),
+    actionsRun: (id: string) => get<ActionsRunDetail>(`/api/actions/runs/${encodeURIComponent(id)}`),
+    actionsApprove: (id: string, ids: string[]) => post(A(`/api/actions/runs/${encodeURIComponent(id)}/approve`), { ids }).then((r) => json<{ request: string }>(r)),
+    actionsInit: (force = false) => post(A('/api/actions/init'), force ? { force } : {}).then((r) => json<{ status: 'created' | 'unchanged' | 'overwritten'; path: string }>(r)),
+    /** A file of an Actions run on the results branch (`runs/<id>/<path>`). */
+    actionsFile: (id: string, path: string) => A(`/api/actions/runs/${encodeURIComponent(id)}/files/${path.split('/').map(encodeURIComponent).join('/')}`),
   };
 }
 
-let currentWs = '';
-
-/** The workspace the viewer shows ('' = local). `api`, `apiUrl` and `rawUrl` follow it. */
-export function workspace(): string {
-  return currentWs;
-}
-
-export function setWorkspace(ws: string): void {
-  if (ws === currentWs) return;
-  currentWs = ws;
-  api = createApi(ws);
-}
-
-export function apiUrl(p: string): string {
-  return apiPath(currentWs, p);
-}
-
-export function rawUrl(p: string): string {
-  return rawPath(currentWs, p);
-}
-
-export let api = createApi('');
+// The current workspace's `api` (a `Backend`) and `setWorkspace` / `workspace` live in backend/index.ts (services.md「ビルド時の選択」).
 
 // --- GitHub workspaces ---
 
@@ -688,4 +671,53 @@ export const gh = {
   close: (id: string) => fetch(`/api/workspaces/${encodeURIComponent(id)}`, { method: 'DELETE' }).then((r) => json<unknown>(r)),
   pr: (id: string) => fetch(apiPath(id, '/api/pr')).then((r) => json<PrInfo>(r)),
   eventsUrl: (id: string) => `/api/workspaces/${encodeURIComponent(id)}/events`,
+};
+
+// --- Local folder (LOCALF) ---
+
+export interface RecentFolder {
+  path: string;
+  openedAt: string;
+  hasConfig: boolean;
+}
+
+export type BusyKind = 'test' | 'snapshot' | 'deps';
+
+export interface LocalInfo {
+  state: 'Empty' | 'Open' | 'Swapping';
+  root: string | null;
+  repoName: string | null;
+  hasConfig: boolean;
+  busy: BusyKind | null;
+  recent: RecentFolder[];
+}
+
+export interface DirEntry {
+  name: string;
+  path: string;
+  kind: 'dir' | 'home' | 'drive';
+  hasConfig: boolean;
+}
+
+export interface DirList {
+  path: string | null;
+  parent: string | null;
+  entries: DirEntry[];
+  truncated: boolean;
+}
+
+/** SSE `local` of `/api/events`: the local folder was swapped or closed. */
+export interface LocalEvent {
+  root: string | null;
+  repoName: string | null;
+  generation: number;
+}
+
+export const localApi = {
+  info: () => fetch('/api/local').then((r) => json<LocalInfo>(r)),
+  open: (path: string) => post('/api/local/open', { path }).then((r) => json<{ root: string; repoName: string; hasConfig: boolean }>(r)),
+  close: () => post('/api/local/close').then((r) => json<{ ok: true }>(r)),
+  removeRecent: (path: string) => send('DELETE', '/api/local/recent', { path }).then((r) => json<{ recent: RecentFolder[] }>(r)),
+  dirs: (path?: string) => fetch(path === undefined ? '/api/fs/dirs' : `/api/fs/dirs?path=${encodeURIComponent(path)}`).then((r) => json<DirList>(r)),
+  eventsUrl: '/api/events',
 };

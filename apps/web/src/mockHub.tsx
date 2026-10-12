@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { api, type ScenarioSummary, type TdScenario } from './api.ts';
+import { api } from './backend/index.ts';
+import type { ScenarioSummary, TdScenario } from './api.ts';
 import type { DraftData, PlayerFailure } from './player.ts';
 
 /** Edges/nodes to emphasise on a diagram of the current doc while a mock scenario plays. */

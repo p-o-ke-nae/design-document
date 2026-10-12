@@ -2,7 +2,8 @@ export { MockRuntime, type MockRuntimeOptions, type ScreenContext, type ScreenHa
 export { MemoryDb, type Row, type Table, type TableDef } from './db.ts';
 export { ApiRouter, parseApiSpec, matchPath, parseRouteSpec, type ApiSpec, type RouteSpec, type WhenSpec, type MockRequest, type MockResponse, type RouteHandler, type Op } from './router.ts';
 export { evalCondition, type ExprScope, type ExprResult } from './expr.ts';
-export { FetchInterceptor } from './fetch.ts';
+export { FetchInterceptor, type Route } from './fetch.ts';
+export { detectHostMode, HostedFiles, type HostInfo, type HostMode } from './host.ts';
 export { ScreenController } from './screen.ts';
 export { DeclarativeBinder, submitTransition, collectInputs, type SubmitState, type SubmitEvent, type BinderOptions } from './binder.ts';
 export { Validator, type ValidationResult, type FieldError } from './validator.ts';

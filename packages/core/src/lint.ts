@@ -1,8 +1,7 @@
-import { existsSync } from 'node:fs';
 import { parseMermaidGraph, diffGraphs } from '@ddv/graph';
 import type { DdvConfig } from './config.ts';
 import { findHeading, resolveRefPath, splitRef } from './markdown.ts';
-import { loadDocs, safeJoin, type DocEntry } from './node.ts';
+import type { DocEntry } from './doc.ts';
 
 export interface LintIssue {
   severity: 'error' | 'warning';
@@ -39,16 +38,25 @@ export function traceIndex(docs: DocEntry[], config: DdvConfig): Map<string, str
   return out;
 }
 
-export type ExtraLintCheck = (repoRoot: string, config: DdvConfig, docs: DocEntry[]) => Promise<LintIssue[]> | LintIssue[];
-
-export async function lintRepo(repoRoot: string, config: DdvConfig, opts: { extraChecks?: ExtraLintCheck[] } = {}): Promise<LintIssue[]> {
-  const docs = await loadDocs(repoRoot, config);
-  const issues = lintDocs(repoRoot, config, docs);
-  for (const check of opts.extraChecks ?? []) issues.push(...(await check(repoRoot, config, docs)));
-  return issues;
+/** Paths whose existence lintDocsWith needs: mock targets and references to files that are not loaded docs. */
+export function lintTargets(docs: DocEntry[], config: DdvConfig): string[] {
+  const byPath = new Set(docs.map((d) => d.path));
+  const out = new Set<string>();
+  for (const d of docs) {
+    for (const r of d.parsed.directives) {
+      if (r.name === 'mock') {
+        out.add(`${config.mocksRoot}/${r.target}`);
+        continue;
+      }
+      const target = resolveRefPath(d.path, splitRef(r.target).path);
+      if (!byPath.has(target)) out.add(target);
+    }
+  }
+  return [...out];
 }
 
-export function lintDocs(repoRoot: string, config: DdvConfig, docs: DocEntry[]): LintIssue[] {
+/** Lints loaded docs; `existing` is the subset of lintTargets that exists in the repository. */
+export function lintDocsWith(existing: ReadonlySet<string>, config: DdvConfig, docs: DocEntry[]): LintIssue[] {
   const issues: LintIssue[] = [];
   const add = (i: LintIssue) => issues.push(i);
   const byPath = new Map(docs.map((d) => [d.path, d]));
@@ -88,7 +96,7 @@ export function lintDocs(repoRoot: string, config: DdvConfig, docs: DocEntry[]):
 
     for (const r of d.parsed.directives) {
       if (r.name === 'mock') {
-        if (!existsSync(safeJoin(repoRoot, `${config.mocksRoot}/${r.target}`))) add({ severity: 'error', rule: 'ref', path: d.path, line: r.line, message: `モック ${r.target} が見つかりません` });
+        if (!existing.has(`${config.mocksRoot}/${r.target}`)) add({ severity: 'error', rule: 'ref', path: d.path, line: r.line, message: `モック ${r.target} が見つかりません` });
         const want = r.attributes?.diagram;
         if (want) {
           const dg = d.parsed.diagrams.find((x) => x.id === want);
@@ -102,7 +110,7 @@ export function lintDocs(repoRoot: string, config: DdvConfig, docs: DocEntry[]):
       const target = resolveRefPath(d.path, p);
       const td = byPath.get(target);
       if (!td) {
-        if (!existsSync(safeJoin(repoRoot, target))) add({ severity: 'error', rule: 'ref', path: d.path, line: r.line, message: `参照先 ${target} が見つかりません` });
+        if (!existing.has(target)) add({ severity: 'error', rule: 'ref', path: d.path, line: r.line, message: `参照先 ${target} が見つかりません` });
         continue;
       }
       if (heading && !findHeading(td.parsed, heading)) add({ severity: 'error', rule: 'ref', path: d.path, line: r.line, message: `参照先 ${target} に見出し「${heading}」がありません` });

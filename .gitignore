@@ -13,3 +13,4 @@ playwright-report/
 references/explainer-main.zip
 references/explainer-main/
 **/.ddv/traces/
+apps/web/dist-pages/

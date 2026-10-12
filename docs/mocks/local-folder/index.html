@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>ローカル版の作業フォルダ選択（モック）</title>
+  <link rel="stylesheet" href="../../../apps/web/src/styles.css" />
+  <style>
+    .page { padding: 12px; display: grid; gap: 10px; max-width: 760px; }
+    .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .mockonly { border-style: dashed; }
+    .dirs li, .recent li { margin: 2px 0; }
+    .cfg { font-size: 11px; padding: 0 6px; border-radius: 10px; background: #dafbe1; }
+    .note { font-size: 12px; color: #57606a; }
+    input.path { min-width: 420px; }
+  </style>
+  <script type="module" src="../_ddv/mock-runtime.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <span class="brand">ddv</span>
+      <span class="muted">ローカル版（127.0.0.1:5179）</span>
+      <span class="spacer"></span>
+    </header>
+
+    <!-- フォルダの選択 -->
+    <section data-screen="Picker">
+      <div class="page">
+        <h2>作業フォルダを開く</h2>
+        <div class="row">
+          <label for="path">パス</label>
+          <input id="path" class="path" data-testid="path" required maxlength="400" data-sample="C:\Users\taro\source\order-app" />
+          <button class="primary" data-testid="open" data-event="開く" data-submit="POST /local/open" data-ok="Doc">開く</button>
+        </div>
+        <p class="error" data-testid="open-error" data-error hidden></p>
+        <div class="row">
+          <h3 data-testid="dirs-current">C:\Users\taro\source</h3>
+          <button data-testid="dirs-up">上の階層へ</button>
+          <button data-testid="dirs-roots">ドライブ・ホーム</button>
+        </div>
+        <p class="error" data-testid="dirs-error" hidden></p>
+        <ul class="dirs" data-testid="dirs" data-bind="/fs/dirs">
+          <template><li>📁 {{name}} <span class="cfg">{{mark}}</span></li></template>
+        </ul>
+        <h3>最近開いたフォルダ</h3>
+        <ul class="recent" data-testid="recent" data-bind="/local/recent">
+          <template><li>{{path}} <span class="muted">{{openedAt}}</span> <button data-testid="recent-remove" title="一覧から消す">削除</button></li></template>
+        </ul>
+        <p class="note">一覧・最近開いたフォルダを選ぶとパスに入ります。</p>
+      </div>
+    </section>
+
+    <!-- 文書 -->
+    <section data-screen="Doc" hidden>
+      <div class="page">
+        <div class="row">
+          <strong>order-app</strong>
+          <span class="muted" data-testid="local-root">C:\Users\taro\source\order-app</span>
+          <span class="spacer"></span>
+          <label for="busy">（モック）実行の状態</label>
+          <select id="busy" class="mockonly" data-testid="busy">
+            <option value="idle">実行中なし</option>
+            <option value="running">テスト実行中</option>
+          </select>
+          <button data-testid="reselect" data-event="フォルダを選び直す" data-submit="POST /local/close" data-ok="Picker">フォルダを選び直す</button>
+        </div>
+        <p class="error" data-testid="reselect-error" data-error hidden></p>
+        <p>（従来の文書画面。図・マトリクス・テスト・GitHub のワークスペースは変わらない）</p>
+      </div>
+    </section>
+
+    <!-- セッション Cookie が無いときの案内（画面遷移図の外。API を呼ばない） -->
+    <section data-screen="TokenRequired" hidden>
+      <div class="page" data-testid="token-required">
+        <h2>ddv serve が表示した URL から開いてください</h2>
+        <p class="note">このページは起動トークン付きの URL（http://127.0.0.1:5179/?ddv-token=…）から開きます。サーバを起動し直したときは、新しく表示された URL を開いてください。</p>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
