@@ -1,7 +1,7 @@
 ---
 id: TRREC
 kind: detailed
-status: review
+status: approved
 title: トレースの記録（シナリオ E2E・mock-runtime） 詳細設計
 traces: [BD-TRACE]
 ---

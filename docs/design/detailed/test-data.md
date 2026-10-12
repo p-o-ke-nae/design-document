@@ -1,7 +1,7 @@
 ---
 id: TDEDIT
 kind: detailed
-status: review
+status: approved
 title: テストデータ編集（シナリオ・fixtures） 詳細設計
 traces: [BD-TDATA]
 ---

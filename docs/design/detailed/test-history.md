@@ -1,7 +1,7 @@
 ---
 id: HIST
 kind: detailed
-status: review
+status: approved
 title: テスト履歴・フレーキー・設計カバレッジ 詳細設計
 traces: [BD-TMON]
 ---
