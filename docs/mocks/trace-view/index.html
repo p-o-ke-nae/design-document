@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>トレースビュー（モック）</title>
+  <link rel="stylesheet" href="../../../apps/web/src/styles.css" />
+  <style>
+    .page { padding: 12px; display: grid; gap: 10px; }
+    .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    table { border-collapse: collapse; font-size: 13px; }
+    th, td { border: 1px solid #d0d7de; padding: 4px 8px; text-align: left; vertical-align: top; }
+    .split { display: grid; grid-template-columns: 240px 1fr; gap: 12px; }
+    .timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+    .timeline li { border: 1px solid #d0d7de; border-radius: 6px; padding: 4px 8px; font-size: 13px; }
+    .timeline li.ng { border-color: #cf222e; color: #cf222e; }
+    .timeline li.sel { background: #ddf4ff; }
+    .shot { border: 1px solid #d0d7de; height: 120px; display: grid; place-items: center; color: #57606a; background: #f6f8fa; }
+    .ng { color: #cf222e; }
+    .mockonly { border-style: dashed; }
+  </style>
+  <script type="module" src="../_ddv/mock-runtime.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <span class="brand">ddv</span>
+      <span class="muted">テスト</span>
+      <span class="spacer"></span>
+      <span class="muted">basic/order.md</span>
+    </header>
+
+    <!-- テスト結果 -->
+    <section data-screen="Result">
+      <div class="page">
+        <strong>マトリクス：screen-flow</strong>
+        <table>
+          <thead><tr><th>テストID</th><th>結果</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>BD-ORDER-SCREEN-P004</td><td class="ng">失敗（10/12 14:03）</td>
+              <td>
+                <select class="mockonly" data-testid="recorded">
+                  <option value="yes">（モック）記録あり</option>
+                  <option value="no">（モック）記録なし</option>
+                </select>
+                <button data-testid="trace-open" data-event="トレースを開く" data-submit="POST /trace-open" data-ok="Trace" data-ng="NoTrace">トレース</button>
+              </td>
+            </tr>
+            <tr><td>BD-ORDER-SCREEN-T003</td><td>成功</td><td><button>トレース</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- トレース -->
+    <section data-screen="Trace" hidden>
+      <div class="page">
+        <div class="row">
+          <button data-testid="trace-back" data-event="戻る" data-goto="Result">← 戻る</button>
+          <strong>BD-ORDER-SCREEN-P004</strong>
+          <span class="muted">10/12 14:03・a1b2c3d・モック・4.1s</span>
+          <span class="badge ng">失敗：ステップ 2</span>
+        </div>
+        <div class="split">
+          <ol class="timeline" data-testid="timeline">
+            <li>1 新規 ✓ 0.6s</li>
+            <li class="ng sel"><button class="link" data-testid="step-select" data-event="ステップを選ぶ" data-goto="Trace">2 次へ [入力OK] ✗ 1.2s</button></li>
+          </ol>
+          <div>
+            <div class="shot" data-testid="screenshot">（スクリーンショット：注文入力）</div>
+            <p>操作：customer に「山田 太郎」、quantity に「3」を入力し next をクリック</p>
+            <p>画面：Input → <span class="ng">Input（期待 Confirm）</span></p>
+            <table data-testid="expect-table">
+              <thead><tr><th>期待</th><th>期待値</th><th>実際</th></tr></thead>
+              <tbody>
+                <tr class="ng"><td>screen</td><td>Confirm</td><td>Input</td></tr>
+                <tr><td>text total</td><td>合計 3,000 円</td><td>—</td></tr>
+              </tbody>
+            </table>
+            <h4>API</h4>
+            <table data-testid="api-calls">
+              <tbody><tr><td>POST /orders</td><td class="ng">409</td><td>{ "message": "在庫が不足しています" }</td></tr></tbody>
+            </table>
+            <h4>DB の変化</h4>
+            <p data-testid="db-diff" class="muted">変化なし</p>
+            <div class="row">
+              <button data-testid="step-prev" data-event="前後のステップ" data-goto="Trace">← 前</button>
+              <button>次 →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- トレースなし -->
+    <section data-screen="NoTrace" hidden>
+      <div class="page">
+        <p data-testid="no-trace">この実行のトレースはありません（保持件数を超えて削除されたか、トレースの導入前の実行です）</p>
+        <button data-testid="notrace-back" data-event="戻る" data-goto="Result">← 戻る</button>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

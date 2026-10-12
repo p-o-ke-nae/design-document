@@ -1,0 +1,13 @@
+# ddv mock scaffold が生成。event / click / expect.screen は再生成で更新、それ以外は保持
+
+id: BD-TMON-SCREEN-P001
+title: 開始 → テスト一覧 → [テストIDを選ぶ] テストIDの履歴 → [一覧へ] テスト一覧 → 終了
+fixtures: [ default ]
+start: List
+steps:
+  - event: テストIDを選ぶ
+    click: test-open
+    expect: { screen: Detail }
+  - event: 一覧へ
+    click: detail-back
+    expect: { screen: List }

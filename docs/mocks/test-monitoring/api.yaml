@@ -1,0 +1,13 @@
+# 疑似 API（テスト監視用）
+tables:
+  - reruns
+routes:
+  - method: POST
+    path: /reruns
+    when:                       # 直近の実行に失敗が無ければ再実行しない
+      - if: "body.lastrun == 'none'"
+        status: 409
+        body: { message: 直近の実行に失敗したテストはありません }
+    op: insert
+    table: reruns
+    status: 202

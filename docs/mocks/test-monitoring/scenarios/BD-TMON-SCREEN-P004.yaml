@@ -1,0 +1,14 @@
+# ddv mock scaffold が生成。event / click / expect.screen は再生成で更新、それ以外は保持
+
+id: BD-TMON-SCREEN-P004
+title: 開始 → テスト一覧 → [失敗を再実行 [失敗あり]] 再実行中 → [実行完了] テスト一覧 → 終了
+fixtures: [ default ]
+start: List
+steps:
+  - event: 失敗を再実行 [失敗あり]
+    input: { rerun-times: "2", lastrun: failed }
+    click: rerun
+    expect: { screen: Rerunning }
+  - event: 実行完了
+    click: rerun-done
+    expect: { screen: List }

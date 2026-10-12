@@ -1,0 +1,7 @@
+# ddv mock scaffold が生成。event / click / expect.screen は再生成で更新、それ以外は保持
+
+id: BD-TRACE-VIEW-P005
+title: 開始 → テスト結果 → 終了
+fixtures: [ default ]
+start: Result
+steps: []

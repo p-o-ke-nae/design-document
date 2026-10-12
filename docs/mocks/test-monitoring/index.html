@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>テスト監視（モック）</title>
+  <link rel="stylesheet" href="../../../apps/web/src/styles.css" />
+  <style>
+    .page { padding: 12px; display: grid; gap: 10px; }
+    .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    table { border-collapse: collapse; font-size: 13px; }
+    th, td { border: 1px solid #d0d7de; padding: 4px 8px; text-align: left; }
+    .dots span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 2px; }
+    .p { background: #1a7f37; } .f { background: #cf222e; } .s { background: #8c959f; } .e { background: #bf8700; } .n { background: #fff; border: 1px solid #8c959f; }
+    .flaky { color: #9a6700; font-weight: bold; }
+    .changed td { background: #fff8c5; }
+    .mockonly { border-style: dashed; }
+    .log { font-family: ui-monospace, monospace; font-size: 12px; background: #f6f8fa; padding: 6px; white-space: pre; }
+  </style>
+  <script type="module" src="../_ddv/mock-runtime.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <span class="brand">ddv</span>
+      <span class="muted">テスト</span>
+      <span class="spacer"></span>
+      <span class="muted">acme/order-app（main・a1b2c3d）</span>
+    </header>
+
+    <!-- テスト一覧 -->
+    <section data-screen="List">
+      <div class="page">
+        <div class="row">
+          <strong>テスト</strong>
+          <span class="muted">42 件：成功 38・失敗 3・スキップ 1</span>
+          <span class="spacer"></span>
+          <button data-testid="flaky-open" data-event="フレーキー" data-goto="Flaky">フレーキー（2）</button>
+        </div>
+        <div class="row">
+          <button class="primary">すべて実行</button>
+          <label for="rerun-times">再実行の回数</label>
+          <select id="rerun-times" data-testid="rerun-times">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="5">5</option>
+          </select>
+          <label for="lastrun">（モック）直近の実行</label>
+          <select id="lastrun" class="mockonly" data-testid="lastrun">
+            <option value="failed">失敗あり（3 件）</option>
+            <option value="none">失敗なし</option>
+          </select>
+          <button data-testid="rerun" data-event="失敗を再実行" data-submit="POST /reruns" data-ok="Rerunning">失敗を再実行</button>
+          <span class="error" data-testid="rerun-error" data-error hidden></span>
+        </div>
+        <table data-testid="test-list">
+          <thead><tr><th>テストID</th><th>直近 10 回</th><th>最新</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td><button class="link" data-testid="test-open" data-event="テストIDを選ぶ" data-goto="Detail">BD-ORDER-SCREEN-P004</button></td>
+              <td class="dots"><span class="p"></span><span class="f"></span><span class="p"></span><span class="f"></span><span class="p"></span><span class="p"></span><span class="p"></span><span class="p"></span><span class="n"></span><span class="n"></span></td>
+              <td>失敗</td><td class="flaky">フレーキー</td>
+            </tr>
+            <tr>
+              <td>BD-ORDER-SCREEN-T003</td>
+              <td class="dots"><span class="p"></span><span class="p"></span><span class="p"></span><span class="p"></span><span class="p"></span><span class="p"></span><span class="p"></span><span class="p"></span><span class="p"></span><span class="p"></span></td>
+              <td>成功</td><td></td>
+            </tr>
+            <tr>
+              <td>DD-STOCK-RULE-T002</td>
+              <td class="dots"><span class="f"></span><span class="f"></span><span class="p"></span><span class="p"></span><span class="e"></span><span class="n"></span><span class="n"></span><span class="n"></span><span class="n"></span><span class="n"></span></td>
+              <td>失敗</td><td></td>
+            </tr>
+          </tbody>
+        </table>
+        <h3>実行履歴</h3>
+        <ul>
+          <li>10/12 14:03 テスト（a1b2c3d）失敗 3</li>
+          <li>10/12 13:40 テスト（a1b2c3d・未コミットの変更あり）失敗 2</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- テストIDの履歴 -->
+    <section data-screen="Detail" hidden>
+      <div class="page">
+        <div class="row">
+          <button data-testid="detail-back" data-event="一覧へ" data-goto="List">← 一覧へ</button>
+          <strong>BD-ORDER-SCREEN-P004</strong>
+          <span class="muted">basic/order.md・screen-flow</span>
+          <span class="flaky">フレーキー（a1b2c3d）</span>
+        </div>
+        <p data-testid="first-failure">失敗し始めた実行：10/12 14:03（a1b2c3d）</p>
+        <table data-testid="history">
+          <thead><tr><th>実行日時</th><th>コミット</th><th>結果</th><th>所要時間</th><th>メッセージ</th></tr></thead>
+          <tbody>
+            <tr class="changed"><td>10/12 14:03</td><td>a1b2c3d</td><td>失敗</td><td>4.1s</td><td>expect.screen: Confirm でなく Input</td></tr>
+            <tr class="changed"><td>10/12 13:55</td><td>a1b2c3d</td><td>成功</td><td>3.8s</td><td></td></tr>
+            <tr><td>10/12 13:40</td><td>a1b2c3d（変更あり）</td><td>失敗</td><td>4.0s</td><td>timeout</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- フレーキー一覧 -->
+    <section data-screen="Flaky" hidden>
+      <div class="page">
+        <div class="row">
+          <button data-testid="flaky-back" data-event="一覧へ" data-goto="List">← 一覧へ</button>
+          <strong>フレーキー（2）</strong>
+        </div>
+        <table data-testid="flaky-list">
+          <thead><tr><th>テストID</th><th>文書</th><th>コミット</th><th>成功 / 失敗</th><th>最後の失敗</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><button class="link" data-testid="flaky-test-open" data-event="テストIDを選ぶ" data-goto="Detail">BD-ORDER-SCREEN-P004</button></td>
+              <td>basic/order.md</td><td>a1b2c3d</td><td>1 / 1</td><td>10/12 14:03</td>
+            </tr>
+            <tr>
+              <td>BD-STOCK-FLOW-P002</td><td>basic/stock.md</td><td>9f8e7d6</td><td>3 / 1</td><td>10/11 18:20</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 再実行中 -->
+    <section data-screen="Rerunning" hidden>
+      <div class="page">
+        <div class="row">
+          <strong>失敗を再実行中</strong>
+          <span class="badge" data-testid="rerun-attempt">1 / 2 回目</span>
+        </div>
+        <div class="log" data-testid="rerun-log">BD-ORDER-SCREEN-P004 … 成功
+DD-STOCK-RULE-T002 … 失敗</div>
+        <button class="mockonly" data-testid="rerun-done" data-event="実行完了" data-goto="List">（モック）実行完了</button>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

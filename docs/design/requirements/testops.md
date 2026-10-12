@@ -1,7 +1,7 @@
 ---
 id: TESTOPS
 kind: requirements
-status: review
+status: approved
 title: テスト監視・テストデータ編集・トレース（Phase 4）要件定義
 ---
 
