@@ -34,7 +34,8 @@ export interface ServerAppOptions {
 /** `<meta name="ddv-auth" content="required">` right after `<head>`: the viewer shows TokenRequired without calling the API. */
 export function markTokenRequired(html: string): string {
   const meta = '<meta name="ddv-auth" content="required">';
-  return /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, (m) => `${m}${meta}`) : `${meta}${html}`;
+  if (/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, (m) => `${m}${meta}`);
+  return /^\s*<!doctype[^>]*>/i.test(html) ? html.replace(/^\s*<!doctype[^>]*>/i, (m) => `${m}${meta}`) : `${meta}${html}`;
 }
 
 /** POSTs that run code from the workspace; refused until the workspace is trusted. */
