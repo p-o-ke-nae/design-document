@@ -1,5 +1,6 @@
 import type { DdvConfig } from '@ddv/core';
 import type { GitHubClient } from '@ddv/github';
+import type { ActionsService } from './actions/actions-service.ts';
 import { CoverageService } from './coverage.ts';
 import { DocService } from './docs.ts';
 import type { ServiceEnv } from './env.ts';
@@ -14,6 +15,7 @@ import type { StatusCommitter } from './status-commit.ts';
 import { TestDataService } from './testdata.ts';
 import { TraceService } from './traces.ts';
 
+export * from './actions/index.ts';
 export * from './config.ts';
 export * from './coverage.ts';
 export * from './docs.ts';
@@ -34,11 +36,6 @@ export * from './status-commit.ts';
 export * from './testdata.ts';
 export * from './threads.ts';
 export * from './traces.ts';
-
-/** Actions results (actions-run.md; a later slice). Only what HistoryService needs is fixed here. */
-export interface ActionsService {
-  readonly history?: HistoryService;
-}
 
 export interface ServiceDeps {
   env: ServiceEnv;
