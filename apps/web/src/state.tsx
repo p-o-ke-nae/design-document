@@ -4,7 +4,7 @@ import { api, apiUrl, ApiError, workspace, type CaseResult, type DdvConfig, type
 export interface Route {
   /** Workspace id ('' = local). */
   ws: string;
-  view: 'doc' | 'tests' | 'open' | 'review' | 'done';
+  view: 'doc' | 'tests' | 'open' | 'folder' | 'review' | 'done';
   path: string;
   heading: string;
   /** Tests tab: '' = list, 'history' = one test id's history, 'flaky' = flaky tests, 'trace' = one test id's trace in one run. */
@@ -15,7 +15,7 @@ export interface Route {
   runId?: string;
 }
 
-/** `#/doc?path=…` / `#/tests` / `#/tests/history/<id>` / `#/tests/trace/<run>/<id>` / `#/tests/flaky` / `#/open`, and the same under `#/w/<ws>` for a GitHub workspace (+ `#/w/<ws>/review` / `#/w/<ws>/review/done`). */
+/** `#/doc?path=…` / `#/tests` / `#/tests/history/<id>` / `#/tests/trace/<run>/<id>` / `#/tests/flaky` / `#/open` / `#/folder`, and the same under `#/w/<ws>` for a GitHub workspace (+ `#/w/<ws>/review` / `#/w/<ws>/review/done`). */
 export function parseHash(hash: string): Route {
   let h = hash.replace(/^#/, '');
   let ws = '';
@@ -27,6 +27,7 @@ export function parseHash(hash: string): Route {
   const [p, q = ''] = h.split('?');
   const params = new URLSearchParams(q);
   if (p === '/open') return { ws: '', view: 'open', path: '', heading: '' };
+  if (p === '/folder') return { ws: '', view: 'folder', path: '', heading: '' };
   if (p === '/tests') return { ws, view: 'tests', path: '', heading: '' };
   if (p === '/tests/flaky') return { ws, view: 'tests', path: '', heading: '', sub: 'flaky' };
   const hm = /^\/tests\/history\/([^/]+)$/.exec(p);

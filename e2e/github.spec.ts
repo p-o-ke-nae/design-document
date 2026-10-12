@@ -6,6 +6,7 @@ import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { E2E_TOKEN, login } from './ddv-auth.ts';
 import { createUpstream, fakeGitHub, fakeGitHubState, type FakeGitHubState, type Upstream } from '../apps/server/src/github-fixture.ts';
 
 // Phase 1 (WSPACE) screen flow against a stub GitHub API and a local upstream repository. Never touches github.com.
@@ -46,7 +47,7 @@ async function startDdv(port: number, env: Record<string, string>): Promise<void
   if (await fetch(`http://127.0.0.1:${port}/`).then(() => true, () => false)) throw new Error(`port ${port} is already in use`);
   // A single process (no tsx wrapper) so that kill() stops the server itself.
   const child = spawn(process.execPath, ['--import', 'tsx', 'apps/server/src/cli.ts', 'serve', '--repo', 'examples/sample-app', '--port', String(port)], {
-    env: { ...process.env, GITHUB_TOKEN: '', GH_TOKEN: '', ...env },
+    env: { ...process.env, GITHUB_TOKEN: '', GH_TOKEN: '', DDV_TOKEN: E2E_TOKEN, ...env },
     stdio: 'pipe',
   });
   servers.push(child);
@@ -54,7 +55,7 @@ async function startDdv(port: number, env: Record<string, string>): Promise<void
   child.stdout?.on('data', (d) => (log += d));
   child.stderr?.on('data', (d) => (log += d));
   for (let i = 0; i < 150; i++) {
-    const ok = await fetch(`http://127.0.0.1:${port}/api/config`).then((r) => r.ok, () => false);
+    const ok = await fetch(`http://127.0.0.1:${port}/`).then((r) => r.ok, () => false);
     if (ok) return;
     if (child.exitCode !== null) break;
     await new Promise((r) => setTimeout(r, 200));
@@ -103,6 +104,11 @@ test.afterAll(async () => {
 });
 
 const BASE = `http://127.0.0.1:${PORT}`;
+
+test.beforeEach(async ({ page }) => {
+  await login(page, BASE);
+  await login(page, `http://127.0.0.1:${NO_TOKEN_PORT}`);
+});
 
 async function openForm(page: Page) {
   await page.getByTestId('open-github').click();
