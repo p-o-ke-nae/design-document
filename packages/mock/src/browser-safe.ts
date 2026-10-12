@@ -7,3 +7,7 @@ export * from './trace-format.ts';
 export * from './tune.ts';
 export * from './tune-patch.ts';
 export * from './yaml-patch.ts';
+export * from './targets.ts';
+export * from './check-core.ts';
+export * from './map.ts';
+export * from './match.ts';

@@ -1,0 +1,19 @@
+{
+  "name": "@ddv/services",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ddv/core": "*",
+    "@ddv/graph": "*",
+    "@ddv/testid": "*",
+    "@ddv/mock": "*",
+    "@ddv/github": "*",
+    "yaml": "^2.9.1"
+  }
+}
