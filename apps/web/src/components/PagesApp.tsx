@@ -9,6 +9,7 @@ import type { TargetSnapshot } from '../pages/target-loader.ts';
 import { DocTree } from './DocTree.tsx';
 import { DocPage } from './DocPage.tsx';
 import { TestsPage } from './TestsPage.tsx';
+import { ActionsPanel } from './ActionsPanel.tsx';
 import { TestHistoryView } from './TestHistory.tsx';
 import { FlakyList } from './FlakyList.tsx';
 import { TraceView } from './TraceView.tsx';
@@ -210,6 +211,8 @@ function PagesShell({ rt, snapshot }: { rt: PagesRuntime; snapshot: TargetSnapsh
                 <TraceView runId={route.runId ?? ''} testId={route.testId ?? ''} />
               ) : route.sub === 'flaky' ? (
                 <FlakyList />
+              ) : route.sub === 'actions' ? (
+                <ActionsPanel path={route.actions ?? ''} />
               ) : (
                 <TestsPage />
               )

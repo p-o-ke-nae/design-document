@@ -240,11 +240,18 @@ function ListView({ status }: { status: ActionsStatus }) {
           <input value={ids} onChange={(e) => setIds(e.target.value)} maxLength={4000} data-testid="ids" />
         </label>
         {!fork && (
-          <button type="button" className="primary"           disabled={!ready || busy || !list || !dispatchGate.enabled} title={ready ? dispatchGate.reason : status.reason} onClick={() => void dispatch(splitIds(ids), list?.rows ?? [])} data-testid="dispatch">
+          <button
+            type="button"
+            className="primary"
+            disabled={!ready || busy || !list || !dispatchGate.enabled}
+            title={ready ? dispatchGate.reason : status.reason}
+            onClick={() => void dispatch(splitIds(ids), list?.rows ?? [])}
+            data-testid="dispatch"
+          >
             Actionsで実行
           </button>
         )}
-                  {ready && !fork && <GateReason gate={dispatchGate} />}
+        {ready && !fork && <GateReason gate={dispatchGate} />}
       </div>
       {shown && (
         <div className="notice warn" data-testid="dispatch-error">
