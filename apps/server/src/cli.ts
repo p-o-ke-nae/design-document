@@ -248,7 +248,10 @@ async function main(argv: string[]) {
   await manager.init();
   const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');
   const auth = new SessionAuth(token, port);
-  const app = createServerApp({ local, manager, tokens, port, devOrigins, dist, auth });
+  const pollMs = Number(process.env.DDV_ACTIONS_POLL_MS);
+  // DDV_ACTIONS_POLL_MS: shorter Actions polling for tests (find / track every n ms).
+  const actionsIntervals = Number.isFinite(pollMs) && pollMs > 0 ? { firstFind: pollMs, find: pollMs, track: pollMs, findTimeout: pollMs * 20 } : undefined;
+  const app = createServerApp({ local, manager, tokens, port, devOrigins, dist, auth, actionsIntervals });
   const ws = args.github ? manager.open(args.github) : null;
 
   serve({ fetch: app.fetch, port, hostname: host }, (info) => {

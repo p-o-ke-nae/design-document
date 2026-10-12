@@ -15,6 +15,9 @@ import { RecentFolders } from './recent.ts';
 import { PendingStore } from './review.ts';
 import { OpenRequestError, parseRepo, toPullInfo, WorkspaceError, type Workspace, type WorkspaceEvent, type WorkspaceManager } from './workspaces.ts';
 import type { RunRecord } from './runs.ts';
+import { ActionsHost, registerActionsRoutes } from './actions-api.ts';
+import { RepoRemote } from './repo-remote.ts';
+import type { TrackerIntervals } from '@ddv/services';
 
 export { latestReviews, type ReviewerState } from '@ddv/services';
 
@@ -30,6 +33,8 @@ export interface ServerAppOptions {
   dist?: string;
   /** Start token / session cookie check (`ddv serve`); absent = Host / Origin only. */
   auth?: SessionAuth;
+  /** Polling intervals of the Actions trackers (tests shorten them). */
+  actionsIntervals?: Partial<TrackerIntervals>;
 }
 
 /** `<meta name="ddv-auth" content="required">` right after `<head>`: the viewer shows TokenRequired without calling the API. */
@@ -81,6 +86,31 @@ export function createServerApp(opts: ServerAppOptions): Hono {
     pull: (id) => manager.pull(id),
     onChange: (id) => threads.invalidate(id),
   });
+
+  // --- GitHub Actions (actions-run.md) ---
+  const remote = new RepoRemote();
+  const hasToken = async () => (await tokens.status()).source !== 'none';
+  const actionsHosts = new WeakMap<ServerContext, ActionsHost>();
+  const actionsDeps = { client: manager.github, hasToken, remote, intervals: opts.actionsIntervals };
+  const localActions = (ctx: ServerContext): ActionsHost => {
+    let h = actionsHosts.get(ctx);
+    if (!h) {
+      h = new ActionsHost(ctx, { kind: 'local', root: ctx.repoRoot }, actionsDeps);
+      actionsHosts.set(ctx, h);
+      ctx.actions = h;
+    }
+    return h;
+  };
+  const workspaceActions = (id: string): ActionsHost => {
+    const { ctx } = manager.context(id);
+    let h = actionsHosts.get(ctx);
+    if (!h) {
+      h = new ActionsHost(ctx, { kind: 'workspace', ws: () => manager.context(id).ws, onApproved: () => manager.checkHead(id, true).catch(() => false) }, actionsDeps);
+      actionsHosts.set(ctx, h);
+      ctx.actions = h;
+    }
+    return h;
+  };
 
   const tokenPage = async () => (dist ? markTokenRequired(await fs.readFile(path.join(dist, 'index.html'), 'utf8').catch(() => '')) || null : null);
   app.use('*', guard({ port: opts.port, devOrigins: opts.devOrigins, auth: opts.auth, tokenPage }));
@@ -143,6 +173,7 @@ export function createServerApp(opts: ServerAppOptions): Hono {
         const cur = manager.context(id).ws;
         return cur.target.pr ? { kind: 'pr', target: prOf(cur), review } : { kind: 'branch' };
       };
+      workspaceActions(id);
       entry = { gen: ws.generation, app: createApp(ctx) };
       apps.set(id, entry);
     }
@@ -187,7 +218,9 @@ export function createServerApp(opts: ServerAppOptions): Hono {
           ctx.events.on('change', onChange);
           ctx.runs.on('end', onEnd);
           ctx.runs.on('run', onRun);
+          const offActions = localActions(ctx).subscribe((e) => void stream.writeSSE({ event: 'actions', data: JSON.stringify(e) }));
           detach = () => {
+            offActions();
             ctx.events.off('change', onChange);
             ctx.runs.off('end', onEnd);
             ctx.runs.off('run', onRun);
@@ -400,6 +433,11 @@ export function createServerApp(opts: ServerAppOptions): Hono {
     }),
   );
 
+  registerActionsRoutes(app, '/api/w/:ws/actions', (c) => {
+    appFor(c.req.param('ws')!);
+    return workspaceActions(c.req.param('ws')!);
+  }, (c) => c.json({ error: 'not found', code: 'not-found' }, 404));
+
   app.all('/api/w/:ws/*', async (c) => {
     const id = c.req.param('ws');
     const { ws, app: wsApp } = appFor(id);
@@ -419,6 +457,7 @@ export function createServerApp(opts: ServerAppOptions): Hono {
   });
 
   // --- local workspace ---
+  registerActionsRoutes(app, '/api/actions', () => (local.ctx ? localActions(local.ctx) : null), (c) => local.fetch(c.req.raw));
   app.all('/api/*', (c) => local.fetch(c.req.raw));
   app.get('/raw/*', (c) => local.fetch(c.req.raw));
 

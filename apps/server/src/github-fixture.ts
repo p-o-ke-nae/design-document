@@ -111,6 +111,161 @@ export interface FakeGitHubState {
     commits: Record<string, { tree: string; parents: string[]; message: string }>;
   };
   nextId: number;
+  /** Actions / contents / check-runs / results branch per `owner/repo` (actions-run.md). */
+  actions: Record<string, FakeActionsRepo>;
+}
+
+export interface FakeRun {
+  id: number;
+  attempt: number;
+  title: string;
+  event: string;
+  branch: string;
+  sha: string;
+  createdAt: string;
+  actor: string;
+  /** Statuses returned by successive `GET /actions/runs/{id}` (the last one repeats). */
+  script: Array<'queued' | 'in_progress' | 'completed'>;
+  conclusion: string;
+  polls: number;
+  inputs?: Record<string, string>;
+  /** Called once when the run is first reported as completed. */
+  onComplete?: (run: FakeRun) => void;
+  completedSeen?: boolean;
+}
+
+export interface FakeActionsRepo {
+  defaultBranch: string;
+  /** `permissions.push` of `GET /repos/{o}/{r}`; undefined = no `permissions`. */
+  push?: boolean;
+  /** Branches holding `.github/workflows/ddv-tests.yml`. */
+  workflowOn: string[];
+  runs: FakeRun[];
+  checks: Record<string, Array<{ id: number; name: string; status: string; conclusion?: string | null; html_url: string; details_url?: string }>>;
+  /** Files of the `ddv-results` branch (null = no branch). */
+  results: Record<string, string | Uint8Array> | null;
+  dispatches: Array<{ ref: string; inputs: Record<string, string> }>;
+  /** false = a dispatch creates no run (never detected). */
+  createRuns: boolean;
+  /** Script / conclusion of the runs created by dispatches. */
+  script: FakeRun['script'];
+  conclusion: string;
+  onDispatch?: (run: FakeRun) => void;
+  /** Extra commits that exist on GitHub (`GET /commits/{sha}`). */
+  knownShas?: string[];
+}
+
+export function fakeActionsRepo(init: Partial<FakeActionsRepo> = {}): FakeActionsRepo {
+  return {
+    defaultBranch: 'main',
+    push: true,
+    workflowOn: ['main'],
+    runs: [],
+    checks: {},
+    results: null,
+    dispatches: [],
+    createRuns: true,
+    script: ['queued', 'in_progress', 'completed'],
+    conclusion: 'success',
+    ...init,
+  };
+}
+
+/** Adds one run to the fake results branch (index.json row + run.json + extra files). */
+export function publishFakeResult(
+  a: FakeActionsRepo,
+  row: { id: string; commit: string; ref: string; status?: 'passed' | 'failed' | 'error'; pr?: number; actor?: string; startedAt?: string; request?: string; trimmed?: boolean; warnings?: string[]; approvals?: unknown[]; snapshots?: { diff: number; noBase: number } },
+  record: Record<string, unknown> = {},
+  files: Record<string, string | Uint8Array> = {},
+): void {
+  const files0 = (a.results ??= {});
+  const index = files0['index.json'] ? JSON.parse(String(files0['index.json'])) : { version: 1, updatedAt: '', runs: [] };
+  const results = Object.fromEntries(
+    Object.entries((record.results ?? {}) as Record<string, { status: string }>).map(([id, r]) => [id, { durationMs: 10, runner: 'e2e', test: `[${id}] test`, ...r }]),
+  ) as Record<string, { status: string }>;
+  record = { ...record, results };
+  const count = (s: string) => Object.values(results).filter((r) => r.status === s).length;
+  const startedAt = row.startedAt ?? new Date().toISOString();
+  const entry = {
+    actionsRunId: row.id.split('-')[0],
+    status: 'passed',
+    startedAt,
+    finishedAt: startedAt,
+    counts: { passed: count('passed'), failed: count('failed'), error: count('error'), skipped: count('skipped') },
+    traces: Object.keys(files).some((f) => f.startsWith('traces/')),
+    trimmed: false,
+    warnings: [],
+    approvals: [],
+    ...row,
+  };
+  index.runs = [entry, ...index.runs.filter((r: { id: string }) => r.id !== row.id)].sort((x: { startedAt: string }, y: { startedAt: string }) => y.startedAt.localeCompare(x.startedAt));
+  index.updatedAt = new Date().toISOString();
+  files0['index.json'] = JSON.stringify(index);
+  files0[`runs/${row.id}/run.json`] = JSON.stringify({
+    id: row.id,
+    kind: 'test',
+    source: 'actions',
+    actionsRunId: entry.actionsRunId,
+    actionsRequest: row.request,
+    ref: row.ref,
+    commit: row.commit,
+    dirty: false,
+    startedAt,
+    finishedAt: startedAt,
+    status: entry.status,
+    request: {},
+    runners: [],
+    results: {},
+    log: [],
+    warnings: row.warnings ?? [],
+    ...record,
+  });
+  for (const [f, c] of Object.entries(files)) files0[`runs/${row.id}/${f}`] = c;
+}
+
+const bytesOf = (c: string | Uint8Array) => (typeof c === 'string' ? Buffer.from(c) : Buffer.from(c));
+const blobSha = (c: string | Uint8Array) => createHash('sha1').update('blob:').update(bytesOf(c)).digest('hex');
+const resultsCommit = (files: Record<string, string | Uint8Array>) =>
+  createHash('sha1')
+    .update(JSON.stringify(Object.keys(files).sort().map((f) => [f, blobSha(files[f]!)])))
+    .digest('hex');
+
+function runJson(repo: string, r: FakeRun, status: string) {
+  return {
+    id: r.id,
+    run_attempt: r.attempt,
+    display_title: r.title,
+    name: 'ddv tests',
+    event: r.event,
+    head_branch: r.branch,
+    head_sha: r.sha,
+    status,
+    conclusion: status === 'completed' ? r.conclusion : null,
+    created_at: r.createdAt,
+    html_url: `https://github.com/${repo}/actions/runs/${r.id}`,
+    actor: { login: r.actor },
+    triggering_actor: { login: r.actor },
+  };
+}
+
+const runStatus = (r: FakeRun) => r.script[Math.min(r.polls, r.script.length - 1)]!;
+
+function jobsJson(repo: string, r: FakeRun, status: string) {
+  const done = status === 'completed';
+  const step = (number: number, name: string, st: string, c?: string) => ({ number, name, status: st, conclusion: st === 'completed' ? (c ?? 'success') : null });
+  return [
+    {
+      id: r.id * 10,
+      name: r.title.includes('approve') ? 'approve' : 'test',
+      status,
+      conclusion: done ? r.conclusion : null,
+      html_url: `https://github.com/${repo}/actions/runs/${r.id}/job/${r.id * 10}`,
+      steps:
+        status === 'queued'
+          ? []
+          : [step(1, 'Set up job', 'completed'), step(2, 'ddv ci run', done ? 'completed' : 'in_progress', r.conclusion), step(3, 'ddv ci publish', done ? 'completed' : 'queued', r.conclusion)],
+    },
+  ];
 }
 
 export function fakeGitHubState(init: Partial<FakeGitHubState> = {}): FakeGitHubState {
@@ -126,6 +281,7 @@ export function fakeGitHubState(init: Partial<FakeGitHubState> = {}): FakeGitHub
     failOn: [],
     git: { blobs: {}, trees: {}, commits: {} },
     nextId: 1000,
+    actions: {},
     ...init,
   };
 }
@@ -165,6 +321,106 @@ function pullJson(repo: string, p: FakePull) {
   };
 }
 
+/** Actions / contents / check-runs / branches / the `ddv-results` branch (null = not an Actions endpoint). */
+function actionsRoute(state: FakeGitHubState, method: string, p: string, q: URLSearchParams, body: any): Response | null {
+  let m = /^\/repos\/([^/]+)\/([^/]+)(\/.*)?$/.exec(p);
+  if (!m) return null;
+  const repo = `${m[1]}/${m[2]}`;
+  const a = state.actions[repo];
+  if (!a) return null;
+  const rest = m[3] ?? '';
+  if (rest === '' && method === 'GET') return j(200, { full_name: repo, default_branch: a.defaultBranch, ...(a.push === undefined ? {} : { permissions: { push: a.push, pull: true } }) });
+  m = /^\/contents\/(.+)$/.exec(rest);
+  if (m && method === 'GET') {
+    const file = decodeURIComponent(m[1]!);
+    const ref = q.get('ref') ?? a.defaultBranch;
+    return file === '.github/workflows/ddv-tests.yml' && a.workflowOn.includes(ref) ? j(200, { type: 'file', path: file, sha: sha1(`wf:${ref}`) }) : j(404, { message: 'Not Found' });
+  }
+  m = /^\/branches\/(.+)$/.exec(rest);
+  if (m && method === 'GET') {
+    const ref = decodeURIComponent(m[1]!);
+    const sha = state.refs[repo]?.[ref] ?? (state.pulls[repo] ?? []).find((x) => x.headRef === ref)?.headSha;
+    return sha ? j(200, { name: ref, commit: { sha } }) : j(404, { message: 'Branch not found' });
+  }
+  m = /^\/commits\/([0-9a-f]{40})$/.exec(rest);
+  if (m && method === 'GET') {
+    const known = Object.values(state.refs[repo] ?? {}).includes(m[1]!) || (state.pulls[repo] ?? []).some((x) => x.headSha === m![1]) || (a.knownShas ?? []).includes(m[1]!);
+    return known ? j(200, { sha: m[1] }) : j(422, { message: `No commit found for SHA: ${m[1]}` });
+  }
+  m = /^\/commits\/([^/]+)\/check-runs$/.exec(rest);
+  if (m && method === 'GET') {
+    const list = a.checks[decodeURIComponent(m[1]!)] ?? [];
+    return j(200, { total_count: list.length, check_runs: list });
+  }
+  if (rest === '/git/ref/heads/ddv-results' && method === 'GET') {
+    if (!a.results) return j(404, { message: 'Not Found' });
+    return j(200, { ref: 'refs/heads/ddv-results', object: { sha: resultsCommit(a.results) } });
+  }
+  m = /^\/git\/trees\/([0-9a-f]{40})$/.exec(rest);
+  if (m && method === 'GET' && a.results && m[1] === resultsCommit(a.results)) {
+    const files = a.results;
+    return j(200, { sha: m[1], truncated: false, tree: Object.keys(files).sort().map((f) => ({ path: f, mode: '100644', type: 'blob', sha: blobSha(files[f]!), size: bytesOf(files[f]!).length })) });
+  }
+  m = /^\/git\/blobs\/([0-9a-f]{40})$/.exec(rest);
+  if (m && method === 'GET' && a.results) {
+    const hit = Object.values(a.results).find((c) => blobSha(c) === m![1]);
+    if (hit !== undefined) return j(200, { sha: m[1], encoding: 'base64', content: bytesOf(hit).toString('base64') });
+  }
+  m = /^\/actions\/workflows\/ddv-tests\.yml\/dispatches$/.exec(rest);
+  if (m && method === 'POST') {
+    const ref: string = body?.ref ?? '';
+    const inputs: Record<string, string> = body?.inputs ?? {};
+    if (!a.workflowOn.includes(ref)) return j(422, { message: `Workflow does not have 'workflow_dispatch' trigger` });
+    a.dispatches.push({ ref, inputs });
+    if (a.createRuns) {
+      const sha = inputs.sha || state.refs[repo]?.[ref] || (state.pulls[repo] ?? []).find((x) => x.headRef === ref)?.headSha || '0'.repeat(40);
+      const run: FakeRun = {
+        id: ++state.nextId,
+        attempt: 1,
+        title: `ddv ${inputs.mode ?? 'test'} ${inputs.request ?? ''}`.trim(),
+        event: 'workflow_dispatch',
+        branch: ref,
+        sha,
+        createdAt: new Date().toISOString(),
+        actor: state.login,
+        script: [...a.script],
+        conclusion: a.conclusion,
+        polls: 0,
+        inputs,
+      };
+      a.runs.unshift(run);
+      a.onDispatch?.(run);
+    }
+    return new Response(null, { status: 204 });
+  }
+  m = /^\/actions\/workflows\/ddv-tests\.yml\/runs$/.exec(rest);
+  if (m && method === 'GET') {
+    const event = q.get('event');
+    const branch = q.get('branch');
+    const n = Number(q.get('per_page') ?? 30);
+    const runs = a.runs
+      .filter((r) => (!event || r.event === event) && (!branch || r.branch === branch))
+      .sort((x, y) => y.createdAt.localeCompare(x.createdAt))
+      .slice(0, n)
+      .map((r) => runJson(repo, r, runStatus(r)));
+    return j(200, { total_count: runs.length, workflow_runs: runs });
+  }
+  m = /^\/actions\/runs\/(\d+)(\/jobs)?$/.exec(rest);
+  if (m && method === 'GET') {
+    const r = a.runs.find((x) => x.id === Number(m![1]));
+    if (!r) return j(404, { message: 'Not Found' });
+    const status = runStatus(r);
+    if (m[2]) return j(200, { total_count: 1, jobs: jobsJson(repo, r, status) });
+    r.polls++;
+    if (status === 'completed' && !r.completedSeen) {
+      r.completedSeen = true;
+      r.onComplete?.(r);
+    }
+    return j(200, runJson(repo, r, status));
+  }
+  return null;
+}
+
 /** `fetch`-compatible handler for the GitHub REST endpoints used by the workspace feature. */
 export function fakeGitHub(state: FakeGitHubState) {
   return async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
@@ -192,6 +448,8 @@ export function fakeGitHub(state: FakeGitHubState) {
       return j(fail.status, { message: fail.message, ...(fail.errors ? { errors: fail.errors } : {}) });
     }
     if (p === '/user') return j(200, { login: state.login });
+    const actionsRes = actionsRoute(state, req.method, p, url.searchParams, reqBody);
+    if (actionsRes) return actionsRes;
     let m = /^\/repos\/([^/]+)\/([^/]+)\/pulls$/.exec(p);
     if (m) return j(200, (state.pulls[`${m[1]}/${m[2]}`] ?? []).filter((x) => (x.state ?? 'open') === 'open').map((x) => pullJson(`${m![1]}/${m![2]}`, x)));
     m = /^\/repos\/([^/]+)\/([^/]+)\/pulls\/(\d+)$/.exec(p);

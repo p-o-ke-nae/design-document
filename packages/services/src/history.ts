@@ -334,6 +334,11 @@ export class HistoryService {
     return mergeRuns(this.local.list(), this.actionsRuns);
   }
 
+  /** A merged run record by id (local id or Actions result id). */
+  record(id: string): RunRecord | undefined {
+    return this.runs().find((r) => r.id === id);
+  }
+
   /** Latest result per test id. */
   latest(): LatestResults {
     return latestOfRuns(this.runs());

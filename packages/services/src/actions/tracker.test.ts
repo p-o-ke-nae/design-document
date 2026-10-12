@@ -57,7 +57,7 @@ describe('findRun', () => {
     expect(r.err).toBeInstanceOf(DispatchFailure);
     expect(r.err!.message).toBe(kind === NOT ? TRACK_MESSAGES.notDetected : 'GitHub の認証に失敗しました: Bad credentials');
   };
-  const expectHit = (r: { ok?: unknown }) => expect(r.ok).toMatchObject({ id: '9', attempt: 2, resultId: '9-2', request: REQ, mode: 'test', actor: 'bob', status: 'in_progress' });
+  const expectHit = (r: object) => expect((r as { ok?: unknown }).ok).toMatchObject({ id: '9', attempt: 2, resultId: '9-2', request: REQ, mode: 'test', actor: 'bob', status: 'in_progress' });
 
   it('[DD-ACTSVC-FINDRUN-P001][DD-ACTSVC-FINDRUN-T001][DD-ACTSVC-FINDRUN-T002][DD-ACTSVC-FINDRUN-T003] 認証などの失敗は起動失敗（理由つき）', async () => {
     const { result, paths } = await play(['hard'], 1e9);
