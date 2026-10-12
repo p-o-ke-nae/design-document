@@ -225,7 +225,7 @@ export function publishFakeResult(
 
 const bytesOf = (c: string | Uint8Array) => (typeof c === 'string' ? Buffer.from(c) : Buffer.from(c));
 const blobSha = (c: string | Uint8Array) => createHash('sha1').update('blob:').update(bytesOf(c)).digest('hex');
-const resultsCommit = (files: Record<string, string | Uint8Array>) =>
+export const resultsCommit = (files: Record<string, string | Uint8Array>) =>
   createHash('sha1')
     .update(JSON.stringify(Object.keys(files).sort().map((f) => [f, blobSha(files[f]!)])))
     .digest('hex');
@@ -322,7 +322,7 @@ function pullJson(repo: string, p: FakePull) {
 }
 
 /** Actions / contents / check-runs / branches / the `ddv-results` branch (null = not an Actions endpoint). */
-function actionsRoute(state: FakeGitHubState, method: string, p: string, q: URLSearchParams, body: any): Response | null {
+export function actionsRoute(state: FakeGitHubState, method: string, p: string, q: URLSearchParams, body: any): Response | null {
   let m = /^\/repos\/([^/]+)\/([^/]+)(\/.*)?$/.exec(p);
   if (!m) return null;
   const repo = `${m[1]}/${m[2]}`;

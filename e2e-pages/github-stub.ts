@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Page, Request, Route } from '@playwright/test';
+import { actionsRoute, fakeActionsRepo, fakeGitHubState, resultsCommit, type FakeActionsRepo, type FakeGitHubState } from '../apps/server/src/github-fixture.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const SAMPLE = 'examples/sample-app';
@@ -73,6 +74,8 @@ export interface StubOptions {
   delays?: { path: RegExp; ms: number }[];
   /** Answer matching api.github.com paths with this status (取得失敗). */
   errors?: { path: RegExp; status: number }[];
+  /** Actions of acme/order-app (actions-run.md); default: no `ddv-tests.yml`, no `ddv-results`, no runs. */
+  actions?: FakeActionsRepo;
 }
 
 export interface GitHubStub {
@@ -84,6 +87,10 @@ export interface GitHubStub {
   setHead(sha: string): void;
   /** Lets the rate-limited answers go. */
   heal(): void;
+  /** Actions of acme/order-app (dispatches, runs, the `ddv-results` files). */
+  actions: FakeActionsRepo;
+  /** Run ids of the Actions fake (`nextId`). */
+  actionsState: FakeGitHubState;
 }
 
 const tokenOf = (req: Request) => req.headers()['authorization']?.replace(/^(token|Bearer)\s+/i, '') ?? null;
@@ -91,11 +98,18 @@ const tokenOf = (req: Request) => req.headers()['authorization']?.replace(/^(tok
 /** Stubs api.github.com / raw.githubusercontent.com / codeload.github.com for `page`. */
 export async function stubGitHub(page: Page, opts: StubOptions = {}): Promise<GitHubStub> {
   const state = { rateLimited: opts.rateLimited ?? false, head: HEAD_SHA };
+  const actions = opts.actions ?? fakeActionsRepo({ workflowOn: [], push: undefined });
+  const actionsState = fakeGitHubState({
+    refs: { [`${OWNER}/${REPO}`]: { main: BASE_SHA, 'feature/confirm-back': HEAD_SHA } },
+    actions: { [`${OWNER}/${REPO}`]: actions, [`${OWNER}/${PRIVATE_REPO}`]: fakeActionsRepo({ workflowOn: [], push: undefined }) },
+  });
   const stub: GitHubStub = {
     requests: [],
     unhandled: [],
     setHead: (sha) => void (state.head = sha),
     heal: () => void (state.rateLimited = false),
+    actions,
+    actionsState,
   };
   const pull = () => ({
     number: PR,
@@ -123,6 +137,12 @@ export async function stubGitHub(page: Page, opts: StubOptions = {}): Promise<Gi
 
     if (url.host === 'raw.githubusercontent.com') {
       const m = /^\/([^/]+)\/([^/]+)\/([0-9a-f]{40})\/(.+)$/.exec(url.pathname);
+      // The `ddv-results` branch (results of the Actions runs) read without a PAT.
+      if (m && m[1] === OWNER && m[2] === REPO && actions.results && m[3] === resultsCommit(actions.results)) {
+        const c = actions.results[m[4].split('/').map(decodeURIComponent).join('/')];
+        if (c === undefined) return route.fulfill({ status: 404, headers: cors, body: '404: Not Found' });
+        return route.fulfill({ status: 200, headers: cors, body: Buffer.from(c) });
+      }
       const files = m?.[3] === BASE_SHA ? TREE.base : TREE.head;
       const f = m && m[1] === OWNER && m[2] === REPO ? files.find((b) => b.path === m[4].split('/').map(decodeURIComponent).join('/')) : undefined;
       if (!f) return route.fulfill({ status: 404, headers: cors, body: '404: Not Found' });
@@ -180,6 +200,16 @@ export async function stubGitHub(page: Page, opts: StubOptions = {}): Promise<Gi
         private: isPrivate,
         ...(authed ? { permissions: { admin: false, push: token === PAT_WRITE, pull: true } } : {}),
       });
+    // Actions (workflow file, runs, check runs, the `ddv-results` branch): the fake shared with the local E2E.
+    const known = /^\/git\/(trees|blobs)\/([0-9a-f]{40})$/.exec(rest);
+    if (/^\/(contents\/|actions\/|git\/ref\/heads\/ddv-results$|commits\/[^/]+\/check-runs$)/.test(rest) || (known && !commits[known[2]] && ![...TREE.base, ...TREE.head].some((b) => b.sha === known[2]))) {
+      if (req.method() !== 'GET' && token !== PAT_WRITE) return json(token ? 403 : 404, { message: token ? 'Resource not accessible by personal access token' : 'Not Found' }, extra);
+      const r = actionsRoute(actionsState, req.method(), `/repos/${owner}/${repo}${rest}`, url.searchParams, req.method() === 'GET' ? undefined : req.postDataJSON());
+      if (r) {
+        if (r.status === 204) return route.fulfill({ status: 204, headers: { ...cors, ...extra } });
+        return json(r.status, await r.json(), extra);
+      }
+    }
     if (rest === `/pulls/${PR}`) return ok(pull());
     if (rest === `/pulls/${PR}/files`) return ok([{ filename: CHANGED_DOC, status: 'modified', additions: 4, deletions: 0, changes: 4, sha: TREE.head.find((b) => b.path === CHANGED_DOC)?.sha }]);
     if (rest.startsWith(`/pulls/${PR}/reviews`) || rest.startsWith(`/pulls/${PR}/comments`)) return ok([]);
