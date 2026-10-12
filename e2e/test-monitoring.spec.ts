@@ -137,7 +137,10 @@ test('[BD-TMON-SCREEN-P004] [BD-TMON-SCREEN-T007] [BD-TMON-SCREEN-T009] [BD-TMON
     await route.continue();
   });
 
+  // Both attempts end within milliseconds: the page must be subscribed to /api/events before the 2nd attempt's `run` event.
+  const subscribed = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/events');
   await page.goto('/#/tests');
+  await subscribed;
   await page.getByTestId('rerun-times').selectOption('2');
   const rerun = page.getByTestId('rerun');
   await expect(rerun).toBeEnabled();
