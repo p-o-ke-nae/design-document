@@ -1,4 +1,5 @@
 /** Backend types shared by HttpBackend / PagesBackend (detailed design: services.md「Backend」). Pure: no imports of `fetch` / `EventSource` code. */
+import type { GitHubOp } from '../pages/permission.ts';
 
 /** Error of an API call as the screens see it (same as the one `json()` of api.ts makes). */
 export class ApiError extends Error {
@@ -17,8 +18,7 @@ export type Edition = 'local' | 'pages';
 
 export type Unsubscribe = () => void;
 
-/** GitHub write operations (pat.md `GitHubOp`; the Pages slice's `PermissionProbe` keys its requirements by these). */
-export type GitHubOp = 'reviewComment' | 'reviewReply' | 'reviewResolve' | 'reviewSubmit' | 'approveStatus' | 'suggestion' | 'actionsDispatch' | 'snapshotApprove';
+export type { GitHubOp };
 
 // OperationId の値と理由の文言は pages-viewer.md の「操作の一覧」と同じ（正本はこの型。OperationGate も引く）
 export type OperationId =
