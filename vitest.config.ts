@@ -12,6 +12,7 @@ export default defineConfig({
       '@ddv/github': r('./packages/github/src/index.ts'),
       '@ddv/testid': r('./packages/testid/src/index.ts'),
       '@ddv/mock/step': r('./packages/mock/src/step.ts'),
+      '@ddv/mock/frame-protocol': r('./packages/mock/src/frame-protocol.ts'),
       '@ddv/mock/playwright': r('./packages/mock/src/playwright.ts'),
       '@ddv/mock/tune': r('./packages/mock/src/tune.ts'),
       '@ddv/mock/tune-patch': r('./packages/mock/src/tune-patch.ts'),
