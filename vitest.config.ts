@@ -24,10 +24,12 @@ export default defineConfig({
       '@ddv/mock/trace': r('./packages/mock/src/trace.ts'),
       '@ddv/mock-runtime': r('./packages/mock-runtime/src/index.ts'),
       '@ddv/mock': r('./packages/mock/src/index.ts'),
+      '#backend-impl': r('./apps/web/src/backend/http.ts'),
+      '#app-impl': r('./apps/web/src/App.tsx'),
     },
   },
   test: {
-    include: ['packages/*/src/**/*.test.ts', 'apps/server/src/**/*.test.ts', 'apps/web/src/**/*.test.ts'],
+    include: ['packages/*/src/**/*.test.ts', 'apps/server/src/**/*.test.ts', 'apps/web/src/**/*.test.ts', 'apps/web/scripts/**/*.test.ts'],
     testTimeout: 120_000,
   },
 });

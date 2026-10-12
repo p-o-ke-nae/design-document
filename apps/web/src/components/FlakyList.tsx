@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { api, type FlakyEntry } from '../api.ts';
+import { api } from '../backend/index.ts';
+import type { FlakyEntry } from '../api.ts';
 import { docHref, historyHref, useApp, viewHref } from '../state.tsx';
 import { formatAt } from './TestHistory.tsx';
 

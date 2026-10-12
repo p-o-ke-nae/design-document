@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { setWorkspace } from './api.ts';
+import { setWorkspace } from './backend/index.ts';
 import { AppProvider, docHref, useApp, viewHref } from './state.tsx';
 import { DocTree } from './components/DocTree.tsx';
 import { DocPage } from './components/DocPage.tsx';

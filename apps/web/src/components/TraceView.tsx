@@ -1,5 +1,7 @@
-import { useEffect, useReducer } from 'react';
-import { api, ApiError, type TraceResponse } from '../api.ts';
+import { useEffect, useMemo, useReducer } from 'react';
+import type { TraceResponse } from '../api.ts';
+import { api } from '../backend/index.ts';
+import { ApiError } from '../backend/types.ts';
 import { viewHref } from '../state.tsx';
 import { acceptsArrowKeys, goBack, reduceTraceView, shortSha, startTrace } from '../trace-view.ts';
 import { TraceStepDetail, TraceTimeline } from './TraceStepDetail.tsx';
@@ -20,7 +22,7 @@ export function TraceView({
   runId: string;
   testId: string;
   load?: () => Promise<TraceResponse>;
-  shotUrl?: (n: number) => string;
+  shotUrl?: (n: number) => Promise<string>;
   backHref?: string;
 }) {
   const [state, dispatch] = useReducer(reduceTraceView, { runId, testId }, startTrace);
@@ -50,6 +52,10 @@ export function TraceView({
   }, []);
 
   const back = () => goBack(backHref ?? viewHref('tests'));
+
+  const current = state.kind !== 'Loading' && state.kind !== 'None' ? state.trace.steps.find((s) => s.index === state.selected) : undefined;
+  const shotIndex = current?.screenshot ? current.index : -1;
+  const shot = useMemo(() => (shotIndex >= 0 ? (shotUrl ? shotUrl(shotIndex) : api.traceShot(runId, testId, shotIndex)) : null), [runId, testId, shotIndex, shotUrl]);
 
   if (state.kind === 'Loading')
     return (
@@ -111,7 +117,7 @@ export function TraceView({
             </button>
           </div>
         </div>
-        <div className="trace-main">{step && <TraceStepDetail step={step} shotUrl={step.screenshot ? (shotUrl ? shotUrl(step.index) : api.traceShot(runId, testId, step.index)) : null} />}</div>
+        <div className="trace-main">{step && <TraceStepDetail step={step} shotUrl={step.screenshot ? shot : null} />}</div>
       </div>
     </div>
   );

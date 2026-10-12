@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { api, type DocResponse } from '../api.ts';
+import { api } from '../backend/index.ts';
+import type { DocResponse } from '../api.ts';
 import { docHref, useApp } from '../state.tsx';
 import { MockHubProvider, useMockHub } from '../mockHub.tsx';
 import { TestDataEditor } from './TestDataEditor.tsx';

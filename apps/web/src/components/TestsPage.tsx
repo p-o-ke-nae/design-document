@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { api, type RunSummary, type TestsResponse } from '../api.ts';
+import { api } from '../backend/index.ts';
+import type { RunSummary, TestsResponse } from '../api.ts';
 import { docHref, flakyHref, historyHref, traceHref, useApp, useLocalStorage } from '../state.tsx';
 import { scenarioLinked } from '../trace-view.ts';
 import { StatusBadge } from './StatusBadge.tsx';

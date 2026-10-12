@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { api, type ResolveResponse } from '../api.ts';
+import { api } from '../backend/index.ts';
+import type { ResolveResponse } from '../api.ts';
 import { docHref, useApp } from '../state.tsx';
 import { Markdown, useMd } from './Markdown.tsx';
 

@@ -2,6 +2,7 @@ import type { Graph, GraphDiff, StateEventTable, TestCase } from '@ddv/graph';
 import type { DdvConfig, DiagramBlock, DirectiveRef, DocElement, Heading, SourceBlock, TocEntry } from '@ddv/core';
 import type { ElementPatch } from '@ddv/mock/tune-patch';
 import type { TraceFile } from '@ddv/mock/trace-format';
+import type { ActionsRunDetail, ActionsRunList, ActionsStatus } from '@ddv/services';
 import { ApiError } from './backend/types.ts';
 
 export type { Graph, GraphDiff, StateEventTable, TestCase, DdvConfig, DiagramBlock, DocElement, Heading, SourceBlock, TocEntry };
@@ -453,6 +454,7 @@ export function createApi(ws: string) {
         steps: s.steps.map((st) => ({ ...st, images: Object.fromEntries(Object.entries(st.images).map(([k, v]) => [k, v && A(v)])) })),
       })),
     approveSnapshots: (body: { id: string; steps?: number[] }) => post(A('/api/snapshots/approve'), body).then((r) => json<unknown>(r)),
+    pr: () => get<PrInfo>('/api/pr'),
     prFiles: () => get<ChangedFiles>('/api/pr/files'),
     prDiff: (path: string) => get<DocDiff>(`/api/pr/diff?path=${encodeURIComponent(path)}`),
     prThreads: (path?: string) => get<Thread[]>(path ? `/api/pr/threads?path=${encodeURIComponent(path)}` : '/api/pr/threads'),
@@ -464,31 +466,19 @@ export function createApi(ws: string) {
     reviews: () => get<ReviewerState[]>('/api/reviews'),
     replyThread: (id: string, body: string) => post(A(`/api/pr/threads/${encodeURIComponent(id)}/replies`), { body }).then((r) => json<ThreadComment>(r)),
     resolveThread: (id: string, resolved: boolean) => post(A(`/api/pr/threads/${encodeURIComponent(id)}/resolve`), { resolved }).then((r) => json<{ id: string; resolved: boolean }>(r)),
+    // Actions (actions-run.md「API」)
+    actionsStatus: (refresh = false) => get<ActionsStatus>(`/api/actions${refresh ? '?refresh=1' : ''}`),
+    actionsRuns: () => get<ActionsRunList>('/api/actions/runs'),
+    actionsDispatch: (body: { ids?: string[]; runner?: string }) => post(A('/api/actions/runs'), body).then((r) => json<{ request: string }>(r)),
+    actionsRun: (id: string) => get<ActionsRunDetail>(`/api/actions/runs/${encodeURIComponent(id)}`),
+    actionsApprove: (id: string, ids: string[]) => post(A(`/api/actions/runs/${encodeURIComponent(id)}/approve`), { ids }).then((r) => json<{ request: string }>(r)),
+    actionsInit: (force = false) => post(A('/api/actions/init'), force ? { force } : {}).then((r) => json<{ status: 'created' | 'unchanged' | 'overwritten'; path: string }>(r)),
+    /** A file of an Actions run on the results branch (`runs/<id>/<path>`). */
+    actionsFile: (id: string, path: string) => A(`/api/actions/runs/${encodeURIComponent(id)}/files/${path.split('/').map(encodeURIComponent).join('/')}`),
   };
 }
 
-let currentWs = '';
-
-/** The workspace the viewer shows ('' = local). `api`, `apiUrl` and `rawUrl` follow it. */
-export function workspace(): string {
-  return currentWs;
-}
-
-export function setWorkspace(ws: string): void {
-  if (ws === currentWs) return;
-  currentWs = ws;
-  api = createApi(ws);
-}
-
-export function apiUrl(p: string): string {
-  return apiPath(currentWs, p);
-}
-
-export function rawUrl(p: string): string {
-  return rawPath(currentWs, p);
-}
-
-export let api = createApi('');
+// The current workspace's `api` (a `Backend`) and `setWorkspace` / `workspace` live in backend/index.ts (services.md「ビルド時の選択」).
 
 // --- GitHub workspaces ---
 

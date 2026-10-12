@@ -2160,3 +2160,8 @@ svg path.ddv-cov-unlinked {
   outline: 2px solid #0969da;
   outline-offset: 1px;
 }
+
+/* PAT menu (Pages edition, pat.md) */
+.pat-menu { position: relative; }
+.pat-menu .menu { position: absolute; right: 0; z-index: 10; background: #fff; border: 1px solid #d0d7de; border-radius: 6px; padding: 8px; display: grid; gap: 6px; width: 320px; }
+.pat-form { display: grid; gap: 6px; max-width: 480px; }

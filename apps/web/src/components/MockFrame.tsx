@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { api, rawUrl, type ScenarioDetail } from '../api.ts';
+import { api } from '../backend/index.ts';
+import type { ScenarioDetail } from '../api.ts';
 import { useApp, useLocalStorage } from '../state.tsx';
 import { playableScenarios, useMockHub } from '../mockHub.tsx';
 import { PlayerController, SPEEDS, STATE_LABEL, createFrameTransport, type DraftData, type FrameTransport, type PlayerSnapshot, type TuneMessage } from '../player.ts';
@@ -228,9 +229,19 @@ export function MockFrame({ target, attrs, source }: { target: string; attrs: Re
 
   const select = useCallback((id: string) => setRequest((r) => ({ id, play: false, seq: r.seq + 1 })), []);
 
+  // Local: the mock's URL (Pages builds srcdoc from the target's reader instead).
+  const [src, setSrc] = useState('');
+  useEffect(() => {
+    if (pages || !htmlPath) return;
+    let alive = true;
+    void api.rawUrl(`/raw/${htmlPath}`).then((u) => alive && setSrc(u));
+    return () => {
+      alive = false;
+    };
+  }, [pages, htmlPath]);
+
   if (!config) return null;
-  const src = rawUrl(`/raw/${htmlPath}`);
-  const tabUrl = pages ? mockSource?.blobUrl?.(htmlPath) : src;
+  const tabUrl = pages ? mockSource?.blobUrl?.(htmlPath) : src || undefined;
   const steps = detail?.scenario?.steps ?? [];
   const { state, busy, cursor, total, failure } = snap;
   // Disabled until the latest selection (even of the same scenario) has been loaded into the controller
@@ -414,7 +425,7 @@ export function MockFrame({ target, attrs, source }: { target: string; attrs: Re
               style={{ width: width ? `${width}px` : '100%' }}
             />
           ) : (
-            <iframe key={nonce} ref={frame} title={target} src={src} style={{ width: width ? `${width}px` : '100%' }} />
+            src && <iframe key={nonce} ref={frame} title={target} src={src} style={{ width: width ? `${width}px` : '100%' }} />
           )}
         </div>
         {hasPlayer && (

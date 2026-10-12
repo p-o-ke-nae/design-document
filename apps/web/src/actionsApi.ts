@@ -1,22 +1,21 @@
-import type { ActionsEvent, ActionsRunDetail, ActionsRunList, ActionsStatus, TrackerUpdate } from '@ddv/services';
-import { apiUrl, json, workspace } from './api.ts';
+import type { ActionsEvent, ActionsStatus, TrackerUpdate } from '@ddv/services';
+import { api, workspace } from './backend/index.ts';
 
 export type { ActionsEvent, ActionsRunDetail, ActionsRunList, ActionsRunRow, ActionsStatus, TrackerUpdate } from '@ddv/services';
 
 /** `GET /api/actions` of a server without Actions (or an error): the feature is not shown. */
 const HIDDEN: ActionsStatus = { state: 'hidden', reason: '', workflow: null, canInit: false };
 
-const send = (p: string, body: unknown) => fetch(apiUrl(p), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-
+/** Actions calls of the current workspace's Backend (HttpBackend: `/api/actions/...`; PagesBackend: the target's ActionsService). */
 export const actionsApi = {
-  status: (refresh = false) => fetch(apiUrl(`/api/actions${refresh ? '?refresh=1' : ''}`)).then((r) => json<ActionsStatus>(r)),
-  runs: () => fetch(apiUrl('/api/actions/runs')).then((r) => json<ActionsRunList>(r)),
-  dispatch: (body: { ids?: string[]; runner?: string }) => send('/api/actions/runs', body).then((r) => json<{ request: string }>(r)),
-  run: (id: string) => fetch(apiUrl(`/api/actions/runs/${encodeURIComponent(id)}`)).then((r) => json<ActionsRunDetail>(r)),
-  approve: (id: string, ids: string[]) => send(`/api/actions/runs/${encodeURIComponent(id)}/approve`, { ids }).then((r) => json<{ request: string }>(r)),
-  init: (force = false) => send('/api/actions/init', force ? { force } : {}).then((r) => json<{ status: 'created' | 'unchanged' | 'overwritten'; path: string }>(r)),
-  /** A file of the run on the results branch (`runs/<id>/<path>`). */
-  fileUrl: (id: string, path: string) => apiUrl(`/api/actions/runs/${encodeURIComponent(id)}/files/${path.split('/').map(encodeURIComponent).join('/')}`),
+  status: (refresh = false) => api.actionsStatus(refresh),
+  runs: () => api.actionsRuns(),
+  dispatch: (body: { ids?: string[]; runner?: string }) => api.actionsDispatch(body),
+  run: (id: string) => api.actionsRun(id),
+  approve: (id: string, ids: string[]) => api.actionsApprove(id, ids),
+  init: (force = false) => api.actionsInit(force),
+  /** A file of the run on the results branch (`runs/<id>/<path>`): a URL (Pages: `blob:`). */
+  file: (id: string, path: string) => api.actionsFile(id, path),
 };
 
 // --- ActionsStatus shared by the tests tab and the matrices (one request per workspace at a time) ---

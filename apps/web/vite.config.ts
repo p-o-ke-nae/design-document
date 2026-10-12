@@ -2,10 +2,13 @@ import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { ddvPagesHtml, loadPagesConfig, normalizeBase } from './scripts/pages-build.ts';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const target = `http://127.0.0.1:${process.env.DDV_PORT ?? 5178}`;
 const edition = process.env.DDV_EDITION === 'pages' ? 'pages' : 'local';
+// pat.md「pages.config.json」: read at build time only, embedded as import.meta.env.DDV_PAGES_CONFIG
+const pagesConfig = edition === 'pages' ? loadPagesConfig(process.env.DDV_PAGES_CONFIG ?? path.join(import.meta.dirname, 'pages.config.json')) : null;
 
 /** The runtime bundled for the Pages edition (DD-MOCKSB). The local edition does not use it, so a missing build is an empty stub there. */
 function mockRuntimeRaw(): Plugin {
@@ -29,8 +32,9 @@ function mockRuntimeRaw(): Plugin {
 
 export default defineConfig({
   root: import.meta.dirname,
-  plugins: [mockRuntimeRaw(), react()],
-  define: { 'import.meta.env.DDV_EDITION': JSON.stringify(edition) },
+  base: edition === 'pages' ? normalizeBase(process.env.DDV_BASE) : '/',
+  plugins: [mockRuntimeRaw(), react(), ...(pagesConfig ? [ddvPagesHtml(pagesConfig)] : [])],
+  define: { 'import.meta.env.DDV_EDITION': JSON.stringify(edition), 'import.meta.env.DDV_PAGES_CONFIG': JSON.stringify(pagesConfig) },
   resolve: {
     alias: {
       '@ddv/core': path.join(root, 'packages/core/src/index.ts'),
@@ -40,6 +44,9 @@ export default defineConfig({
       '@ddv/mock/frame-protocol': path.join(root, 'packages/mock/src/frame-protocol.ts'),
       '@ddv/mock/tune-patch': path.join(root, 'packages/mock/src/tune-patch.ts'),
       '@ddv/mock/trace-format': path.join(root, 'packages/mock/src/trace-format.ts'),
+      // Only one backend (and screen root) per bundle: the Pages edition has no `/api` client. services.md「ビルド時の選択」
+      '#backend-impl': path.join(import.meta.dirname, edition === 'pages' ? 'src/backend/pages.ts' : 'src/backend/http.ts'),
+      '#app-impl': path.join(import.meta.dirname, edition === 'pages' ? 'src/components/PagesApp.tsx' : 'src/App.tsx'),
     },
   },
   server: {

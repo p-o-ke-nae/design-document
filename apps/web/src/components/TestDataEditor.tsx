@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type InputHTMLAttributes, type ReactNode } from 'react';
-import { api, ApiError, type DataIssue, type MockField, type Step, type StepValue, type TdRow, type TdValue, type TestDataBundle, type ValidationResult } from '../api.ts';
+import { api } from '../backend/index.ts';
+import { ApiError } from '../backend/types.ts';
+import type { DataIssue, MockField, Step, StepValue, TdRow, TdValue, TestDataBundle, ValidationResult } from '../api.ts';
 import { useApp } from '../state.tsx';
 import { useMockHub } from '../mockHub.tsx';
 import { usePr } from './Pr.tsx';

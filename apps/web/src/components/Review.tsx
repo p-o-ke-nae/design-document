@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { elementsOf, type DocElement, type ParsedDoc } from '@ddv/core';
-import { api, type DocResponse, type ElementRef, type PendingComment, type ReviewEvent, type TreeDoc } from '../api.ts';
+import { api } from '../backend/index.ts';
+import type { DocResponse, ElementRef, PendingComment, ReviewEvent, TreeDoc } from '../api.ts';
 import { docHref, useApp } from '../state.tsx';
 import { recalledSubmit, rememberSubmit, usePr } from './Pr.tsx';
 

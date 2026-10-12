@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ApiError, workspace, type TraceResponse } from '../api.ts';
+import type { TraceResponse } from '../api.ts';
+import { workspace } from '../backend/index.ts';
+import { ApiError } from '../backend/types.ts';
 import {
   actionsApi,
   loadActionsStatus,
@@ -708,7 +710,7 @@ function DetailView({ id, status }: { id: string; status: ActionsStatus }) {
                       <div key={st.step} className="shots">
                         {kinds.map((k) => (
                           <figure key={k}>
-                            <img src={actionsApi.fileUrl(id, `snapshots/${k}/${s.id}/${n}.png`)} alt={`${s.id} ${n} ${SHOT_LABEL[k]}`} loading="lazy" />
+                            <ActionsImg id={id} path={`snapshots/${k}/${s.id}/${n}.png`} alt={`${s.id} ${n} ${SHOT_LABEL[k]}`} />
                             <figcaption>
                               {SHOT_LABEL[k]}（ステップ {st.step}）
                             </figcaption>
@@ -761,11 +763,32 @@ function DetailView({ id, status }: { id: string; status: ActionsStatus }) {
 function ActionsTrace({ id, testId }: { id: string; testId: string }) {
   const load = useCallback(
     () =>
-      fetch(actionsApi.fileUrl(id, `traces/${testId}.json`)).then(async (r) => {
-        if (!r.ok) throw new ApiError('トレースがありません', r.status, 'missing');
-        return (await r.json()) as TraceResponse;
-      }),
+      actionsApi
+        .file(id, `traces/${testId}.json`)
+        .then((u) => fetch(u))
+        .then(async (r) => {
+          if (!r.ok) throw new ApiError('トレースがありません', r.status, 'missing');
+          return (await r.json()) as TraceResponse;
+        }),
     [id, testId],
   );
-  return <TraceView runId={id} testId={testId} load={load} shotUrl={(n) => actionsApi.fileUrl(id, `traces/${testId}/${n}.png`)} backHref={actionsHref(`runs/${encodeURIComponent(id)}`)} />;
+  const shotUrl = useCallback((n: number) => actionsApi.file(id, `traces/${testId}/${n}.png`), [id, testId]);
+  return <TraceView runId={id} testId={testId} load={load} shotUrl={shotUrl} backHref={actionsHref(`runs/${encodeURIComponent(id)}`)} />;
+}
+
+/** An image of the results branch (the URL resolves asynchronously: Pages makes `blob:` URLs). */
+function ActionsImg({ id, path, alt }: { id: string; path: string; alt: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setSrc(null);
+    actionsApi.file(id, path).then(
+      (u) => alive && setSrc(u),
+      () => {},
+    );
+    return () => {
+      alive = false;
+    };
+  }, [id, path]);
+  return src ? <img src={src} alt={alt} loading="lazy" /> : <span className="muted">{alt}</span>;
 }
