@@ -8,6 +8,7 @@ import { FlakyMark } from './TestHistory.tsx';
 import { useMockHub } from '../mockHub.tsx';
 import { StatusBadge } from './StatusBadge.tsx';
 import { CommentGutter } from './Review.tsx';
+import { GateReason, useGate } from '../gate.tsx';
 
 type Tab = 'all' | 'P' | 'T' | 'S' | 'X' | 'table';
 
@@ -38,6 +39,8 @@ export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; se
     setChecked(n);
   };
   const run = (ids: string[]) => void runTests({ ids });
+  const runGate = useGate('runLocal');
+  const idGate = useGate('generateTestIds');
 
   return (
     <section className="matrix" data-testid="matrix" data-diagram-key={matrix.diagramKey}>
@@ -53,7 +56,8 @@ export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; se
           <button
             type="button"
             className="primary"
-            title="未採番(仮ID)のケースにIDを確定し .ddv/testids.lock.json を更新します"
+            disabled={!idGate.enabled}
+            title={idGate.reason ?? '未採番(仮ID)のケースにIDを確定し .ddv/testids.lock.json を更新します'}
             onClick={async () => {
               const r = await api.generateIds();
               setMsg(`ロックを更新しました（追加 ${r.added.length} / 欠番 ${r.retired.length}）`);
@@ -62,12 +66,14 @@ export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; se
             IDを確定（{provisional.length}）
           </button>
         )}
-        <button type="button" disabled={running || !checked.size} onClick={() => run([...checked].filter((id) => matrix.cases.find((c) => c.id === id)?.links.length))}>
+        {provisional.length > 0 && <GateReason gate={idGate} />}
+        <button type="button" disabled={running || !checked.size || !runGate.enabled} title={runGate.reason} onClick={() => run([...checked].filter((id) => matrix.cases.find((c) => c.id === id)?.links.length))}>
           選択を実行
         </button>
-        <button type="button" disabled={running || !linked.length} onClick={() => run(linked.map((c) => c.id))}>
+        <button type="button" disabled={running || !linked.length || !runGate.enabled} title={runGate.reason} onClick={() => run(linked.map((c) => c.id))}>
           紐づくテストを全て実行
         </button>
+        <GateReason gate={runGate} />
       </header>
       {msg && <div className="notice">{msg}</div>}
       {matrix.warnings.map((w, i) => (
@@ -179,6 +185,7 @@ function MatrixRow({
   coverage?: CoverageClass;
   summary?: TestSummary;
 }) {
+  const runGate = useGate('runLocal');
   const executed = !!result || !!summary?.recent.some((m) => m !== 'none');
   return (
     <tr className={`${selected ? 'is-selected' : ''}`} onClick={onSelect} data-testid="matrix-row" data-test-id={c.id}>
@@ -219,7 +226,7 @@ function MatrixRow({
         {summary?.flaky && <span data-testid="matrix-flaky"><FlakyMark commits={summary.flakyCommits} /></span>}
       </td>
       <td onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="run" disabled={!c.links.length || running} onClick={onRun} data-testid="run-case" title={c.links.length ? 'このテストを実行' : '紐づくテストがありません'}>
+        <button type="button" className="run" disabled={!c.links.length || running || !runGate.enabled} onClick={onRun} data-testid="run-case" title={runGate.reason ?? (c.links.length ? 'このテストを実行' : '紐づくテストがありません')}>
           ▶ 実行
         </button>
         {onPlayMock && (

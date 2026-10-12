@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api } from '../backend/index.ts';
 import type { ChangedFile, ChangedFiles, DocDiff, ElementRef, PendingReview, PrInfo, ReviewEvent, ReviewerState, SubmitResult, Thread } from '../api.ts';
-import { useApp } from '../state.tsx';
-import { useWorkspaces } from './Workspace.tsx';
+import { routeCodec, useApp } from '../state.tsx';
+import { GateReason, useGate } from '../gate.tsx';
 
 /** Where a new review comment is being written (the 💬 that opened it). */
 export interface Composer {
@@ -48,11 +48,11 @@ export const recalledSubmit = (ws: string) => (lastSubmit?.ws === ws ? lastSubmi
 
 export function PrProvider({ children }: { children: ReactNode }) {
   const { route, version } = useApp();
-  const { current } = useWorkspaces();
-  const id = current?.id ?? '';
+  // The workspace id (local: `#/w/<ws>`; Pages: the target's `Route.ws`). Not from Workspace.tsx: that is local-only UI.
+  const id = route.ws;
   const [info, setInfo] = useState<PrInfo | null>(null);
   const [files, setFiles] = useState<ChangedFiles | null>(null);
-  const [diffOn, setDiffOn] = useState(false);
+  const [diffOn, setDiffOn] = useState(route.diff ?? false);
   const [diff, setDiff] = useState<DocDiff | null>(null);
   const [threads, setThreads] = useState<Thread[]>([]);
   const [threadsTick, setThreadsTick] = useState(0);
@@ -96,6 +96,14 @@ export function PrProvider({ children }: { children: ReactNode }) {
     const m = new Map((files?.docs ?? []).map((f) => [f.path, f]));
     return (p: string) => m.get(p);
   }, [files]);
+
+  // Pages edition: the diff toggle is kept in the URL (`view=diff`) without adding history (pages-viewer.md「生成」).
+  useEffect(() => {
+    const c = routeCodec();
+    if (!c || route.view !== 'doc' || !route.path) return;
+    const href = c.href({ ...route, diff: diffOn });
+    if (location.hash !== href) history.replaceState(history.state, '', href);
+  }, [diffOn, route]);
 
   const path = route.view === 'doc' ? route.path : '';
   const changed = !!path && !!changeOf(path);
@@ -189,6 +197,8 @@ export function ThreadView({ thread, showPlace }: { thread: Thread; showPlace?: 
       setBusy(false);
     }
   };
+  const replyGate = useGate('reply');
+  const resolveGate = useGate('resolveThread');
   const send = () => {
     if (!reply.trim()) return setError('返信を入力してください');
     void run(() => api.replyThread(thread.id, reply), () => setReply(''));
@@ -224,12 +234,14 @@ export function ThreadView({ thread, showPlace }: { thread: Thread; showPlace?: 
         <div className="thread-actions">
           <textarea value={reply} onChange={(e) => setReply(e.target.value)} placeholder="返信を書く" rows={2} maxLength={2000} data-testid="thread-reply" />
           <div className="row">
-            <button type="button" disabled={busy} onClick={send} data-testid="thread-reply-send">
+            <button type="button" disabled={busy || !replyGate.enabled} title={replyGate.reason} onClick={send} data-testid="thread-reply-send">
               返信
             </button>
-            <button type="button" disabled={busy} onClick={() => void run(() => api.resolveThread(thread.id, !thread.resolved))} data-testid="thread-resolve">
+            <GateReason gate={replyGate} />
+            <button type="button" disabled={busy || !resolveGate.enabled} title={resolveGate.reason} onClick={() => void run(() => api.resolveThread(thread.id, !thread.resolved))} data-testid="thread-resolve">
               {thread.resolved ? '未解決に戻す' : '解決済みにする'}
             </button>
+            {resolveGate.reason !== replyGate.reason && <GateReason gate={resolveGate} />}
             {error && (
               <span className="error" data-testid="thread-error">
                 {error}

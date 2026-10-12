@@ -6,7 +6,7 @@ import { ApiError } from '../backend/types.ts';
 /** The local folder's feed (`local` events), shared with the local AppProvider's subscription. */
 const localBackend = createBackend('');
 import { parseHash, type Route } from '../state.tsx';
-import { ReviewStates, usePr } from './Pr.tsx';
+import { PrBarView } from './PrBarView.tsx';
 
 export const LOGIN_MESSAGE = 'GitHub にログインしてください（`gh auth login` または `GITHUB_TOKEN`）';
 
@@ -484,9 +484,6 @@ export function LoadingPage() {
 /** PR bar: number, title, base ← head, head, 更新あり, 最新化, review states. */
 export function PrBar() {
   const { current, update, reload } = useWorkspaces();
-  const prCtx = usePr();
-  const pr$ = !!prCtx && current?.kind === 'pr';
-  const pendingCount = Array.isArray(prCtx?.review?.comments) ? prCtx.review.comments.length : 0;
   const [info, setInfo] = useState<PrInfo | null>(null);
   const [error, setError] = useState('');
   const id = current?.id ?? '';
@@ -508,7 +505,6 @@ export function PrBar() {
   }, [id, current?.kind, update]);
 
   if (!current) return null;
-  const pr = info?.pr;
   const refresh = async () => {
     setError('');
     try {
@@ -527,56 +523,18 @@ export function PrBar() {
     }
   };
   return (
-    <div className="prbar" data-testid="prbar">
-      {current.kind === 'pr' ? (
-        <>
-          <span className="title" data-testid="pr-title">
-            #{current.pr} {pr?.title ?? current.title ?? ''}
-          </span>
-          {pr && (
-            <code>
-              {pr.baseRef} ← {pr.headRef}
-            </code>
-          )}
-        </>
-      ) : (
-        <span className="title" data-testid="pr-title">
-          {current.repo} @{current.ref}
-        </span>
-      )}
-      <code data-testid="head-sha" title={current.headSha}>
-        {current.headSha.slice(0, 7)}
-      </code>
-      {current.state === 'Stale' && (
-        <span className="stale" data-testid="stale">
-          更新あり
-        </span>
-      )}
-      {pr && pr.state === 'closed' && (
-        <span className="badge" data-testid="pr-state">
-          {pr.merged ? 'マージ済み' : 'クローズ'}
-        </span>
-      )}
-      <button type="button" onClick={() => void refresh()} data-testid="refresh">
-        最新化
-      </button>
-      {error && <span className="error">{error}</span>}
-      <span className="spacer" />
-      <ReviewStates info={info} />
-      {pr$ && (
-        <button type="button" className="primary" onClick={() => (location.hash = `#/w/${encodeURIComponent(id)}/review`)} data-testid="to-review" title="保留中のレビューを開く">
-          レビュー（<span data-testid="pending-count">{pendingCount}</span>）
-        </button>
-      )}
-      {pr && (
-        <a href={pr.htmlUrl} target="_blank" rel="noreferrer">
-          GitHub で開く
-        </a>
-      )}
-      <button type="button" onClick={() => void close()} data-testid="ws-close" title="worktree を削除します">
-        閉じる
-      </button>
-    </div>
+    <PrBarView
+      kind={current.kind === 'pr' ? 'pr' : 'ref'}
+      pr={current.pr}
+      title={current.title}
+      refLabel={`${current.repo} @${current.ref}`}
+      headSha={current.headSha}
+      stale={current.state === 'Stale'}
+      info={info}
+      onRefresh={() => void refresh()}
+      error={error}
+      onClose={() => void close()}
+    />
   );
 }
 

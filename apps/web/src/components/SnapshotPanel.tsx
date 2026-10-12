@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../backend/index.ts';
 import type { SnapshotInfo, SnapshotStatus } from '../api.ts';
+import { GateReason, useGate } from '../gate.tsx';
 
 const STATUS_LABEL: Record<SnapshotStatus, string> = { None: '未撮影', NoBase: '基準なし', Match: '一致', Diff: '差分あり' };
 
@@ -17,6 +18,8 @@ export function SnapshotPanel({ scenarioId }: { scenarioId: string }) {
   const [error, setError] = useState('');
   const [log, setLog] = useState<string[]>([]);
   const stopRef = useRef<(() => void) | null>(null);
+  // Shooting and approving write files of this PC (Pages: via Actions; actions-run.md).
+  const shotGate = useGate('snapshotLocal');
 
   const refresh = useCallback(() => {
     if (!scenarioId) return;
@@ -79,15 +82,16 @@ export function SnapshotPanel({ scenarioId }: { scenarioId: string }) {
         {pending.length > 0 && <span className="chip warn">要承認 {pending.length}</span>}
       </summary>
       <div className="snapshot-tools">
-        <button type="button" className="primary" data-testid="snapshot-run" disabled={running || !scenarioId} onClick={() => void run([scenarioId])}>
+        <button type="button" className="primary" data-testid="snapshot-run" disabled={running || !scenarioId || !shotGate.enabled} title={shotGate.reason} onClick={() => void run([scenarioId])}>
           📷 このシナリオを撮影
         </button>
-        <button type="button" data-testid="snapshot-run-all" disabled={running} onClick={() => void run()}>
+        <button type="button" data-testid="snapshot-run-all" disabled={running || !shotGate.enabled} title={shotGate.reason} onClick={() => void run()}>
           全シナリオを撮影
         </button>
-        <button type="button" data-testid="snapshot-approve-all" disabled={running || !pending.length} onClick={() => void approve()}>
+        <button type="button" data-testid="snapshot-approve-all" disabled={running || !pending.length || !shotGate.enabled} title={shotGate.reason} onClick={() => void approve()}>
           すべて承認
         </button>
+        <GateReason gate={shotGate} />
         {running && <span className="muted">撮影中…</span>}
         {info?.browser && <span className="muted">ブラウザ: {info.browser}</span>}
       </div>
@@ -102,7 +106,7 @@ export function SnapshotPanel({ scenarioId }: { scenarioId: string }) {
             {typeof s.diffRatio === 'number' && <span className="muted">差分 {(s.diffRatio * 100).toFixed(2)}%</span>}
             <span className="spacer" />
             {(s.status === 'NoBase' || s.status === 'Diff') && (
-              <button type="button" data-testid="snapshot-approve" disabled={running} onClick={() => void approve([s.step])}>
+              <button type="button" data-testid="snapshot-approve" disabled={running || !shotGate.enabled} title={shotGate.reason} onClick={() => void approve([s.step])}>
                 承認
               </button>
             )}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../backend/index.ts';
 import type { TreeDoc } from '../api.ts';
-import { docHref, parseHash, useApp } from '../state.tsx';
+import { docHref, parseRoute, useApp } from '../state.tsx';
 import { ChangeMark, MARK_TITLE, usePr } from './Pr.tsx';
 
 const GROUPS: Array<[string, string]> = [
@@ -22,7 +22,7 @@ export function DocTree() {
       .then((t) => {
         setDocs(t.docs);
         setError('');
-        const r = parseHash(location.hash);
+        const r = parseRoute(location.hash);
         // Open the first document on a bare URL (local) or a workspace root (#/w/<ws>/ or #/w/<ws>/doc).
         if (t.docs[0] && (r.ws ? r.view === 'doc' && !r.path : !location.hash)) location.hash = docHref(t.docs[0].path);
       })

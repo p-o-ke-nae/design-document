@@ -232,7 +232,8 @@ export function MockFrame({ target, attrs, source }: { target: string; attrs: Re
   // Local: the mock's URL (Pages builds srcdoc from the target's reader instead).
   const [src, setSrc] = useState('');
   useEffect(() => {
-    if (pages || !htmlPath) return;
+    // `EDITION` (not `pages`) so that the Pages bundle drops the local `/raw/` URL
+    if (EDITION === 'pages' || !htmlPath) return;
     let alive = true;
     void api.rawUrl(`/raw/${htmlPath}`).then((u) => alive && setSrc(u));
     return () => {

@@ -6,6 +6,7 @@
 import { createServices, EMPTY_RUNS, mimeOf, NO_TRACE_MESSAGE, systemEnv, type ServiceDeps, type PlayRecord, type PlayStore, type PrContext, type RepoReader, type Services, type TestDataWorkspace } from '@ddv/services';
 import type { PrInfo } from '../api.ts';
 import { PAGES_CAPABILITIES } from './capabilities.ts';
+import { GitHubError } from '@ddv/github';
 import { toApiError } from './errors.ts';
 import { ApiError, type ActionsEvent, type Availability, type Backend, type BackendListener, type GateResult, type OperationId, type PatView, type Unsubscribe } from './types.ts';
 
@@ -17,6 +18,8 @@ export interface CallDeps {
   capabilities: Readonly<Record<OperationId, Availability>>;
   gate: OperationGateLike;
   pat: PatView;
+  /** A write answered 403: `PermissionProbe.recordDenied` (pages-viewer.md「操作の一覧」). */
+  onDenied?: (op: OperationId, e: unknown) => void;
 }
 
 /**
@@ -40,6 +43,7 @@ export async function pagesCall<T>(deps: CallDeps, op: OperationId | readonly Op
   try {
     return await fn();
   } catch (e) {
+    if (deps.onDenied && e instanceof GitHubError && e.kind === 'forbidden') for (const o of ops) if (deps.capabilities[o].kind === 'write') deps.onDenied(o, e);
     throw toApiError(e, deps.pat);
   }
 }
@@ -77,6 +81,11 @@ export class PagesFeed {
     if (t.headSha === this.staleSha) return;
     this.staleSha = t.headSha;
     this.emit({ type: 'stale', headSha: t.headSha });
+  }
+
+  /** Pending reviews changed in another tab (BroadcastChannel `reviews-changed`): the screens reload like a local file change. */
+  onChange(paths: string[] = []): void {
+    this.emit({ type: 'change', paths });
   }
 
   onActions(ev: ActionsEvent): void {
@@ -120,6 +129,7 @@ export interface PagesContext {
   /** PR targets: the answer of `pr()`. */
   prInfo?: () => Promise<PrInfo>;
   capabilities?: Readonly<Record<OperationId, Availability>>;
+  onDenied?: CallDeps['onDenied'];
 }
 
 export interface PagesContextOptions extends Omit<PagesContext, 'services' | 'plays'> {
@@ -129,6 +139,10 @@ export interface PagesContextOptions extends Omit<PagesContext, 'services' | 'pl
   repoName: string;
   /** PR targets (review・PR diff). */
   pr?: ServiceDeps['pr'];
+  /**
+   * Actions (actions-run.md): the Actions slice plugs `PagesActionsTarget` in here (`ServiceDeps.actions`); its run tracker
+   * pushes into `pagesFeed(scope).onActions`. PagesApp does not set it yet.
+   */
   actions?: ServiceDeps['actions'];
   env?: ServiceDeps['env'];
 }
@@ -156,6 +170,7 @@ export function createPagesContext(o: PagesContextOptions): PagesContext {
     ...(o.prContext || o.pr ? { prContext: o.prContext ?? o.pr!.context } : {}),
     ...(o.prInfo ? { prInfo: o.prInfo } : {}),
     ...(o.capabilities ? { capabilities: o.capabilities } : {}),
+    ...(o.onDenied ? { onDenied: o.onDenied } : {}),
   };
 }
 
@@ -188,7 +203,7 @@ export function createPagesBackend(scope: string, getContext: () => PagesContext
   const ctx = (): PagesContext => getContext() ?? fail(503, 'not-ready', NOT_READY);
   const deps = (): CallDeps => {
     const c = ctx();
-    return { capabilities: c.capabilities ?? PAGES_CAPABILITIES, gate: c.gate, pat: c.pat };
+    return { capabilities: c.capabilities ?? PAGES_CAPABILITIES, gate: c.gate, pat: c.pat, ...(c.onDenied ? { onDenied: c.onDenied } : {}) };
   };
   const svc = () => ctx().services;
   /** Reads (no `OperationId`). The services answer in the same shapes as the local API, so only the static type is adapted. */

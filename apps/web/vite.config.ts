@@ -2,11 +2,12 @@ import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { ddvPagesHtml, loadPagesConfig, normalizeBase } from './scripts/pages-build.ts';
+import { ddvPagesHtml, loadPagesConfig, normalizeBase, resolveEdition } from './scripts/pages-build.ts';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const target = `http://127.0.0.1:${process.env.DDV_PORT ?? 5178}`;
-const edition = process.env.DDV_EDITION === 'pages' ? 'pages' : 'local';
+// pat.md「ビルド」: anything but local / pages stops the build
+const edition = resolveEdition(process.env.DDV_EDITION);
 // pat.md「pages.config.json」: read at build time only, embedded as import.meta.env.DDV_PAGES_CONFIG
 const pagesConfig = edition === 'pages' ? loadPagesConfig(process.env.DDV_PAGES_CONFIG ?? path.join(import.meta.dirname, 'pages.config.json')) : null;
 

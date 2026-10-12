@@ -2,19 +2,32 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { api, workspace } from './backend/index.ts';
 import { ApiError } from './backend/types.ts';
 import type { CaseResult, DdvConfig, DepsMissingDetail, HistorySummary, RunSummary } from './api.ts';
+import type { HrefView, Route } from './route.ts';
 
-export interface Route {
-  /** Workspace id ('' = local). */
-  ws: string;
-  view: 'doc' | 'tests' | 'open' | 'folder' | 'review' | 'done';
-  path: string;
-  heading: string;
-  /** Tests tab: '' = list, 'history' = one test id's history, 'flaky' = flaky tests, 'trace' = one test id's trace in one run. */
-  sub?: '' | 'history' | 'flaky' | 'trace';
-  /** Tests tab, `history` / `trace`: the test id. */
-  testId?: string;
-  /** Tests tab, `trace`: the run id. */
-  runId?: string;
+export type { Route } from './route.ts';
+
+/**
+ * Pages edition: the hash is `#/gh/owner/repo/…` (pages-viewer.md「URL」). PagesApp sets the codec; without one (local) the
+ * helpers below give the same strings as before.
+ */
+export interface RouteCodec {
+  parse(hash: string): Route;
+  href(view: HrefView): string;
+}
+
+let codec: RouteCodec | null = null;
+
+export function setRouteCodec(c: RouteCodec | null): void {
+  codec = c;
+}
+
+export function routeCodec(): RouteCodec | null {
+  return codec;
+}
+
+/** The route of a hash (`parseHash`, or the Pages codec). */
+export function parseRoute(hash: string): Route {
+  return codec ? codec.parse(hash) : parseHash(hash);
 }
 
 /** `#/doc?path=…` / `#/tests` / `#/tests/history/<id>` / `#/tests/trace/<run>/<id>` / `#/tests/flaky` / `#/open` / `#/folder`, and the same under `#/w/<ws>` for a GitHub workspace (+ `#/w/<ws>/review` / `#/w/<ws>/review/done`). */
@@ -47,26 +60,37 @@ export function wsBase(ws = workspace()): string {
 }
 
 export function docHref(path: string, heading = ''): string {
+  if (codec) return codec.href({ view: 'doc', path, heading });
   const q = new URLSearchParams({ path });
   if (heading) q.set('h', heading);
   return `${wsBase()}/doc?${q}`;
 }
 
 export function viewHref(view: 'tests' | 'root'): string {
+  if (codec) return codec.href({ view: view === 'tests' ? 'tests' : 'doc', path: '', heading: '' });
   return `${wsBase()}/${view === 'tests' ? 'tests' : ''}`;
 }
 
 export function historyHref(id: string): string {
+  if (codec) return codec.href({ view: 'tests', path: '', heading: '', sub: 'history', testId: id });
   return `${wsBase()}/tests/history/${encodeURIComponent(id)}`;
 }
 
 export function flakyHref(): string {
+  if (codec) return codec.href({ view: 'tests', path: '', heading: '', sub: 'flaky' });
   return `${wsBase()}/tests/flaky`;
 }
 
 /** Trace view of one test id in one run. */
 export function traceHref(runId: string, id: string): string {
+  if (codec) return codec.href({ view: 'tests', path: '', heading: '', sub: 'trace', runId, testId: id });
   return `${wsBase()}/tests/trace/${encodeURIComponent(runId)}/${encodeURIComponent(id)}`;
+}
+
+/** PR review (`done` = after submitting). */
+export function reviewHref(done = false): string {
+  if (codec) return codec.href({ view: done ? 'done' : 'review', path: '', heading: '' });
+  return `${wsBase()}/review${done ? '/done' : ''}`;
 }
 
 export function useLocalStorage<T>(key: string, initial: T): [T, (v: T) => void] {
@@ -119,7 +143,7 @@ export function useApp(): AppState {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<DdvConfig | null>(null);
   const [repoName, setRepoName] = useState('');
-  const [route, setRoute] = useState<Route>(() => parseHash(location.hash));
+  const [route, setRoute] = useState<Route>(() => parseRoute(location.hash));
   const [version, setVersion] = useState(0);
   const [latest, setLatest] = useState<Record<string, CaseResult>>({});
   const [activeRun, setActiveRun] = useState<RunSummary | null>(null);
@@ -172,7 +196,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       document.title = `ddv - ${c.repoName}`;
     });
     refreshResults();
-    const onHash = () => setRoute(parseHash(location.hash));
+    const onHash = () => setRoute(parseRoute(location.hash));
     window.addEventListener('hashchange', onHash);
     const unsubscribe = api.subscribe((ev) => {
       if (ev.type === 'change') setVersion((v) => v + 1);
