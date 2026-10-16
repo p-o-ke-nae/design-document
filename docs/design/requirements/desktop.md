@@ -1,7 +1,7 @@
 ---
 id: DESK
 kind: requirements
-status: draft
+status: approved
 title: .NET デスクトップと実アプリのデザイン（Phase 5）要件定義
 ---
 

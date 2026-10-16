@@ -1,0 +1,5 @@
+targets:
+  - { id: 1, name: e2e, platform: web, target: モック（docs/mocks）, available: true, reason: "" }
+  - { id: 2, name: wpf, platform: wpf, target: desktop/OrderApp.Wpf/bin/Debug/net8.0-windows/OrderApp.Wpf.exe, available: true, reason: "" }
+  - { id: 3, name: winforms, platform: winforms, target: desktop/OrderApp.WinForms/bin/Debug/net8.0-windows/OrderApp.WinForms.exe, available: false, reason: アプリの実行ファイルが見つかりません（ビルドしてください） }
+runs: []

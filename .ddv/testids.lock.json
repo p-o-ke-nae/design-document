@@ -739,6 +739,640 @@
         }
       }
     },
+    "BD-DESKRUN-CHECK": {
+      "doc": "docs/design/basic/desktop-run.md",
+      "diagram": "check",
+      "next": {
+        "P": 8,
+        "T": 14
+      },
+      "cases": {
+        "P:A||B>B|不適合|E1": {
+          "id": "BD-DESKRUN-CHECK-P001",
+          "status": "active",
+          "title": "シナリオ・対応表 → 対応表が形式に適合 → [不適合] error: 対応表の形式"
+        },
+        "P:A||B>B|適合|C>C|ある|E2": {
+          "id": "BD-DESKRUN-CHECK-P002",
+          "status": "active",
+          "title": "シナリオ・対応表 → 対応表が形式に適合 → [適合] event のあるステップに only がない → [ある] error: 遷移のステップに only"
+        },
+        "P:A||B>B|適合|C>C|ない|D>D|不明|E3": {
+          "id": "BD-DESKRUN-CHECK-P003",
+          "status": "active",
+          "title": "シナリオ・対応表 → 対応表が形式に適合 → [適合] event のあるステップに only がない → [ない] only の値が既知のプラットフォーム → [不明] error: 不明なプラットフォーム"
+        },
+        "P:A||B>B|適合|C>C|ない|D>D|既知|F>F|読めない|W1": {
+          "id": "BD-DESKRUN-CHECK-P004",
+          "status": "active",
+          "title": "シナリオ・対応表 → 対応表が形式に適合 → [適合] event のあるステップに only がない → [ない] only の値が既知のプラットフォーム → [既知] flaui のランナーの画面定義を読める → [読めない] warning: 画面定義が見つからない・名前の検査を省略"
+        },
+        "P:A||B>B|適合|C>C|ない|D>D|既知|F>F|読める|G>G|ない|E4": {
+          "id": "BD-DESKRUN-CHECK-P005",
+          "status": "active",
+          "title": "シナリオ・対応表 → 対応表が形式に適合 → [適合] event のあるステップに only がない → [ない] only の値が既知のプラットフォーム → [既知] flaui のランナーの画面定義を読める → [読める] 論理名・状態IDの名前が画面定義にある → [ない] error: 名前の欠け・名前を付けるか対応表で読み替える"
+        },
+        "P:A||B>B|適合|C>C|ない|D>D|既知|F>F|読める|G>G|ある|H>H|ない|E5": {
+          "id": "BD-DESKRUN-CHECK-P006",
+          "status": "active",
+          "title": "シナリオ・対応表 → 対応表が形式に適合 → [適合] event のあるステップに only がない → [ない] only の値が既知のプラットフォーム → [既知] flaui のランナーの画面定義を読める → [読める] 論理名・状態IDの名前が画面定義にある → [ある] 対応表の読み替え先が画面定義にある → [ない] error: 読み替え先の欠け"
+        },
+        "P:A||B>B|適合|C>C|ない|D>D|既知|F>F|読める|G>G|ある|H>H|ある|OK": {
+          "id": "BD-DESKRUN-CHECK-P007",
+          "status": "active",
+          "title": "シナリオ・対応表 → 対応表が形式に適合 → [適合] event のあるステップに only がない → [ない] only の値が既知のプラットフォーム → [既知] flaui のランナーの画面定義を読める → [読める] 論理名・状態IDの名前が画面定義にある → [ある] 対応表の読み替え先が画面定義にある → [ある] OK"
+        },
+        "T:A||B": {
+          "id": "BD-DESKRUN-CHECK-T001",
+          "status": "active",
+          "title": "シナリオ・対応表 --> 対応表が形式に適合"
+        },
+        "T:B|不適合|E1": {
+          "id": "BD-DESKRUN-CHECK-T002",
+          "status": "active",
+          "title": "対応表が形式に適合 --[不適合]--> error: 対応表の形式"
+        },
+        "T:B|適合|C": {
+          "id": "BD-DESKRUN-CHECK-T003",
+          "status": "active",
+          "title": "対応表が形式に適合 --[適合]--> event のあるステップに only がない"
+        },
+        "T:C|ある|E2": {
+          "id": "BD-DESKRUN-CHECK-T004",
+          "status": "active",
+          "title": "event のあるステップに only がない --[ある]--> error: 遷移のステップに only"
+        },
+        "T:C|ない|D": {
+          "id": "BD-DESKRUN-CHECK-T005",
+          "status": "active",
+          "title": "event のあるステップに only がない --[ない]--> only の値が既知のプラットフォーム"
+        },
+        "T:D|不明|E3": {
+          "id": "BD-DESKRUN-CHECK-T006",
+          "status": "active",
+          "title": "only の値が既知のプラットフォーム --[不明]--> error: 不明なプラットフォーム"
+        },
+        "T:D|既知|F": {
+          "id": "BD-DESKRUN-CHECK-T007",
+          "status": "active",
+          "title": "only の値が既知のプラットフォーム --[既知]--> flaui のランナーの画面定義を読める"
+        },
+        "T:F|読めない|W1": {
+          "id": "BD-DESKRUN-CHECK-T008",
+          "status": "active",
+          "title": "flaui のランナーの画面定義を読める --[読めない]--> warning: 画面定義が見つからない・名前の検査を省略"
+        },
+        "T:F|読める|G": {
+          "id": "BD-DESKRUN-CHECK-T009",
+          "status": "active",
+          "title": "flaui のランナーの画面定義を読める --[読める]--> 論理名・状態IDの名前が画面定義にある"
+        },
+        "T:G|ない|E4": {
+          "id": "BD-DESKRUN-CHECK-T010",
+          "status": "active",
+          "title": "論理名・状態IDの名前が画面定義にある --[ない]--> error: 名前の欠け・名前を付けるか対応表で読み替える"
+        },
+        "T:G|ある|H": {
+          "id": "BD-DESKRUN-CHECK-T011",
+          "status": "active",
+          "title": "論理名・状態IDの名前が画面定義にある --[ある]--> 対応表の読み替え先が画面定義にある"
+        },
+        "T:H|ない|E5": {
+          "id": "BD-DESKRUN-CHECK-T012",
+          "status": "active",
+          "title": "対応表の読み替え先が画面定義にある --[ない]--> error: 読み替え先の欠け"
+        },
+        "T:H|ある|OK": {
+          "id": "BD-DESKRUN-CHECK-T013",
+          "status": "active",
+          "title": "対応表の読み替え先が画面定義にある --[ある]--> OK"
+        }
+      }
+    },
+    "BD-DESKRUN-GATE": {
+      "doc": "docs/design/basic/desktop-run.md",
+      "diagram": "gate",
+      "next": {
+        "P": 7,
+        "T": 12,
+        "S": 11
+      },
+      "cases": {
+        "P:A||B>B|web|OK": {
+          "id": "BD-DESKRUN-GATE-P001",
+          "status": "active",
+          "title": "接続先を表示する → プラットフォーム → [web] 選べる"
+        },
+        "P:A||B>B|wpf・winforms|C>C|Pages 版|X1": {
+          "id": "BD-DESKRUN-GATE-P002",
+          "status": "active",
+          "title": "接続先を表示する → プラットフォーム → [wpf・winforms] ローカル版 → [Pages 版] 無効：デスクトップアプリの実行はローカル版（Windows）で行います"
+        },
+        "P:A||B>B|wpf・winforms|C>C|ローカル版|D>D|いいえ|X2": {
+          "id": "BD-DESKRUN-GATE-P003",
+          "status": "active",
+          "title": "接続先を表示する → プラットフォーム → [wpf・winforms] ローカル版 → [ローカル版] サーバが Windows で動いている → [いいえ] 無効：デスクトップアプリの実行は Windows でだけ行えます"
+        },
+        "P:A||B>B|wpf・winforms|C>C|ローカル版|D>D|はい|E>E|ない|X3": {
+          "id": "BD-DESKRUN-GATE-P004",
+          "status": "active",
+          "title": "接続先を表示する → プラットフォーム → [wpf・winforms] ローカル版 → [ローカル版] サーバが Windows で動いている → [はい] .NET SDK がある → [ない] 無効：.NET SDK が見つかりません（導入の案内）"
+        },
+        "P:A||B>B|wpf・winforms|C>C|ローカル版|D>D|はい|E>E|ある|F>F|ない|X4": {
+          "id": "BD-DESKRUN-GATE-P005",
+          "status": "active",
+          "title": "接続先を表示する → プラットフォーム → [wpf・winforms] ローカル版 → [ローカル版] サーバが Windows で動いている → [はい] .NET SDK がある → [ある] 設定の実行ファイルがある → [ない] 無効：アプリの実行ファイルが見つかりません（ビルドしてください）"
+        },
+        "P:A||B>B|wpf・winforms|C>C|ローカル版|D>D|はい|E>E|ある|F>F|ある|OK": {
+          "id": "BD-DESKRUN-GATE-P006",
+          "status": "active",
+          "title": "接続先を表示する → プラットフォーム → [wpf・winforms] ローカル版 → [ローカル版] サーバが Windows で動いている → [はい] .NET SDK がある → [ある] 設定の実行ファイルがある → [ある] 選べる"
+        },
+        "T:A||B": {
+          "id": "BD-DESKRUN-GATE-T001",
+          "status": "active",
+          "title": "接続先を表示する --> プラットフォーム"
+        },
+        "T:B|web|OK": {
+          "id": "BD-DESKRUN-GATE-T002",
+          "status": "active",
+          "title": "プラットフォーム --[web]--> 選べる"
+        },
+        "T:B|wpf・winforms|C": {
+          "id": "BD-DESKRUN-GATE-T003",
+          "status": "active",
+          "title": "プラットフォーム --[wpf・winforms]--> ローカル版"
+        },
+        "T:C|Pages 版|X1": {
+          "id": "BD-DESKRUN-GATE-T004",
+          "status": "active",
+          "title": "ローカル版 --[Pages 版]--> 無効：デスクトップアプリの実行はローカル版（Windows）で行います"
+        },
+        "T:C|ローカル版|D": {
+          "id": "BD-DESKRUN-GATE-T005",
+          "status": "active",
+          "title": "ローカル版 --[ローカル版]--> サーバが Windows で動いている"
+        },
+        "T:D|いいえ|X2": {
+          "id": "BD-DESKRUN-GATE-T006",
+          "status": "active",
+          "title": "サーバが Windows で動いている --[いいえ]--> 無効：デスクトップアプリの実行は Windows でだけ行えます"
+        },
+        "T:D|はい|E": {
+          "id": "BD-DESKRUN-GATE-T007",
+          "status": "active",
+          "title": "サーバが Windows で動いている --[はい]--> .NET SDK がある"
+        },
+        "T:E|ない|X3": {
+          "id": "BD-DESKRUN-GATE-T008",
+          "status": "active",
+          "title": ".NET SDK がある --[ない]--> 無効：.NET SDK が見つかりません（導入の案内）"
+        },
+        "T:E|ある|F": {
+          "id": "BD-DESKRUN-GATE-T009",
+          "status": "active",
+          "title": ".NET SDK がある --[ある]--> 設定の実行ファイルがある"
+        },
+        "T:F|ない|X4": {
+          "id": "BD-DESKRUN-GATE-T010",
+          "status": "active",
+          "title": "設定の実行ファイルがある --[ない]--> 無効：アプリの実行ファイルが見つかりません（ビルドしてください）"
+        },
+        "T:F|ある|OK": {
+          "id": "BD-DESKRUN-GATE-T011",
+          "status": "active",
+          "title": "設定の実行ファイルがある --[ある]--> 選べる"
+        },
+        "S:A||B>B|web|OK": {
+          "id": "BD-DESKRUN-GATE-S001",
+          "status": "active",
+          "title": "接続先を表示する → プラットフォーム → [web] 選べる"
+        },
+        "S:A||B>B|wpf・winforms|C": {
+          "id": "BD-DESKRUN-GATE-S002",
+          "status": "active",
+          "title": "接続先を表示する → プラットフォーム → [wpf・winforms] ローカル版"
+        },
+        "S:B|wpf・winforms|C>C|Pages 版|X1": {
+          "id": "BD-DESKRUN-GATE-S003",
+          "status": "active",
+          "title": "プラットフォーム → [wpf・winforms] ローカル版 → [Pages 版] 無効：デスクトップアプリの実行はローカル版（Windows）で行います"
+        },
+        "S:B|wpf・winforms|C>C|ローカル版|D": {
+          "id": "BD-DESKRUN-GATE-S004",
+          "status": "active",
+          "title": "プラットフォーム → [wpf・winforms] ローカル版 → [ローカル版] サーバが Windows で動いている"
+        },
+        "S:C|ローカル版|D>D|いいえ|X2": {
+          "id": "BD-DESKRUN-GATE-S005",
+          "status": "active",
+          "title": "ローカル版 → [ローカル版] サーバが Windows で動いている → [いいえ] 無効：デスクトップアプリの実行は Windows でだけ行えます"
+        },
+        "S:C|ローカル版|D>D|はい|E": {
+          "id": "BD-DESKRUN-GATE-S006",
+          "status": "active",
+          "title": "ローカル版 → [ローカル版] サーバが Windows で動いている → [はい] .NET SDK がある"
+        },
+        "S:D|はい|E>E|ない|X3": {
+          "id": "BD-DESKRUN-GATE-S007",
+          "status": "active",
+          "title": "サーバが Windows で動いている → [はい] .NET SDK がある → [ない] 無効：.NET SDK が見つかりません（導入の案内）"
+        },
+        "S:D|はい|E>E|ある|F": {
+          "id": "BD-DESKRUN-GATE-S008",
+          "status": "active",
+          "title": "サーバが Windows で動いている → [はい] .NET SDK がある → [ある] 設定の実行ファイルがある"
+        },
+        "S:E|ある|F>F|ない|X4": {
+          "id": "BD-DESKRUN-GATE-S009",
+          "status": "active",
+          "title": ".NET SDK がある → [ある] 設定の実行ファイルがある → [ない] 無効：アプリの実行ファイルが見つかりません（ビルドしてください）"
+        },
+        "S:E|ある|F>F|ある|OK": {
+          "id": "BD-DESKRUN-GATE-S010",
+          "status": "active",
+          "title": ".NET SDK がある → [ある] 設定の実行ファイルがある → [ある] 選べる"
+        }
+      }
+    },
+    "BD-DESKRUN-ONLY": {
+      "doc": "docs/design/basic/desktop-run.md",
+      "diagram": "only",
+      "next": {
+        "P": 5,
+        "T": 8,
+        "S": 7
+      },
+      "cases": {
+        "P:A||B>B|ない|R": {
+          "id": "BD-DESKRUN-ONLY-P001",
+          "status": "active",
+          "title": "ステップ → only がある → [ない] 実行する"
+        },
+        "P:A||B>B|ある|C>C|ある|E1": {
+          "id": "BD-DESKRUN-ONLY-P002",
+          "status": "active",
+          "title": "ステップ → only がある → [ある] event がある → [ある] lint の error：遷移のステップに only は付けられない（図とシナリオを分ける）"
+        },
+        "P:A||B>B|ある|C>C|ない|D>D|含まれる|R": {
+          "id": "BD-DESKRUN-ONLY-P003",
+          "status": "active",
+          "title": "ステップ → only がある → [ある] event がある → [ない] 今のプラットフォームが only に含まれる → [含まれる] 実行する"
+        },
+        "P:A||B>B|ある|C>C|ない|D>D|含まれない|S": {
+          "id": "BD-DESKRUN-ONLY-P004",
+          "status": "active",
+          "title": "ステップ → only がある → [ある] event がある → [ない] 今のプラットフォームが only に含まれる → [含まれない] 飛ばす（トレースに skip。成功の判定に影響しない）"
+        },
+        "T:A||B": {
+          "id": "BD-DESKRUN-ONLY-T001",
+          "status": "active",
+          "title": "ステップ --> only がある"
+        },
+        "T:B|ない|R": {
+          "id": "BD-DESKRUN-ONLY-T002",
+          "status": "active",
+          "title": "only がある --[ない]--> 実行する"
+        },
+        "T:B|ある|C": {
+          "id": "BD-DESKRUN-ONLY-T003",
+          "status": "active",
+          "title": "only がある --[ある]--> event がある"
+        },
+        "T:C|ある|E1": {
+          "id": "BD-DESKRUN-ONLY-T004",
+          "status": "active",
+          "title": "event がある --[ある]--> lint の error：遷移のステップに only は付けられない（図とシナリオを分ける）"
+        },
+        "T:C|ない|D": {
+          "id": "BD-DESKRUN-ONLY-T005",
+          "status": "active",
+          "title": "event がある --[ない]--> 今のプラットフォームが only に含まれる"
+        },
+        "T:D|含まれる|R": {
+          "id": "BD-DESKRUN-ONLY-T006",
+          "status": "active",
+          "title": "今のプラットフォームが only に含まれる --[含まれる]--> 実行する"
+        },
+        "T:D|含まれない|S": {
+          "id": "BD-DESKRUN-ONLY-T007",
+          "status": "active",
+          "title": "今のプラットフォームが only に含まれる --[含まれない]--> 飛ばす（トレースに skip。成功の判定に影響しない）"
+        },
+        "S:A||B>B|ない|R": {
+          "id": "BD-DESKRUN-ONLY-S001",
+          "status": "active",
+          "title": "ステップ → only がある → [ない] 実行する"
+        },
+        "S:A||B>B|ある|C": {
+          "id": "BD-DESKRUN-ONLY-S002",
+          "status": "active",
+          "title": "ステップ → only がある → [ある] event がある"
+        },
+        "S:B|ある|C>C|ある|E1": {
+          "id": "BD-DESKRUN-ONLY-S003",
+          "status": "active",
+          "title": "only がある → [ある] event がある → [ある] lint の error：遷移のステップに only は付けられない（図とシナリオを分ける）"
+        },
+        "S:B|ある|C>C|ない|D": {
+          "id": "BD-DESKRUN-ONLY-S004",
+          "status": "active",
+          "title": "only がある → [ある] event がある → [ない] 今のプラットフォームが only に含まれる"
+        },
+        "S:C|ない|D>D|含まれる|R": {
+          "id": "BD-DESKRUN-ONLY-S005",
+          "status": "active",
+          "title": "event がある → [ない] 今のプラットフォームが only に含まれる → [含まれる] 実行する"
+        },
+        "S:C|ない|D>D|含まれない|S": {
+          "id": "BD-DESKRUN-ONLY-S006",
+          "status": "active",
+          "title": "event がある → [ない] 今のプラットフォームが only に含まれる → [含まれない] 飛ばす（トレースに skip。成功の判定に影響しない）"
+        }
+      }
+    },
+    "BD-DESKRUN-RESOLVE": {
+      "doc": "docs/design/basic/desktop-run.md",
+      "diagram": "resolve",
+      "next": {
+        "P": 5,
+        "T": 8,
+        "S": 9
+      },
+      "cases": {
+        "P:A||B>B|ある|C>C||E>E|見つかる|OK": {
+          "id": "BD-DESKRUN-RESOLVE-P001",
+          "status": "active",
+          "title": "ステップの論理名（画面・操作・入力・期待の要素） → 対応表のそのプラットフォームの節に読み替えがある → [ある] 読み替え先の名前で探す → 今のウィンドウに見つかる（期限まで） → [見つかる] 操作・判定する"
+        },
+        "P:A||B>B|ある|C>C||E>E|見つからない|X": {
+          "id": "BD-DESKRUN-RESOLVE-P002",
+          "status": "active",
+          "title": "ステップの論理名（画面・操作・入力・期待の要素） → 対応表のそのプラットフォームの節に読み替えがある → [ある] 読み替え先の名前で探す → 今のウィンドウに見つかる（期限まで） → [見つからない] 失敗：論理名・探した名前・プラットフォームを表示"
+        },
+        "P:A||B>B|ない|D>D||E>E|見つかる|OK": {
+          "id": "BD-DESKRUN-RESOLVE-P003",
+          "status": "active",
+          "title": "ステップの論理名（画面・操作・入力・期待の要素） → 対応表のそのプラットフォームの節に読み替えがある → [ない] 論理名と同じ名前で探す → 今のウィンドウに見つかる（期限まで） → [見つかる] 操作・判定する"
+        },
+        "P:A||B>B|ない|D>D||E>E|見つからない|X": {
+          "id": "BD-DESKRUN-RESOLVE-P004",
+          "status": "active",
+          "title": "ステップの論理名（画面・操作・入力・期待の要素） → 対応表のそのプラットフォームの節に読み替えがある → [ない] 論理名と同じ名前で探す → 今のウィンドウに見つかる（期限まで） → [見つからない] 失敗：論理名・探した名前・プラットフォームを表示"
+        },
+        "T:A||B": {
+          "id": "BD-DESKRUN-RESOLVE-T001",
+          "status": "active",
+          "title": "ステップの論理名（画面・操作・入力・期待の要素） --> 対応表のそのプラットフォームの節に読み替えがある"
+        },
+        "T:B|ある|C": {
+          "id": "BD-DESKRUN-RESOLVE-T002",
+          "status": "active",
+          "title": "対応表のそのプラットフォームの節に読み替えがある --[ある]--> 読み替え先の名前で探す"
+        },
+        "T:B|ない|D": {
+          "id": "BD-DESKRUN-RESOLVE-T003",
+          "status": "active",
+          "title": "対応表のそのプラットフォームの節に読み替えがある --[ない]--> 論理名と同じ名前で探す"
+        },
+        "T:C||E": {
+          "id": "BD-DESKRUN-RESOLVE-T004",
+          "status": "active",
+          "title": "読み替え先の名前で探す --> 今のウィンドウに見つかる（期限まで）"
+        },
+        "T:D||E": {
+          "id": "BD-DESKRUN-RESOLVE-T005",
+          "status": "active",
+          "title": "論理名と同じ名前で探す --> 今のウィンドウに見つかる（期限まで）"
+        },
+        "T:E|見つかる|OK": {
+          "id": "BD-DESKRUN-RESOLVE-T006",
+          "status": "active",
+          "title": "今のウィンドウに見つかる（期限まで） --[見つかる]--> 操作・判定する"
+        },
+        "T:E|見つからない|X": {
+          "id": "BD-DESKRUN-RESOLVE-T007",
+          "status": "active",
+          "title": "今のウィンドウに見つかる（期限まで） --[見つからない]--> 失敗：論理名・探した名前・プラットフォームを表示"
+        },
+        "S:A||B>B|ある|C": {
+          "id": "BD-DESKRUN-RESOLVE-S001",
+          "status": "active",
+          "title": "ステップの論理名（画面・操作・入力・期待の要素） → 対応表のそのプラットフォームの節に読み替えがある → [ある] 読み替え先の名前で探す"
+        },
+        "S:A||B>B|ない|D": {
+          "id": "BD-DESKRUN-RESOLVE-S002",
+          "status": "active",
+          "title": "ステップの論理名（画面・操作・入力・期待の要素） → 対応表のそのプラットフォームの節に読み替えがある → [ない] 論理名と同じ名前で探す"
+        },
+        "S:B|ある|C>C||E": {
+          "id": "BD-DESKRUN-RESOLVE-S003",
+          "status": "active",
+          "title": "対応表のそのプラットフォームの節に読み替えがある → [ある] 読み替え先の名前で探す → 今のウィンドウに見つかる（期限まで）"
+        },
+        "S:B|ない|D>D||E": {
+          "id": "BD-DESKRUN-RESOLVE-S004",
+          "status": "active",
+          "title": "対応表のそのプラットフォームの節に読み替えがある → [ない] 論理名と同じ名前で探す → 今のウィンドウに見つかる（期限まで）"
+        },
+        "S:C||E>E|見つかる|OK": {
+          "id": "BD-DESKRUN-RESOLVE-S005",
+          "status": "active",
+          "title": "読み替え先の名前で探す → 今のウィンドウに見つかる（期限まで） → [見つかる] 操作・判定する"
+        },
+        "S:C||E>E|見つからない|X": {
+          "id": "BD-DESKRUN-RESOLVE-S006",
+          "status": "active",
+          "title": "読み替え先の名前で探す → 今のウィンドウに見つかる（期限まで） → [見つからない] 失敗：論理名・探した名前・プラットフォームを表示"
+        },
+        "S:D||E>E|見つかる|OK": {
+          "id": "BD-DESKRUN-RESOLVE-S007",
+          "status": "active",
+          "title": "論理名と同じ名前で探す → 今のウィンドウに見つかる（期限まで） → [見つかる] 操作・判定する"
+        },
+        "S:D||E>E|見つからない|X": {
+          "id": "BD-DESKRUN-RESOLVE-S008",
+          "status": "active",
+          "title": "論理名と同じ名前で探す → 今のウィンドウに見つかる（期限まで） → [見つからない] 失敗：論理名・探した名前・プラットフォームを表示"
+        }
+      }
+    },
+    "BD-DESKRUN-SCREEN": {
+      "doc": "docs/design/basic/desktop-run.md",
+      "diagram": "screen-flow",
+      "next": {
+        "P": 7,
+        "T": 10,
+        "X": 19
+      },
+      "cases": {
+        "P:[*]start||List>List|実行|Target>Target|開始 [接続先なし]|Target>Target|開始 [接続先あり]|Running>Running|実行完了|List>List||[*]end": {
+          "id": "BD-DESKRUN-SCREEN-P001",
+          "status": "active",
+          "title": "開始 → テスト一覧 → [実行] 接続先の選択 → [開始 [接続先なし]] 接続先の選択 → [開始 [接続先あり]] 実行中 → [実行完了] テスト一覧 → 終了"
+        },
+        "P:[*]start||List>List|実行|Target>Target|開始 [接続先なし]|Target>Target|キャンセル|List>List||[*]end": {
+          "id": "BD-DESKRUN-SCREEN-P002",
+          "status": "active",
+          "title": "開始 → テスト一覧 → [実行] 接続先の選択 → [開始 [接続先なし]] 接続先の選択 → [キャンセル] テスト一覧 → 終了"
+        },
+        "P:[*]start||List>List|実行|Target>Target|開始 [接続先あり]|Running>Running|実行完了|List>List||[*]end": {
+          "id": "BD-DESKRUN-SCREEN-P003",
+          "status": "active",
+          "title": "開始 → テスト一覧 → [実行] 接続先の選択 → [開始 [接続先あり]] 実行中 → [実行完了] テスト一覧 → 終了"
+        },
+        "P:[*]start||List>List|実行|Target>Target|キャンセル|List>List||[*]end": {
+          "id": "BD-DESKRUN-SCREEN-P004",
+          "status": "active",
+          "title": "開始 → テスト一覧 → [実行] 接続先の選択 → [キャンセル] テスト一覧 → 終了"
+        },
+        "P:[*]start||List>List|結果を選ぶ|Trace>Trace|一覧へ|List>List||[*]end": {
+          "id": "BD-DESKRUN-SCREEN-P005",
+          "status": "active",
+          "title": "開始 → テスト一覧 → [結果を選ぶ] トレース → [一覧へ] テスト一覧 → 終了"
+        },
+        "P:[*]start||List>List||[*]end": {
+          "id": "BD-DESKRUN-SCREEN-P006",
+          "status": "active",
+          "title": "開始 → テスト一覧 → 終了"
+        },
+        "T:[*]start||List": {
+          "id": "BD-DESKRUN-SCREEN-T001",
+          "status": "active",
+          "title": "開始 --> テスト一覧"
+        },
+        "T:List|実行|Target": {
+          "id": "BD-DESKRUN-SCREEN-T002",
+          "status": "active",
+          "title": "テスト一覧 --[実行]--> 接続先の選択"
+        },
+        "T:Target|開始 [接続先なし]|Target": {
+          "id": "BD-DESKRUN-SCREEN-T003",
+          "status": "active",
+          "title": "接続先の選択 --[開始 [接続先なし]]--> 接続先の選択"
+        },
+        "T:Target|開始 [接続先あり]|Running": {
+          "id": "BD-DESKRUN-SCREEN-T004",
+          "status": "active",
+          "title": "接続先の選択 --[開始 [接続先あり]]--> 実行中"
+        },
+        "T:Target|キャンセル|List": {
+          "id": "BD-DESKRUN-SCREEN-T005",
+          "status": "active",
+          "title": "接続先の選択 --[キャンセル]--> テスト一覧"
+        },
+        "T:Running|実行完了|List": {
+          "id": "BD-DESKRUN-SCREEN-T006",
+          "status": "active",
+          "title": "実行中 --[実行完了]--> テスト一覧"
+        },
+        "T:List|結果を選ぶ|Trace": {
+          "id": "BD-DESKRUN-SCREEN-T007",
+          "status": "active",
+          "title": "テスト一覧 --[結果を選ぶ]--> トレース"
+        },
+        "T:Trace|一覧へ|List": {
+          "id": "BD-DESKRUN-SCREEN-T008",
+          "status": "active",
+          "title": "トレース --[一覧へ]--> テスト一覧"
+        },
+        "T:List||[*]end": {
+          "id": "BD-DESKRUN-SCREEN-T009",
+          "status": "active",
+          "title": "テスト一覧 --> 終了"
+        },
+        "X:List|開始": {
+          "id": "BD-DESKRUN-SCREEN-X001",
+          "status": "active",
+          "title": "テスト一覧 で [開始]"
+        },
+        "X:List|キャンセル": {
+          "id": "BD-DESKRUN-SCREEN-X002",
+          "status": "active",
+          "title": "テスト一覧 で [キャンセル]"
+        },
+        "X:List|実行完了": {
+          "id": "BD-DESKRUN-SCREEN-X003",
+          "status": "active",
+          "title": "テスト一覧 で [実行完了]"
+        },
+        "X:List|一覧へ": {
+          "id": "BD-DESKRUN-SCREEN-X004",
+          "status": "active",
+          "title": "テスト一覧 で [一覧へ]"
+        },
+        "X:Target|実行": {
+          "id": "BD-DESKRUN-SCREEN-X005",
+          "status": "active",
+          "title": "接続先の選択 で [実行]"
+        },
+        "X:Target|実行完了": {
+          "id": "BD-DESKRUN-SCREEN-X006",
+          "status": "active",
+          "title": "接続先の選択 で [実行完了]"
+        },
+        "X:Target|結果を選ぶ": {
+          "id": "BD-DESKRUN-SCREEN-X007",
+          "status": "active",
+          "title": "接続先の選択 で [結果を選ぶ]"
+        },
+        "X:Target|一覧へ": {
+          "id": "BD-DESKRUN-SCREEN-X008",
+          "status": "active",
+          "title": "接続先の選択 で [一覧へ]"
+        },
+        "X:Running|実行": {
+          "id": "BD-DESKRUN-SCREEN-X009",
+          "status": "active",
+          "title": "実行中 で [実行]"
+        },
+        "X:Running|開始": {
+          "id": "BD-DESKRUN-SCREEN-X010",
+          "status": "active",
+          "title": "実行中 で [開始]"
+        },
+        "X:Running|キャンセル": {
+          "id": "BD-DESKRUN-SCREEN-X011",
+          "status": "active",
+          "title": "実行中 で [キャンセル]"
+        },
+        "X:Running|結果を選ぶ": {
+          "id": "BD-DESKRUN-SCREEN-X012",
+          "status": "active",
+          "title": "実行中 で [結果を選ぶ]"
+        },
+        "X:Running|一覧へ": {
+          "id": "BD-DESKRUN-SCREEN-X013",
+          "status": "active",
+          "title": "実行中 で [一覧へ]"
+        },
+        "X:Trace|実行": {
+          "id": "BD-DESKRUN-SCREEN-X014",
+          "status": "active",
+          "title": "トレース で [実行]"
+        },
+        "X:Trace|開始": {
+          "id": "BD-DESKRUN-SCREEN-X015",
+          "status": "active",
+          "title": "トレース で [開始]"
+        },
+        "X:Trace|キャンセル": {
+          "id": "BD-DESKRUN-SCREEN-X016",
+          "status": "active",
+          "title": "トレース で [キャンセル]"
+        },
+        "X:Trace|実行完了": {
+          "id": "BD-DESKRUN-SCREEN-X017",
+          "status": "active",
+          "title": "トレース で [実行完了]"
+        },
+        "X:Trace|結果を選ぶ": {
+          "id": "BD-DESKRUN-SCREEN-X018",
+          "status": "active",
+          "title": "トレース で [結果を選ぶ]"
+        }
+      }
+    },
     "BD-GHREV-APPROVE": {
       "doc": "docs/design/basic/github-review.md",
       "diagram": "approve",
@@ -4363,6 +4997,338 @@
           "id": "BD-TMON-SCREEN-X013",
           "status": "active",
           "title": "再実行中 で [失敗を再実行]"
+        }
+      }
+    },
+    "BD-TOKENS-DCHK": {
+      "doc": "docs/design/basic/design-tokens.md",
+      "diagram": "drift-check",
+      "next": {
+        "P": 6,
+        "T": 10,
+        "S": 9
+      },
+      "cases": {
+        "P:A||B>B|ない|W1": {
+          "id": "BD-TOKENS-DCHK-P001",
+          "status": "active",
+          "title": "ddv-lint → 設定の tokens のセットごとに 出力ファイルがある → [ない] warning: 未生成・ddv tokens generate を実行"
+        },
+        "P:A||B>B|ある|C>C|ない|W2": {
+          "id": "BD-TOKENS-DCHK-P002",
+          "status": "active",
+          "title": "ddv-lint → 設定の tokens のセットごとに 出力ファイルがある → [ある] 生成元のファイルがある → [ない] warning: 生成元が見つからない"
+        },
+        "P:A||B>B|ある|C>C|ある|D>D|不一致|W3": {
+          "id": "BD-TOKENS-DCHK-P003",
+          "status": "active",
+          "title": "ddv-lint → 設定の tokens のセットごとに 出力ファイルがある → [ある] 生成元のファイルがある → [ある] 記録したハッシュと今の内容が一致 → [不一致] warning: 生成元が変更された・再生成"
+        },
+        "P:A||B>B|ある|C>C|ある|D>D|一致|E>E|不一致|W4": {
+          "id": "BD-TOKENS-DCHK-P004",
+          "status": "active",
+          "title": "ddv-lint → 設定の tokens のセットごとに 出力ファイルがある → [ある] 生成元のファイルがある → [ある] 記録したハッシュと今の内容が一致 → [一致] 記録した生成元と設定の sources が一致 → [不一致] warning: 設定が変わった・再生成"
+        },
+        "P:A||B>B|ある|C>C|ある|D>D|一致|E>E|一致|OK": {
+          "id": "BD-TOKENS-DCHK-P005",
+          "status": "active",
+          "title": "ddv-lint → 設定の tokens のセットごとに 出力ファイルがある → [ある] 生成元のファイルがある → [ある] 記録したハッシュと今の内容が一致 → [一致] 記録した生成元と設定の sources が一致 → [一致] OK"
+        },
+        "T:A||B": {
+          "id": "BD-TOKENS-DCHK-T001",
+          "status": "active",
+          "title": "ddv-lint --> 設定の tokens のセットごとに 出力ファイルがある"
+        },
+        "T:B|ない|W1": {
+          "id": "BD-TOKENS-DCHK-T002",
+          "status": "active",
+          "title": "設定の tokens のセットごとに 出力ファイルがある --[ない]--> warning: 未生成・ddv tokens generate を実行"
+        },
+        "T:B|ある|C": {
+          "id": "BD-TOKENS-DCHK-T003",
+          "status": "active",
+          "title": "設定の tokens のセットごとに 出力ファイルがある --[ある]--> 生成元のファイルがある"
+        },
+        "T:C|ない|W2": {
+          "id": "BD-TOKENS-DCHK-T004",
+          "status": "active",
+          "title": "生成元のファイルがある --[ない]--> warning: 生成元が見つからない"
+        },
+        "T:C|ある|D": {
+          "id": "BD-TOKENS-DCHK-T005",
+          "status": "active",
+          "title": "生成元のファイルがある --[ある]--> 記録したハッシュと今の内容が一致"
+        },
+        "T:D|不一致|W3": {
+          "id": "BD-TOKENS-DCHK-T006",
+          "status": "active",
+          "title": "記録したハッシュと今の内容が一致 --[不一致]--> warning: 生成元が変更された・再生成"
+        },
+        "T:D|一致|E": {
+          "id": "BD-TOKENS-DCHK-T007",
+          "status": "active",
+          "title": "記録したハッシュと今の内容が一致 --[一致]--> 記録した生成元と設定の sources が一致"
+        },
+        "T:E|不一致|W4": {
+          "id": "BD-TOKENS-DCHK-T008",
+          "status": "active",
+          "title": "記録した生成元と設定の sources が一致 --[不一致]--> warning: 設定が変わった・再生成"
+        },
+        "T:E|一致|OK": {
+          "id": "BD-TOKENS-DCHK-T009",
+          "status": "active",
+          "title": "記録した生成元と設定の sources が一致 --[一致]--> OK"
+        },
+        "S:A||B>B|ない|W1": {
+          "id": "BD-TOKENS-DCHK-S001",
+          "status": "active",
+          "title": "ddv-lint → 設定の tokens のセットごとに 出力ファイルがある → [ない] warning: 未生成・ddv tokens generate を実行"
+        },
+        "S:A||B>B|ある|C": {
+          "id": "BD-TOKENS-DCHK-S002",
+          "status": "active",
+          "title": "ddv-lint → 設定の tokens のセットごとに 出力ファイルがある → [ある] 生成元のファイルがある"
+        },
+        "S:B|ある|C>C|ない|W2": {
+          "id": "BD-TOKENS-DCHK-S003",
+          "status": "active",
+          "title": "設定の tokens のセットごとに 出力ファイルがある → [ある] 生成元のファイルがある → [ない] warning: 生成元が見つからない"
+        },
+        "S:B|ある|C>C|ある|D": {
+          "id": "BD-TOKENS-DCHK-S004",
+          "status": "active",
+          "title": "設定の tokens のセットごとに 出力ファイルがある → [ある] 生成元のファイルがある → [ある] 記録したハッシュと今の内容が一致"
+        },
+        "S:C|ある|D>D|不一致|W3": {
+          "id": "BD-TOKENS-DCHK-S005",
+          "status": "active",
+          "title": "生成元のファイルがある → [ある] 記録したハッシュと今の内容が一致 → [不一致] warning: 生成元が変更された・再生成"
+        },
+        "S:C|ある|D>D|一致|E": {
+          "id": "BD-TOKENS-DCHK-S006",
+          "status": "active",
+          "title": "生成元のファイルがある → [ある] 記録したハッシュと今の内容が一致 → [一致] 記録した生成元と設定の sources が一致"
+        },
+        "S:D|一致|E>E|不一致|W4": {
+          "id": "BD-TOKENS-DCHK-S007",
+          "status": "active",
+          "title": "記録したハッシュと今の内容が一致 → [一致] 記録した生成元と設定の sources が一致 → [不一致] warning: 設定が変わった・再生成"
+        },
+        "S:D|一致|E>E|一致|OK": {
+          "id": "BD-TOKENS-DCHK-S008",
+          "status": "active",
+          "title": "記録したハッシュと今の内容が一致 → [一致] 記録した生成元と設定の sources が一致 → [一致] OK"
+        }
+      }
+    },
+    "BD-TOKENS-DRIFT": {
+      "doc": "docs/design/basic/design-tokens.md",
+      "diagram": "drift",
+      "next": {
+        "T": 7,
+        "X": 2
+      },
+      "cases": {
+        "T:[*]start||None": {
+          "id": "BD-TOKENS-DRIFT-T001",
+          "status": "active",
+          "title": "開始 --> 未生成"
+        },
+        "T:None|生成|Fresh": {
+          "id": "BD-TOKENS-DRIFT-T002",
+          "status": "active",
+          "title": "未生成 --[生成]--> 一致"
+        },
+        "T:Fresh|生成元を変更|Stale": {
+          "id": "BD-TOKENS-DRIFT-T003",
+          "status": "active",
+          "title": "一致 --[生成元を変更]--> 乖離"
+        },
+        "T:Stale|生成元を変更|Stale": {
+          "id": "BD-TOKENS-DRIFT-T004",
+          "status": "active",
+          "title": "乖離 --[生成元を変更]--> 乖離"
+        },
+        "T:Stale|生成|Fresh": {
+          "id": "BD-TOKENS-DRIFT-T005",
+          "status": "active",
+          "title": "乖離 --[生成]--> 一致"
+        },
+        "T:Fresh|生成|Fresh": {
+          "id": "BD-TOKENS-DRIFT-T006",
+          "status": "active",
+          "title": "一致 --[生成]--> 一致"
+        },
+        "X:None|生成元を変更": {
+          "id": "BD-TOKENS-DRIFT-X001",
+          "status": "active",
+          "title": "未生成 で [生成元を変更]"
+        }
+      }
+    },
+    "BD-TOKENS-GEN": {
+      "doc": "docs/design/basic/design-tokens.md",
+      "diagram": "generate",
+      "next": {
+        "P": 7,
+        "T": 13,
+        "S": 14
+      },
+      "cases": {
+        "P:A||B>B|ない|E1": {
+          "id": "BD-TOKENS-GEN-P001",
+          "status": "active",
+          "title": "ddv tokens generate → 設定の tokens に対象のセットがある → [ない] error: tokens が未設定 / 名前が無い"
+        },
+        "P:A||B>B|ある|C>C|読めない|E2": {
+          "id": "BD-TOKENS-GEN-P002",
+          "status": "active",
+          "title": "ddv tokens generate → 設定の tokens に対象のセットがある → [ある] 生成元をすべて読める → [読めない] error: 読めないファイルと理由・そのセットは出力しない"
+        },
+        "P:A||B>B|ある|C>C|読める|D>D|xaml|X>X||F>F|ある|W>W||O": {
+          "id": "BD-TOKENS-GEN-P003",
+          "status": "active",
+          "title": "ddv tokens generate → 設定の tokens に対象のセットがある → [ある] 生成元をすべて読める → [読める] 種類 → [xaml] リソースを変換し 標準の項目を Aero2 で補う → 変換できない値がある → [ある] warning: 項目と理由・その項目は出力しない → 出力ファイルを書き 生成元とハッシュを記録"
+        },
+        "P:A||B>B|ある|C>C|読める|D>D|xaml|X>X||F>F|ない|O": {
+          "id": "BD-TOKENS-GEN-P004",
+          "status": "active",
+          "title": "ddv tokens generate → 設定の tokens に対象のセットがある → [ある] 生成元をすべて読める → [読める] 種類 → [xaml] リソースを変換し 標準の項目を Aero2 で補う → 変換できない値がある → [ない] 出力ファイルを書き 生成元とハッシュを記録"
+        },
+        "P:A||B>B|ある|C>C|読める|D>D|css|Y>Y||F>F|ある|W>W||O": {
+          "id": "BD-TOKENS-GEN-P005",
+          "status": "active",
+          "title": "ddv tokens generate → 設定の tokens に対象のセットがある → [ある] 生成元をすべて読める → [読める] 種類 → [css] 変数・@theme・指定したクラスを取り込み 代替値で置き換える → 変換できない値がある → [ある] warning: 項目と理由・その項目は出力しない → 出力ファイルを書き 生成元とハッシュを記録"
+        },
+        "P:A||B>B|ある|C>C|読める|D>D|css|Y>Y||F>F|ない|O": {
+          "id": "BD-TOKENS-GEN-P006",
+          "status": "active",
+          "title": "ddv tokens generate → 設定の tokens に対象のセットがある → [ある] 生成元をすべて読める → [読める] 種類 → [css] 変数・@theme・指定したクラスを取り込み 代替値で置き換える → 変換できない値がある → [ない] 出力ファイルを書き 生成元とハッシュを記録"
+        },
+        "T:A||B": {
+          "id": "BD-TOKENS-GEN-T001",
+          "status": "active",
+          "title": "ddv tokens generate --> 設定の tokens に対象のセットがある"
+        },
+        "T:B|ない|E1": {
+          "id": "BD-TOKENS-GEN-T002",
+          "status": "active",
+          "title": "設定の tokens に対象のセットがある --[ない]--> error: tokens が未設定 / 名前が無い"
+        },
+        "T:B|ある|C": {
+          "id": "BD-TOKENS-GEN-T003",
+          "status": "active",
+          "title": "設定の tokens に対象のセットがある --[ある]--> 生成元をすべて読める"
+        },
+        "T:C|読めない|E2": {
+          "id": "BD-TOKENS-GEN-T004",
+          "status": "active",
+          "title": "生成元をすべて読める --[読めない]--> error: 読めないファイルと理由・そのセットは出力しない"
+        },
+        "T:C|読める|D": {
+          "id": "BD-TOKENS-GEN-T005",
+          "status": "active",
+          "title": "生成元をすべて読める --[読める]--> 種類"
+        },
+        "T:D|xaml|X": {
+          "id": "BD-TOKENS-GEN-T006",
+          "status": "active",
+          "title": "種類 --[xaml]--> リソースを変換し 標準の項目を Aero2 で補う"
+        },
+        "T:D|css|Y": {
+          "id": "BD-TOKENS-GEN-T007",
+          "status": "active",
+          "title": "種類 --[css]--> 変数・@theme・指定したクラスを取り込み 代替値で置き換える"
+        },
+        "T:X||F": {
+          "id": "BD-TOKENS-GEN-T008",
+          "status": "active",
+          "title": "リソースを変換し 標準の項目を Aero2 で補う --> 変換できない値がある"
+        },
+        "T:Y||F": {
+          "id": "BD-TOKENS-GEN-T009",
+          "status": "active",
+          "title": "変数・@theme・指定したクラスを取り込み 代替値で置き換える --> 変換できない値がある"
+        },
+        "T:F|ある|W": {
+          "id": "BD-TOKENS-GEN-T010",
+          "status": "active",
+          "title": "変換できない値がある --[ある]--> warning: 項目と理由・その項目は出力しない"
+        },
+        "T:F|ない|O": {
+          "id": "BD-TOKENS-GEN-T011",
+          "status": "active",
+          "title": "変換できない値がある --[ない]--> 出力ファイルを書き 生成元とハッシュを記録"
+        },
+        "T:W||O": {
+          "id": "BD-TOKENS-GEN-T012",
+          "status": "active",
+          "title": "warning: 項目と理由・その項目は出力しない --> 出力ファイルを書き 生成元とハッシュを記録"
+        },
+        "S:A||B>B|ない|E1": {
+          "id": "BD-TOKENS-GEN-S001",
+          "status": "active",
+          "title": "ddv tokens generate → 設定の tokens に対象のセットがある → [ない] error: tokens が未設定 / 名前が無い"
+        },
+        "S:A||B>B|ある|C": {
+          "id": "BD-TOKENS-GEN-S002",
+          "status": "active",
+          "title": "ddv tokens generate → 設定の tokens に対象のセットがある → [ある] 生成元をすべて読める"
+        },
+        "S:B|ある|C>C|読めない|E2": {
+          "id": "BD-TOKENS-GEN-S003",
+          "status": "active",
+          "title": "設定の tokens に対象のセットがある → [ある] 生成元をすべて読める → [読めない] error: 読めないファイルと理由・そのセットは出力しない"
+        },
+        "S:B|ある|C>C|読める|D": {
+          "id": "BD-TOKENS-GEN-S004",
+          "status": "active",
+          "title": "設定の tokens に対象のセットがある → [ある] 生成元をすべて読める → [読める] 種類"
+        },
+        "S:C|読める|D>D|xaml|X": {
+          "id": "BD-TOKENS-GEN-S005",
+          "status": "active",
+          "title": "生成元をすべて読める → [読める] 種類 → [xaml] リソースを変換し 標準の項目を Aero2 で補う"
+        },
+        "S:C|読める|D>D|css|Y": {
+          "id": "BD-TOKENS-GEN-S006",
+          "status": "active",
+          "title": "生成元をすべて読める → [読める] 種類 → [css] 変数・@theme・指定したクラスを取り込み 代替値で置き換える"
+        },
+        "S:D|xaml|X>X||F": {
+          "id": "BD-TOKENS-GEN-S007",
+          "status": "active",
+          "title": "種類 → [xaml] リソースを変換し 標準の項目を Aero2 で補う → 変換できない値がある"
+        },
+        "S:D|css|Y>Y||F": {
+          "id": "BD-TOKENS-GEN-S008",
+          "status": "active",
+          "title": "種類 → [css] 変数・@theme・指定したクラスを取り込み 代替値で置き換える → 変換できない値がある"
+        },
+        "S:X||F>F|ある|W": {
+          "id": "BD-TOKENS-GEN-S009",
+          "status": "active",
+          "title": "リソースを変換し 標準の項目を Aero2 で補う → 変換できない値がある → [ある] warning: 項目と理由・その項目は出力しない"
+        },
+        "S:X||F>F|ない|O": {
+          "id": "BD-TOKENS-GEN-S010",
+          "status": "active",
+          "title": "リソースを変換し 標準の項目を Aero2 で補う → 変換できない値がある → [ない] 出力ファイルを書き 生成元とハッシュを記録"
+        },
+        "S:Y||F>F|ある|W": {
+          "id": "BD-TOKENS-GEN-S011",
+          "status": "active",
+          "title": "変数・@theme・指定したクラスを取り込み 代替値で置き換える → 変換できない値がある → [ある] warning: 項目と理由・その項目は出力しない"
+        },
+        "S:Y||F>F|ない|O": {
+          "id": "BD-TOKENS-GEN-S012",
+          "status": "active",
+          "title": "変数・@theme・指定したクラスを取り込み 代替値で置き換える → 変換できない値がある → [ない] 出力ファイルを書き 生成元とハッシュを記録"
+        },
+        "S:F|ある|W>W||O": {
+          "id": "BD-TOKENS-GEN-S013",
+          "status": "active",
+          "title": "変換できない値がある → [ある] warning: 項目と理由・その項目は出力しない → 出力ファイルを書き 生成元とハッシュを記録"
         }
       }
     },
