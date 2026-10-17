@@ -1,7 +1,7 @@
 ---
 id: DESKRUN
 kind: basic
-status: review
+status: approved
 title: デスクトップアプリ（WPF・WinForms）でのシナリオ実行 基本設計
 traces: [REQ-505, REQ-506, REQ-507, REQ-508, REQ-509, REQ-510, REQ-512]
 ---

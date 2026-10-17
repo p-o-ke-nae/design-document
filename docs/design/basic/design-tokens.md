@@ -1,7 +1,7 @@
 ---
 id: TOKENS
 kind: basic
-status: review
+status: approved
 title: 実アプリのデザインのトークン（XAML・CSS の取り込み）基本設計
 traces: [REQ-501, REQ-502, REQ-503, REQ-504, REQ-508, REQ-511]
 ---

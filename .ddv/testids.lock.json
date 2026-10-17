@@ -7325,6 +7325,1001 @@
         }
       }
     },
+    "DD-DSCN-APPLY": {
+      "doc": "docs/design/detailed/desktop-scenario.md",
+      "diagram": "step-plan",
+      "next": {
+        "P": 5,
+        "T": 8
+      },
+      "cases": {
+        "P:A||B>B|含まれない|S": {
+          "id": "DD-DSCN-APPLY-P001",
+          "status": "active",
+          "title": "ステップ → stepApplies → [含まれない] 飛ばす（run=false）・画面は直前のまま"
+        },
+        "P:A||B>B|含まれる|C>C|ある|T": {
+          "id": "DD-DSCN-APPLY-P002",
+          "status": "active",
+          "title": "ステップ → stepApplies → [含まれる] event がある → [ある] expect をそのまま使い 画面を expect.screen にする"
+        },
+        "P:A||B>B|含まれる|C>C|ない|D>D|ある|T2": {
+          "id": "DD-DSCN-APPLY-P003",
+          "status": "active",
+          "title": "ステップ → stepApplies → [含まれる] event がある → [ない] expect.screen がある → [ある] expect をそのまま使い 画面を expect.screen にする"
+        },
+        "P:A||B>B|含まれる|C>C|ない|D>D|ない|T3": {
+          "id": "DD-DSCN-APPLY-P004",
+          "status": "active",
+          "title": "ステップ → stepApplies → [含まれる] event がある → [ない] expect.screen がある → [ない] expect に直前の画面を screen として補う"
+        },
+        "T:A||B": {
+          "id": "DD-DSCN-APPLY-T001",
+          "status": "active",
+          "title": "ステップ --> stepApplies"
+        },
+        "T:B|含まれない|S": {
+          "id": "DD-DSCN-APPLY-T002",
+          "status": "active",
+          "title": "stepApplies --[含まれない]--> 飛ばす（run=false）・画面は直前のまま"
+        },
+        "T:B|含まれる|C": {
+          "id": "DD-DSCN-APPLY-T003",
+          "status": "active",
+          "title": "stepApplies --[含まれる]--> event がある"
+        },
+        "T:C|ある|T": {
+          "id": "DD-DSCN-APPLY-T004",
+          "status": "active",
+          "title": "event がある --[ある]--> expect をそのまま使い 画面を expect.screen にする"
+        },
+        "T:C|ない|D": {
+          "id": "DD-DSCN-APPLY-T005",
+          "status": "active",
+          "title": "event がある --[ない]--> expect.screen がある"
+        },
+        "T:D|ある|T2": {
+          "id": "DD-DSCN-APPLY-T006",
+          "status": "active",
+          "title": "expect.screen がある --[ある]--> expect をそのまま使い 画面を expect.screen にする"
+        },
+        "T:D|ない|T3": {
+          "id": "DD-DSCN-APPLY-T007",
+          "status": "active",
+          "title": "expect.screen がある --[ない]--> expect に直前の画面を screen として補う"
+        }
+      }
+    },
+    "DD-DSCN-AUXMRG": {
+      "doc": "docs/design/detailed/desktop-scenario.md",
+      "diagram": "aux-merge",
+      "next": {
+        "P": 4,
+        "T": 6
+      },
+      "cases": {
+        "P:A||P>P|ない|H": {
+          "id": "DD-DSCN-AUXMRG-P001",
+          "status": "active",
+          "title": "既存の補助ステップ → 前に遷移のステップがある → [ない] 先頭のまとまり：結果の先頭に残す"
+        },
+        "P:A||P>P|ある|M>M|対応した|K": {
+          "id": "DD-DSCN-AUXMRG-P002",
+          "status": "active",
+          "title": "既存の補助ステップ → 前に遷移のステップがある → [ある] その遷移のステップが生成したステップに対応した → [対応した] 対応したステップの直後に そのままの順で置く"
+        },
+        "P:A||P>P|ある|M>M|対応しない|D": {
+          "id": "DD-DSCN-AUXMRG-P003",
+          "status": "active",
+          "title": "既存の補助ステップ → 前に遷移のステップがある → [ある] その遷移のステップが生成したステップに対応した → [対応しない] 消して 件数を「補助ステップを削除」として表示"
+        },
+        "T:A||P": {
+          "id": "DD-DSCN-AUXMRG-T001",
+          "status": "active",
+          "title": "既存の補助ステップ --> 前に遷移のステップがある"
+        },
+        "T:P|ない|H": {
+          "id": "DD-DSCN-AUXMRG-T002",
+          "status": "active",
+          "title": "前に遷移のステップがある --[ない]--> 先頭のまとまり：結果の先頭に残す"
+        },
+        "T:P|ある|M": {
+          "id": "DD-DSCN-AUXMRG-T003",
+          "status": "active",
+          "title": "前に遷移のステップがある --[ある]--> その遷移のステップが生成したステップに対応した"
+        },
+        "T:M|対応した|K": {
+          "id": "DD-DSCN-AUXMRG-T004",
+          "status": "active",
+          "title": "その遷移のステップが生成したステップに対応した --[対応した]--> 対応したステップの直後に そのままの順で置く"
+        },
+        "T:M|対応しない|D": {
+          "id": "DD-DSCN-AUXMRG-T005",
+          "status": "active",
+          "title": "その遷移のステップが生成したステップに対応した --[対応しない]--> 消して 件数を「補助ステップを削除」として表示"
+        }
+      }
+    },
+    "DD-DSCN-DRES": {
+      "doc": "docs/design/detailed/desktop-scenario.md",
+      "diagram": "desktop-resolve",
+      "next": {
+        "P": 8,
+        "T": 13
+      },
+      "cases": {
+        "P:A||K>K|画面|S>S|ある|S1>S1|automationId|R1": {
+          "id": "DD-DSCN-DRES-P001",
+          "status": "active",
+          "title": "論理名と種類 → 種類 → [画面] map.screens にある → [ある] 規則 → [automationId] その AutomationId の要素が今のウィンドウにある"
+        },
+        "P:A||K>K|画面|S>S|ある|S1>S1|title|R2": {
+          "id": "DD-DSCN-DRES-P002",
+          "status": "active",
+          "title": "論理名と種類 → 種類 → [画面] map.screens にある → [ある] 規則 → [title] 前面のウィンドウのタイトルが一致"
+        },
+        "P:A||K>K|画面|S>S|ない|R3": {
+          "id": "DD-DSCN-DRES-P003",
+          "status": "active",
+          "title": "論理名と種類 → 種類 → [画面] map.screens にある → [ない] 論理名の AutomationId"
+        },
+        "P:A||K>K|遷移のクリック|E>E|ある|R4": {
+          "id": "DD-DSCN-DRES-P004",
+          "status": "active",
+          "title": "論理名と種類 → 種類 → [遷移のクリック] map.events にイベント名（ガードを除く）がある → [ある] 読み替え先の AutomationId"
+        },
+        "P:A||K>K|遷移のクリック|E>E|ない|R5": {
+          "id": "DD-DSCN-DRES-P005",
+          "status": "active",
+          "title": "論理名と種類 → 種類 → [遷移のクリック] map.events にイベント名（ガードを除く）がある → [ない] click の値の AutomationId"
+        },
+        "P:A||K>K|入力・期待・補助のクリック|F>F|ある|R6": {
+          "id": "DD-DSCN-DRES-P006",
+          "status": "active",
+          "title": "論理名と種類 → 種類 → [入力・期待・補助のクリック] map.fields にある → [ある] 読み替え先の AutomationId"
+        },
+        "P:A||K>K|入力・期待・補助のクリック|F>F|ない|R7": {
+          "id": "DD-DSCN-DRES-P007",
+          "status": "active",
+          "title": "論理名と種類 → 種類 → [入力・期待・補助のクリック] map.fields にある → [ない] 論理名の AutomationId"
+        },
+        "T:A||K": {
+          "id": "DD-DSCN-DRES-T001",
+          "status": "active",
+          "title": "論理名と種類 --> 種類"
+        },
+        "T:K|画面|S": {
+          "id": "DD-DSCN-DRES-T002",
+          "status": "active",
+          "title": "種類 --[画面]--> map.screens にある"
+        },
+        "T:S|ある|S1": {
+          "id": "DD-DSCN-DRES-T003",
+          "status": "active",
+          "title": "map.screens にある --[ある]--> 規則"
+        },
+        "T:S1|automationId|R1": {
+          "id": "DD-DSCN-DRES-T004",
+          "status": "active",
+          "title": "規則 --[automationId]--> その AutomationId の要素が今のウィンドウにある"
+        },
+        "T:S1|title|R2": {
+          "id": "DD-DSCN-DRES-T005",
+          "status": "active",
+          "title": "規則 --[title]--> 前面のウィンドウのタイトルが一致"
+        },
+        "T:S|ない|R3": {
+          "id": "DD-DSCN-DRES-T006",
+          "status": "active",
+          "title": "map.screens にある --[ない]--> 論理名の AutomationId"
+        },
+        "T:K|遷移のクリック|E": {
+          "id": "DD-DSCN-DRES-T007",
+          "status": "active",
+          "title": "種類 --[遷移のクリック]--> map.events にイベント名（ガードを除く）がある"
+        },
+        "T:E|ある|R4": {
+          "id": "DD-DSCN-DRES-T008",
+          "status": "active",
+          "title": "map.events にイベント名（ガードを除く）がある --[ある]--> 読み替え先の AutomationId"
+        },
+        "T:E|ない|R5": {
+          "id": "DD-DSCN-DRES-T009",
+          "status": "active",
+          "title": "map.events にイベント名（ガードを除く）がある --[ない]--> click の値の AutomationId"
+        },
+        "T:K|入力・期待・補助のクリック|F": {
+          "id": "DD-DSCN-DRES-T010",
+          "status": "active",
+          "title": "種類 --[入力・期待・補助のクリック]--> map.fields にある"
+        },
+        "T:F|ある|R6": {
+          "id": "DD-DSCN-DRES-T011",
+          "status": "active",
+          "title": "map.fields にある --[ある]--> 読み替え先の AutomationId"
+        },
+        "T:F|ない|R7": {
+          "id": "DD-DSCN-DRES-T012",
+          "status": "active",
+          "title": "map.fields にある --[ない]--> 論理名の AutomationId"
+        }
+      }
+    },
+    "DD-DSCN-MAPNORM": {
+      "doc": "docs/design/detailed/desktop-scenario.md",
+      "diagram": "map-normalize",
+      "next": {
+        "P": 7,
+        "T": 12
+      },
+      "cases": {
+        "P:A||L>L|ある|P>P|ある|E1": {
+          "id": "DD-DSCN-MAPNORM-P001",
+          "status": "active",
+          "title": "_map.yaml の直下のキー → screens・events・fields がある → [ある] web・wpf・winforms がある → [ある] error: 従来の形式とプラットフォームの節は同時に書けません"
+        },
+        "P:A||L>L|ある|P>P|ない|W>W||R>R|合わない|E3": {
+          "id": "DD-DSCN-MAPNORM-P002",
+          "status": "active",
+          "title": "_map.yaml の直下のキー → screens・events・fields がある → [ある] web・wpf・winforms がある → [ない] 直下を web の節とみなす → 各節の screens の規則がその節に合う → [合わない] error: 画面の規則がプラットフォームに合いません"
+        },
+        "P:A||L>L|ある|P>P|ない|W>W||R>R|合う|OK": {
+          "id": "DD-DSCN-MAPNORM-P003",
+          "status": "active",
+          "title": "_map.yaml の直下のキー → screens・events・fields がある → [ある] web・wpf・winforms がある → [ない] 直下を web の節とみなす → 各節の screens の規則がその節に合う → [合う] ScreenMap"
+        },
+        "P:A||L>L|ない|P2>P2|ある|E2": {
+          "id": "DD-DSCN-MAPNORM-P004",
+          "status": "active",
+          "title": "_map.yaml の直下のキー → screens・events・fields がある → [ない] web・wpf・winforms 以外のキーがある → [ある] error: 不明なキーです"
+        },
+        "P:A||L>L|ない|P2>P2|ない|N>N||R>R|合わない|E3": {
+          "id": "DD-DSCN-MAPNORM-P005",
+          "status": "active",
+          "title": "_map.yaml の直下のキー → screens・events・fields がある → [ない] web・wpf・winforms 以外のキーがある → [ない] 節ごとに読む・無い節は空 → 各節の screens の規則がその節に合う → [合わない] error: 画面の規則がプラットフォームに合いません"
+        },
+        "P:A||L>L|ない|P2>P2|ない|N>N||R>R|合う|OK": {
+          "id": "DD-DSCN-MAPNORM-P006",
+          "status": "active",
+          "title": "_map.yaml の直下のキー → screens・events・fields がある → [ない] web・wpf・winforms 以外のキーがある → [ない] 節ごとに読む・無い節は空 → 各節の screens の規則がその節に合う → [合う] ScreenMap"
+        },
+        "T:A||L": {
+          "id": "DD-DSCN-MAPNORM-T001",
+          "status": "active",
+          "title": "_map.yaml の直下のキー --> screens・events・fields がある"
+        },
+        "T:L|ある|P": {
+          "id": "DD-DSCN-MAPNORM-T002",
+          "status": "active",
+          "title": "screens・events・fields がある --[ある]--> web・wpf・winforms がある"
+        },
+        "T:P|ある|E1": {
+          "id": "DD-DSCN-MAPNORM-T003",
+          "status": "active",
+          "title": "web・wpf・winforms がある --[ある]--> error: 従来の形式とプラットフォームの節は同時に書けません"
+        },
+        "T:P|ない|W": {
+          "id": "DD-DSCN-MAPNORM-T004",
+          "status": "active",
+          "title": "web・wpf・winforms がある --[ない]--> 直下を web の節とみなす"
+        },
+        "T:L|ない|P2": {
+          "id": "DD-DSCN-MAPNORM-T005",
+          "status": "active",
+          "title": "screens・events・fields がある --[ない]--> web・wpf・winforms 以外のキーがある"
+        },
+        "T:P2|ある|E2": {
+          "id": "DD-DSCN-MAPNORM-T006",
+          "status": "active",
+          "title": "web・wpf・winforms 以外のキーがある --[ある]--> error: 不明なキーです"
+        },
+        "T:P2|ない|N": {
+          "id": "DD-DSCN-MAPNORM-T007",
+          "status": "active",
+          "title": "web・wpf・winforms 以外のキーがある --[ない]--> 節ごとに読む・無い節は空"
+        },
+        "T:W||R": {
+          "id": "DD-DSCN-MAPNORM-T008",
+          "status": "active",
+          "title": "直下を web の節とみなす --> 各節の screens の規則がその節に合う"
+        },
+        "T:N||R": {
+          "id": "DD-DSCN-MAPNORM-T009",
+          "status": "active",
+          "title": "節ごとに読む・無い節は空 --> 各節の screens の規則がその節に合う"
+        },
+        "T:R|合わない|E3": {
+          "id": "DD-DSCN-MAPNORM-T010",
+          "status": "active",
+          "title": "各節の screens の規則がその節に合う --[合わない]--> error: 画面の規則がプラットフォームに合いません"
+        },
+        "T:R|合う|OK": {
+          "id": "DD-DSCN-MAPNORM-T011",
+          "status": "active",
+          "title": "各節の screens の規則がその節に合う --[合う]--> ScreenMap"
+        }
+      }
+    },
+    "DD-DSCN-NAMECHK": {
+      "doc": "docs/design/detailed/desktop-scenario.md",
+      "diagram": "name-check",
+      "next": {
+        "P": 7,
+        "T": 13
+      },
+      "cases": {
+        "P:A||I>I|読めない|W1": {
+          "id": "DD-DSCN-NAMECHK-P001",
+          "status": "active",
+          "title": "ランナー → 画面定義を読める → [読めない] warning: 画面定義が見つかりません・名前の検査を省略します"
+        },
+        "P:A||I>I|読める|S>S||G>G|ある|SK": {
+          "id": "DD-DSCN-NAMECHK-P002",
+          "status": "active",
+          "title": "ランナー → 画面定義を読める → [読める] run=true のステップの名前ごと → 論理名が ignore にある → [ある] 検査しない"
+        },
+        "P:A||I>I|読める|S>S||G>G|ない|R>R|はい|RM>RM|ない|E2": {
+          "id": "DD-DSCN-NAMECHK-P003",
+          "status": "active",
+          "title": "ランナー → 画面定義を読める → [読める] run=true のステップの名前ごと → 論理名が ignore にある → [ない] 対応表で読み替えている → [はい] 読み替え先がその画面の範囲にある → [ない] error: 読み替え先の欠け"
+        },
+        "P:A||I>I|読める|S>S||G>G|ない|R>R|はい|RM>RM|ある|OK": {
+          "id": "DD-DSCN-NAMECHK-P004",
+          "status": "active",
+          "title": "ランナー → 画面定義を読める → [読める] run=true のステップの名前ごと → 論理名が ignore にある → [ない] 対応表で読み替えている → [はい] 読み替え先がその画面の範囲にある → [ある] 問題なし"
+        },
+        "P:A||I>I|読める|S>S||G>G|ない|R>R|いいえ|N>N|ない|E1": {
+          "id": "DD-DSCN-NAMECHK-P005",
+          "status": "active",
+          "title": "ランナー → 画面定義を読める → [読める] run=true のステップの名前ごと → 論理名が ignore にある → [ない] 対応表で読み替えている → [いいえ] 論理名がその画面の範囲にある → [ない] error: 名前の欠け"
+        },
+        "P:A||I>I|読める|S>S||G>G|ない|R>R|いいえ|N>N|ある|OK": {
+          "id": "DD-DSCN-NAMECHK-P006",
+          "status": "active",
+          "title": "ランナー → 画面定義を読める → [読める] run=true のステップの名前ごと → 論理名が ignore にある → [ない] 対応表で読み替えている → [いいえ] 論理名がその画面の範囲にある → [ある] 問題なし"
+        },
+        "T:A||I": {
+          "id": "DD-DSCN-NAMECHK-T001",
+          "status": "active",
+          "title": "ランナー --> 画面定義を読める"
+        },
+        "T:I|読めない|W1": {
+          "id": "DD-DSCN-NAMECHK-T002",
+          "status": "active",
+          "title": "画面定義を読める --[読めない]--> warning: 画面定義が見つかりません・名前の検査を省略します"
+        },
+        "T:I|読める|S": {
+          "id": "DD-DSCN-NAMECHK-T003",
+          "status": "active",
+          "title": "画面定義を読める --[読める]--> run=true のステップの名前ごと"
+        },
+        "T:S||G": {
+          "id": "DD-DSCN-NAMECHK-T004",
+          "status": "active",
+          "title": "run=true のステップの名前ごと --> 論理名が ignore にある"
+        },
+        "T:G|ある|SK": {
+          "id": "DD-DSCN-NAMECHK-T005",
+          "status": "active",
+          "title": "論理名が ignore にある --[ある]--> 検査しない"
+        },
+        "T:G|ない|R": {
+          "id": "DD-DSCN-NAMECHK-T006",
+          "status": "active",
+          "title": "論理名が ignore にある --[ない]--> 対応表で読み替えている"
+        },
+        "T:R|はい|RM": {
+          "id": "DD-DSCN-NAMECHK-T007",
+          "status": "active",
+          "title": "対応表で読み替えている --[はい]--> 読み替え先がその画面の範囲にある"
+        },
+        "T:RM|ない|E2": {
+          "id": "DD-DSCN-NAMECHK-T008",
+          "status": "active",
+          "title": "読み替え先がその画面の範囲にある --[ない]--> error: 読み替え先の欠け"
+        },
+        "T:RM|ある|OK": {
+          "id": "DD-DSCN-NAMECHK-T009",
+          "status": "active",
+          "title": "読み替え先がその画面の範囲にある --[ある]--> 問題なし"
+        },
+        "T:R|いいえ|N": {
+          "id": "DD-DSCN-NAMECHK-T010",
+          "status": "active",
+          "title": "対応表で読み替えている --[いいえ]--> 論理名がその画面の範囲にある"
+        },
+        "T:N|ない|E1": {
+          "id": "DD-DSCN-NAMECHK-T011",
+          "status": "active",
+          "title": "論理名がその画面の範囲にある --[ない]--> error: 名前の欠け"
+        },
+        "T:N|ある|OK": {
+          "id": "DD-DSCN-NAMECHK-T012",
+          "status": "active",
+          "title": "論理名がその画面の範囲にある --[ある]--> 問題なし"
+        }
+      }
+    },
+    "DD-DSCN-SCRFILE": {
+      "doc": "docs/design/detailed/desktop-scenario.md",
+      "diagram": "screen-file",
+      "next": {
+        "P": 8,
+        "T": 11
+      },
+      "cases": {
+        "P:A||R>R|title|W1": {
+          "id": "DD-DSCN-SCRFILE-P001",
+          "status": "active",
+          "title": "状態ID → map.screens の規則 → [title] warning: 画面を特定できません・プロジェクト全体で探す"
+        },
+        "P:A||R>R|automationId|N>N||F>F|ある|OK": {
+          "id": "DD-DSCN-SCRFILE-P002",
+          "status": "active",
+          "title": "状態ID → map.screens の規則 → [automationId] その AutomationId を名前とする → rootName か className がその名前のファイルがある → [ある] そのファイル"
+        },
+        "P:A||R>R|automationId|N>N||F>F|ない|U>U|ある|OK2": {
+          "id": "DD-DSCN-SCRFILE-P003",
+          "status": "active",
+          "title": "状態ID → map.screens の規則 → [automationId] その AutomationId を名前とする → rootName か className がその名前のファイルがある → [ない] ほかのファイルの names にその名前の UserControl の要素がある → [ある] その要素の型のファイル"
+        },
+        "P:A||R>R|automationId|N>N||F>F|ない|U>U|ない|E1": {
+          "id": "DD-DSCN-SCRFILE-P004",
+          "status": "active",
+          "title": "状態ID → map.screens の規則 → [automationId] その AutomationId を名前とする → rootName か className がその名前のファイルがある → [ない] ほかのファイルの names にその名前の UserControl の要素がある → [ない] error: 画面の定義が見つかりません"
+        },
+        "P:A||R>R|なし|N2>N2||F>F|ある|OK": {
+          "id": "DD-DSCN-SCRFILE-P005",
+          "status": "active",
+          "title": "状態ID → map.screens の規則 → [なし] 状態IDを名前とする → rootName か className がその名前のファイルがある → [ある] そのファイル"
+        },
+        "P:A||R>R|なし|N2>N2||F>F|ない|U>U|ある|OK2": {
+          "id": "DD-DSCN-SCRFILE-P006",
+          "status": "active",
+          "title": "状態ID → map.screens の規則 → [なし] 状態IDを名前とする → rootName か className がその名前のファイルがある → [ない] ほかのファイルの names にその名前の UserControl の要素がある → [ある] その要素の型のファイル"
+        },
+        "P:A||R>R|なし|N2>N2||F>F|ない|U>U|ない|E1": {
+          "id": "DD-DSCN-SCRFILE-P007",
+          "status": "active",
+          "title": "状態ID → map.screens の規則 → [なし] 状態IDを名前とする → rootName か className がその名前のファイルがある → [ない] ほかのファイルの names にその名前の UserControl の要素がある → [ない] error: 画面の定義が見つかりません"
+        },
+        "T:A||R": {
+          "id": "DD-DSCN-SCRFILE-T001",
+          "status": "active",
+          "title": "状態ID --> map.screens の規則"
+        },
+        "T:R|title|W1": {
+          "id": "DD-DSCN-SCRFILE-T002",
+          "status": "active",
+          "title": "map.screens の規則 --[title]--> warning: 画面を特定できません・プロジェクト全体で探す"
+        },
+        "T:R|automationId|N": {
+          "id": "DD-DSCN-SCRFILE-T003",
+          "status": "active",
+          "title": "map.screens の規則 --[automationId]--> その AutomationId を名前とする"
+        },
+        "T:R|なし|N2": {
+          "id": "DD-DSCN-SCRFILE-T004",
+          "status": "active",
+          "title": "map.screens の規則 --[なし]--> 状態IDを名前とする"
+        },
+        "T:N||F": {
+          "id": "DD-DSCN-SCRFILE-T005",
+          "status": "active",
+          "title": "その AutomationId を名前とする --> rootName か className がその名前のファイルがある"
+        },
+        "T:N2||F": {
+          "id": "DD-DSCN-SCRFILE-T006",
+          "status": "active",
+          "title": "状態IDを名前とする --> rootName か className がその名前のファイルがある"
+        },
+        "T:F|ある|OK": {
+          "id": "DD-DSCN-SCRFILE-T007",
+          "status": "active",
+          "title": "rootName か className がその名前のファイルがある --[ある]--> そのファイル"
+        },
+        "T:F|ない|U": {
+          "id": "DD-DSCN-SCRFILE-T008",
+          "status": "active",
+          "title": "rootName か className がその名前のファイルがある --[ない]--> ほかのファイルの names にその名前の UserControl の要素がある"
+        },
+        "T:U|ある|OK2": {
+          "id": "DD-DSCN-SCRFILE-T009",
+          "status": "active",
+          "title": "ほかのファイルの names にその名前の UserControl の要素がある --[ある]--> その要素の型のファイル"
+        },
+        "T:U|ない|E1": {
+          "id": "DD-DSCN-SCRFILE-T010",
+          "status": "active",
+          "title": "ほかのファイルの names にその名前の UserControl の要素がある --[ない]--> error: 画面の定義が見つかりません"
+        }
+      }
+    },
+    "DD-DSCN-STEPVAL": {
+      "doc": "docs/design/detailed/desktop-scenario.md",
+      "diagram": "step-validate",
+      "next": {
+        "P": 7,
+        "T": 12
+      },
+      "cases": {
+        "P:A||O>O|不明|E1": {
+          "id": "DD-DSCN-STEPVAL-P001",
+          "status": "active",
+          "title": "ステップ → only の値がすべて既知 → [不明] error: 不明なプラットフォームです: 値（web / wpf / winforms / desktop）"
+        },
+        "P:A||O>O|既知・なし|V>V|ある|VO>VO|ある|E2": {
+          "id": "DD-DSCN-STEPVAL-P002",
+          "status": "active",
+          "title": "ステップ → only の値がすべて既知 → [既知・なし] event がある → [ある] only がある → [ある] error: 遷移のステップに only は付けられません（図とシナリオを分けてください）"
+        },
+        "P:A||O>O|既知・なし|V>V|ある|VO>VO|ない|VS>VS|ない|E3": {
+          "id": "DD-DSCN-STEPVAL-P003",
+          "status": "active",
+          "title": "ステップ → only の値がすべて既知 → [既知・なし] event がある → [ある] only がある → [ない] expect.screen がある → [ない] error: 遷移のステップには expect.screen が必要です"
+        },
+        "P:A||O>O|既知・なし|V>V|ある|VO>VO|ない|VS>VS|ある|OK": {
+          "id": "DD-DSCN-STEPVAL-P004",
+          "status": "active",
+          "title": "ステップ → only の値がすべて既知 → [既知・なし] event がある → [ある] only がある → [ない] expect.screen がある → [ある] 正しい"
+        },
+        "P:A||O>O|既知・なし|V>V|ない|X>X|ない|E4": {
+          "id": "DD-DSCN-STEPVAL-P005",
+          "status": "active",
+          "title": "ステップ → only の値がすべて既知 → [既知・なし] event がある → [ない] click・input・do・wait・expect のどれかがある → [ない] error: 補助ステップに操作も期待もありません"
+        },
+        "P:A||O>O|既知・なし|V>V|ない|X>X|ある|OK": {
+          "id": "DD-DSCN-STEPVAL-P006",
+          "status": "active",
+          "title": "ステップ → only の値がすべて既知 → [既知・なし] event がある → [ない] click・input・do・wait・expect のどれかがある → [ある] 正しい"
+        },
+        "T:A||O": {
+          "id": "DD-DSCN-STEPVAL-T001",
+          "status": "active",
+          "title": "ステップ --> only の値がすべて既知"
+        },
+        "T:O|不明|E1": {
+          "id": "DD-DSCN-STEPVAL-T002",
+          "status": "active",
+          "title": "only の値がすべて既知 --[不明]--> error: 不明なプラットフォームです: 値（web / wpf / winforms / desktop）"
+        },
+        "T:O|既知・なし|V": {
+          "id": "DD-DSCN-STEPVAL-T003",
+          "status": "active",
+          "title": "only の値がすべて既知 --[既知・なし]--> event がある"
+        },
+        "T:V|ある|VO": {
+          "id": "DD-DSCN-STEPVAL-T004",
+          "status": "active",
+          "title": "event がある --[ある]--> only がある"
+        },
+        "T:VO|ある|E2": {
+          "id": "DD-DSCN-STEPVAL-T005",
+          "status": "active",
+          "title": "only がある --[ある]--> error: 遷移のステップに only は付けられません（図とシナリオを分けてください）"
+        },
+        "T:VO|ない|VS": {
+          "id": "DD-DSCN-STEPVAL-T006",
+          "status": "active",
+          "title": "only がある --[ない]--> expect.screen がある"
+        },
+        "T:VS|ない|E3": {
+          "id": "DD-DSCN-STEPVAL-T007",
+          "status": "active",
+          "title": "expect.screen がある --[ない]--> error: 遷移のステップには expect.screen が必要です"
+        },
+        "T:VS|ある|OK": {
+          "id": "DD-DSCN-STEPVAL-T008",
+          "status": "active",
+          "title": "expect.screen がある --[ある]--> 正しい"
+        },
+        "T:V|ない|X": {
+          "id": "DD-DSCN-STEPVAL-T009",
+          "status": "active",
+          "title": "event がある --[ない]--> click・input・do・wait・expect のどれかがある"
+        },
+        "T:X|ない|E4": {
+          "id": "DD-DSCN-STEPVAL-T010",
+          "status": "active",
+          "title": "click・input・do・wait・expect のどれかがある --[ない]--> error: 補助ステップに操作も期待もありません"
+        },
+        "T:X|ある|OK": {
+          "id": "DD-DSCN-STEPVAL-T011",
+          "status": "active",
+          "title": "click・input・do・wait・expect のどれかがある --[ある]--> 正しい"
+        }
+      }
+    },
+    "DD-DSCN-WCLICK": {
+      "doc": "docs/design/detailed/desktop-scenario.md",
+      "diagram": "web-click",
+      "next": {
+        "P": 5,
+        "T": 8
+      },
+      "cases": {
+        "P:A||T>T|mock|M": {
+          "id": "DD-DSCN-WCLICK-P001",
+          "status": "active",
+          "title": "click(key, event) → 対象 → [mock] 表示中の画面内の data-testid=key（既存と同じ）"
+        },
+        "P:A||T>T|app|E>E|ある|EV": {
+          "id": "DD-DSCN-WCLICK-P002",
+          "status": "active",
+          "title": "click(key, event) → 対象 → [app] event がある → [ある] 既存：map.events のイベント"
+        },
+        "P:A||T>T|app|E>E|ない|F>F|ある|F1": {
+          "id": "DD-DSCN-WCLICK-P003",
+          "status": "active",
+          "title": "click(key, event) → 対象 → [app] event がある → [ない] map.fields に key がある → [ある] 読み替え先のセレクタ"
+        },
+        "P:A||T>T|app|E>E|ない|F>F|ない|F2": {
+          "id": "DD-DSCN-WCLICK-P004",
+          "status": "active",
+          "title": "click(key, event) → 対象 → [app] event がある → [ない] map.fields に key がある → [ない] [data-testid=key]"
+        },
+        "T:A||T": {
+          "id": "DD-DSCN-WCLICK-T001",
+          "status": "active",
+          "title": "click(key, event) --> 対象"
+        },
+        "T:T|mock|M": {
+          "id": "DD-DSCN-WCLICK-T002",
+          "status": "active",
+          "title": "対象 --[mock]--> 表示中の画面内の data-testid=key（既存と同じ）"
+        },
+        "T:T|app|E": {
+          "id": "DD-DSCN-WCLICK-T003",
+          "status": "active",
+          "title": "対象 --[app]--> event がある"
+        },
+        "T:E|ある|EV": {
+          "id": "DD-DSCN-WCLICK-T004",
+          "status": "active",
+          "title": "event がある --[ある]--> 既存：map.events のイベント"
+        },
+        "T:E|ない|F": {
+          "id": "DD-DSCN-WCLICK-T005",
+          "status": "active",
+          "title": "event がある --[ない]--> map.fields に key がある"
+        },
+        "T:F|ある|F1": {
+          "id": "DD-DSCN-WCLICK-T006",
+          "status": "active",
+          "title": "map.fields に key がある --[ある]--> 読み替え先のセレクタ"
+        },
+        "T:F|ない|F2": {
+          "id": "DD-DSCN-WCLICK-T007",
+          "status": "active",
+          "title": "map.fields に key がある --[ない]--> [data-testid=key]"
+        }
+      }
+    },
+    "DD-FLAUI-DBUILD": {
+      "doc": "docs/design/detailed/flaui-driver.md",
+      "diagram": "driver-build",
+      "next": {
+        "P": 7,
+        "T": 11
+      },
+      "cases": {
+        "P:A||C>C|ある|OK": {
+          "id": "DD-FLAUI-DBUILD-P001",
+          "status": "active",
+          "title": "ensure → キャッシュに FlaUiDriver.dll と .ok がある → [ある] そのパス"
+        },
+        "P:A||C>C|ない|L>L|ほかがビルド中|WT>WT||C>C|ある|OK": {
+          "id": "DD-FLAUI-DBUILD-P002",
+          "status": "active",
+          "title": "ensure → キャッシュに FlaUiDriver.dll と .ok がある → [ない] ビルドのロックを取れる → [ほかがビルド中] ロックが消えるまで最大 5 分待つ → キャッシュに FlaUiDriver.dll と .ok がある → [ある] そのパス"
+        },
+        "P:A||C>C|ない|L>L|ほかがビルド中|WT>WT||C>C|ない|L>L|取れた|B>B||R>R|0 以外|E": {
+          "id": "DD-FLAUI-DBUILD-P003",
+          "status": "active",
+          "title": "ensure → キャッシュに FlaUiDriver.dll と .ok がある → [ない] ビルドのロックを取れる → [ほかがビルド中] ロックが消えるまで最大 5 分待つ → キャッシュに FlaUiDriver.dll と .ok がある → [ない] ビルドのロックを取れる → [取れた] dotnet build -c Release -o キャッシュ → 終了コード 0 → [0 以外] error: ドライバのビルドに失敗しました（ログの末尾 20 行）"
+        },
+        "P:A||C>C|ない|L>L|ほかがビルド中|WT>WT||C>C|ない|L>L|取れた|B>B||R>R|0|M>M||OK": {
+          "id": "DD-FLAUI-DBUILD-P004",
+          "status": "active",
+          "title": "ensure → キャッシュに FlaUiDriver.dll と .ok がある → [ない] ビルドのロックを取れる → [ほかがビルド中] ロックが消えるまで最大 5 分待つ → キャッシュに FlaUiDriver.dll と .ok がある → [ない] ビルドのロックを取れる → [取れた] dotnet build -c Release -o キャッシュ → 終了コード 0 → [0] .ok を書き ロックを消す → そのパス"
+        },
+        "P:A||C>C|ない|L>L|取れた|B>B||R>R|0 以外|E": {
+          "id": "DD-FLAUI-DBUILD-P005",
+          "status": "active",
+          "title": "ensure → キャッシュに FlaUiDriver.dll と .ok がある → [ない] ビルドのロックを取れる → [取れた] dotnet build -c Release -o キャッシュ → 終了コード 0 → [0 以外] error: ドライバのビルドに失敗しました（ログの末尾 20 行）"
+        },
+        "P:A||C>C|ない|L>L|取れた|B>B||R>R|0|M>M||OK": {
+          "id": "DD-FLAUI-DBUILD-P006",
+          "status": "active",
+          "title": "ensure → キャッシュに FlaUiDriver.dll と .ok がある → [ない] ビルドのロックを取れる → [取れた] dotnet build -c Release -o キャッシュ → 終了コード 0 → [0] .ok を書き ロックを消す → そのパス"
+        },
+        "T:A||C": {
+          "id": "DD-FLAUI-DBUILD-T001",
+          "status": "active",
+          "title": "ensure --> キャッシュに FlaUiDriver.dll と .ok がある"
+        },
+        "T:C|ある|OK": {
+          "id": "DD-FLAUI-DBUILD-T002",
+          "status": "active",
+          "title": "キャッシュに FlaUiDriver.dll と .ok がある --[ある]--> そのパス"
+        },
+        "T:C|ない|L": {
+          "id": "DD-FLAUI-DBUILD-T003",
+          "status": "active",
+          "title": "キャッシュに FlaUiDriver.dll と .ok がある --[ない]--> ビルドのロックを取れる"
+        },
+        "T:L|ほかがビルド中|WT": {
+          "id": "DD-FLAUI-DBUILD-T004",
+          "status": "active",
+          "title": "ビルドのロックを取れる --[ほかがビルド中]--> ロックが消えるまで最大 5 分待つ"
+        },
+        "T:WT||C": {
+          "id": "DD-FLAUI-DBUILD-T005",
+          "status": "active",
+          "title": "ロックが消えるまで最大 5 分待つ --> キャッシュに FlaUiDriver.dll と .ok がある"
+        },
+        "T:L|取れた|B": {
+          "id": "DD-FLAUI-DBUILD-T006",
+          "status": "active",
+          "title": "ビルドのロックを取れる --[取れた]--> dotnet build -c Release -o キャッシュ"
+        },
+        "T:B||R": {
+          "id": "DD-FLAUI-DBUILD-T007",
+          "status": "active",
+          "title": "dotnet build -c Release -o キャッシュ --> 終了コード 0"
+        },
+        "T:R|0 以外|E": {
+          "id": "DD-FLAUI-DBUILD-T008",
+          "status": "active",
+          "title": "終了コード 0 --[0 以外]--> error: ドライバのビルドに失敗しました（ログの末尾 20 行）"
+        },
+        "T:R|0|M": {
+          "id": "DD-FLAUI-DBUILD-T009",
+          "status": "active",
+          "title": "終了コード 0 --[0]--> .ok を書き ロックを消す"
+        },
+        "T:M||OK": {
+          "id": "DD-FLAUI-DBUILD-T010",
+          "status": "active",
+          "title": ".ok を書き ロックを消す --> そのパス"
+        }
+      }
+    },
+    "DD-FLAUI-FILL": {
+      "doc": "docs/design/detailed/flaui-driver.md",
+      "diagram": "fill",
+      "next": {
+        "P": 6,
+        "T": 8
+      },
+      "cases": {
+        "P:A||F>F|ない|E0": {
+          "id": "DD-FLAUI-FILL-P001",
+          "status": "active",
+          "title": "fill(key, value) → find で見つかる → [ない] StepError notFound"
+        },
+        "P:A||F>F|ある|P>P|Toggle|T": {
+          "id": "DD-FLAUI-FILL-P002",
+          "status": "active",
+          "title": "fill(key, value) → find で見つかる → [ある] パターン → [Toggle] toggle（true / false）"
+        },
+        "P:A||F>F|ある|P>P|SelectionItem を持つ子がある・ExpandCollapse|S": {
+          "id": "DD-FLAUI-FILL-P003",
+          "status": "active",
+          "title": "fill(key, value) → find で見つかる → [ある] パターン → [SelectionItem を持つ子がある・ExpandCollapse] select（表示文字列で選ぶ）"
+        },
+        "P:A||F>F|ある|P>P|Value|V": {
+          "id": "DD-FLAUI-FILL-P004",
+          "status": "active",
+          "title": "fill(key, value) → find で見つかる → [ある] パターン → [Value] setValue"
+        },
+        "P:A||F>F|ある|P>P|どれもない|E1": {
+          "id": "DD-FLAUI-FILL-P005",
+          "status": "active",
+          "title": "fill(key, value) → find で見つかる → [ある] パターン → [どれもない] StepError notFound: 入力できない要素です"
+        },
+        "T:A||F": {
+          "id": "DD-FLAUI-FILL-T001",
+          "status": "active",
+          "title": "fill(key, value) --> find で見つかる"
+        },
+        "T:F|ない|E0": {
+          "id": "DD-FLAUI-FILL-T002",
+          "status": "active",
+          "title": "find で見つかる --[ない]--> StepError notFound"
+        },
+        "T:F|ある|P": {
+          "id": "DD-FLAUI-FILL-T003",
+          "status": "active",
+          "title": "find で見つかる --[ある]--> パターン"
+        },
+        "T:P|Toggle|T": {
+          "id": "DD-FLAUI-FILL-T004",
+          "status": "active",
+          "title": "パターン --[Toggle]--> toggle（true / false）"
+        },
+        "T:P|SelectionItem を持つ子がある・ExpandCollapse|S": {
+          "id": "DD-FLAUI-FILL-T005",
+          "status": "active",
+          "title": "パターン --[SelectionItem を持つ子がある・ExpandCollapse]--> select（表示文字列で選ぶ）"
+        },
+        "T:P|Value|V": {
+          "id": "DD-FLAUI-FILL-T006",
+          "status": "active",
+          "title": "パターン --[Value]--> setValue"
+        },
+        "T:P|どれもない|E1": {
+          "id": "DD-FLAUI-FILL-T007",
+          "status": "active",
+          "title": "パターン --[どれもない]--> StepError notFound: 入力できない要素です"
+        }
+      }
+    },
+    "DD-FLAUI-FIND": {
+      "doc": "docs/design/detailed/flaui-driver.md",
+      "diagram": "find",
+      "next": {
+        "P": 6,
+        "T": 11
+      },
+      "cases": {
+        "P:A||B>B|title|T>T|ある|F1": {
+          "id": "DD-FLAUI-FIND-P001",
+          "status": "active",
+          "title": "by と name → by → [title] アプリのトップレベルのウィンドウに そのタイトルがある → [ある] found・前面か"
+        },
+        "P:A||B>B|title|T>T|ない|NF": {
+          "id": "DD-FLAUI-FIND-P002",
+          "status": "active",
+          "title": "by と name → by → [title] アプリのトップレベルのウィンドウに そのタイトルがある → [ない] found=false"
+        },
+        "P:A||B>B|automationId|W>W||D>D|ない|NF": {
+          "id": "DD-FLAUI-FIND-P003",
+          "status": "active",
+          "title": "by と name → by → [automationId] アプリのトップレベルのウィンドウを 前面のものから順に → 子孫に その AutomationId の要素がある → [ない] found=false"
+        },
+        "P:A||B>B|automationId|W>W||D>D|ある|V>V|ある|F2": {
+          "id": "DD-FLAUI-FIND-P004",
+          "status": "active",
+          "title": "by と name → by → [automationId] アプリのトップレベルのウィンドウを 前面のものから順に → 子孫に その AutomationId の要素がある → [ある] IsOffscreen でないものがある → [ある] 最初の見えている要素"
+        },
+        "P:A||B>B|automationId|W>W||D>D|ある|V>V|ない|F3": {
+          "id": "DD-FLAUI-FIND-P005",
+          "status": "active",
+          "title": "by と name → by → [automationId] アプリのトップレベルのウィンドウを 前面のものから順に → 子孫に その AutomationId の要素がある → [ある] IsOffscreen でないものがある → [ない] 最初の要素（visible=false）"
+        },
+        "T:A||B": {
+          "id": "DD-FLAUI-FIND-T001",
+          "status": "active",
+          "title": "by と name --> by"
+        },
+        "T:B|title|T": {
+          "id": "DD-FLAUI-FIND-T002",
+          "status": "active",
+          "title": "by --[title]--> アプリのトップレベルのウィンドウに そのタイトルがある"
+        },
+        "T:T|ある|F1": {
+          "id": "DD-FLAUI-FIND-T003",
+          "status": "active",
+          "title": "アプリのトップレベルのウィンドウに そのタイトルがある --[ある]--> found・前面か"
+        },
+        "T:T|ない|NF": {
+          "id": "DD-FLAUI-FIND-T004",
+          "status": "active",
+          "title": "アプリのトップレベルのウィンドウに そのタイトルがある --[ない]--> found=false"
+        },
+        "T:B|automationId|W": {
+          "id": "DD-FLAUI-FIND-T005",
+          "status": "active",
+          "title": "by --[automationId]--> アプリのトップレベルのウィンドウを 前面のものから順に"
+        },
+        "T:W||D": {
+          "id": "DD-FLAUI-FIND-T006",
+          "status": "active",
+          "title": "アプリのトップレベルのウィンドウを 前面のものから順に --> 子孫に その AutomationId の要素がある"
+        },
+        "T:D|ない|NF": {
+          "id": "DD-FLAUI-FIND-T007",
+          "status": "active",
+          "title": "子孫に その AutomationId の要素がある --[ない]--> found=false"
+        },
+        "T:D|ある|V": {
+          "id": "DD-FLAUI-FIND-T008",
+          "status": "active",
+          "title": "子孫に その AutomationId の要素がある --[ある]--> IsOffscreen でないものがある"
+        },
+        "T:V|ある|F2": {
+          "id": "DD-FLAUI-FIND-T009",
+          "status": "active",
+          "title": "IsOffscreen でないものがある --[ある]--> 最初の見えている要素"
+        },
+        "T:V|ない|F3": {
+          "id": "DD-FLAUI-FIND-T010",
+          "status": "active",
+          "title": "IsOffscreen でないものがある --[ない]--> 最初の要素（visible=false）"
+        }
+      }
+    },
+    "DD-FLAUI-GATE": {
+      "doc": "docs/design/detailed/flaui-driver.md",
+      "diagram": "gate",
+      "next": {
+        "P": 6,
+        "T": 10
+      },
+      "cases": {
+        "P:A||P>P|web|OK": {
+          "id": "DD-FLAUI-GATE-P001",
+          "status": "active",
+          "title": "ランナー → platform → [web] 使える"
+        },
+        "P:A||P>P|wpf・winforms|W>W|いいえ|X1": {
+          "id": "DD-FLAUI-GATE-P002",
+          "status": "active",
+          "title": "ランナー → platform → [wpf・winforms] process.platform が win32 → [いいえ] not-windows: デスクトップアプリの実行は Windows でだけ行えます"
+        },
+        "P:A||P>P|wpf・winforms|W>W|はい|D>D|ない|X2": {
+          "id": "DD-FLAUI-GATE-P003",
+          "status": "active",
+          "title": "ランナー → platform → [wpf・winforms] process.platform が win32 → [はい] dotnet --list-sdks に 8 以上の SDK がある → [ない] no-dotnet: .NET SDK が見つかりません（導入の案内）"
+        },
+        "P:A||P>P|wpf・winforms|W>W|はい|D>D|ある|F>F|ない|X3": {
+          "id": "DD-FLAUI-GATE-P004",
+          "status": "active",
+          "title": "ランナー → platform → [wpf・winforms] process.platform が win32 → [はい] dotnet --list-sdks に 8 以上の SDK がある → [ある] app.path のファイルがある → [ない] app-missing: アプリの実行ファイルが見つかりません（ビルドしてください）"
+        },
+        "P:A||P>P|wpf・winforms|W>W|はい|D>D|ある|F>F|ある|OK": {
+          "id": "DD-FLAUI-GATE-P005",
+          "status": "active",
+          "title": "ランナー → platform → [wpf・winforms] process.platform が win32 → [はい] dotnet --list-sdks に 8 以上の SDK がある → [ある] app.path のファイルがある → [ある] 使える"
+        },
+        "T:A||P": {
+          "id": "DD-FLAUI-GATE-T001",
+          "status": "active",
+          "title": "ランナー --> platform"
+        },
+        "T:P|web|OK": {
+          "id": "DD-FLAUI-GATE-T002",
+          "status": "active",
+          "title": "platform --[web]--> 使える"
+        },
+        "T:P|wpf・winforms|W": {
+          "id": "DD-FLAUI-GATE-T003",
+          "status": "active",
+          "title": "platform --[wpf・winforms]--> process.platform が win32"
+        },
+        "T:W|いいえ|X1": {
+          "id": "DD-FLAUI-GATE-T004",
+          "status": "active",
+          "title": "process.platform が win32 --[いいえ]--> not-windows: デスクトップアプリの実行は Windows でだけ行えます"
+        },
+        "T:W|はい|D": {
+          "id": "DD-FLAUI-GATE-T005",
+          "status": "active",
+          "title": "process.platform が win32 --[はい]--> dotnet --list-sdks に 8 以上の SDK がある"
+        },
+        "T:D|ない|X2": {
+          "id": "DD-FLAUI-GATE-T006",
+          "status": "active",
+          "title": "dotnet --list-sdks に 8 以上の SDK がある --[ない]--> no-dotnet: .NET SDK が見つかりません（導入の案内）"
+        },
+        "T:D|ある|F": {
+          "id": "DD-FLAUI-GATE-T007",
+          "status": "active",
+          "title": "dotnet --list-sdks に 8 以上の SDK がある --[ある]--> app.path のファイルがある"
+        },
+        "T:F|ない|X3": {
+          "id": "DD-FLAUI-GATE-T008",
+          "status": "active",
+          "title": "app.path のファイルがある --[ない]--> app-missing: アプリの実行ファイルが見つかりません（ビルドしてください）"
+        },
+        "T:F|ある|OK": {
+          "id": "DD-FLAUI-GATE-T009",
+          "status": "active",
+          "title": "app.path のファイルがある --[ある]--> 使える"
+        }
+      }
+    },
     "DD-HIST-CLASSIFY": {
       "doc": "docs/design/detailed/test-history.md",
       "diagram": "classify",
@@ -11041,6 +12036,662 @@
         }
       }
     },
+    "DD-PLATRES-BADGE": {
+      "doc": "docs/design/detailed/platform-results.md",
+      "diagram": "badges",
+      "next": {
+        "P": 5,
+        "T": 10
+      },
+      "cases": {
+        "P:A||P>P||W>W|はい|OLD": {
+          "id": "DD-PLATRES-BADGE-P001",
+          "status": "active",
+          "title": "行 → 並べるプラットフォーム = 接続先のプラットフォーム と 結果があるプラットフォーム → web だけ か 空 → [はい] バッジを出さず 従来の表示"
+        },
+        "P:A||P>P||W>W|いいえ|B>B||R>R|ない|N1": {
+          "id": "DD-PLATRES-BADGE-P002",
+          "status": "active",
+          "title": "行 → 並べるプラットフォーム = 接続先のプラットフォーム と 結果があるプラットフォーム → web だけ か 空 → [いいえ] プラットフォームごとにバッジ → そのプラットフォームの結果がある → [ない] – （押せない）"
+        },
+        "P:A||P>P||W>W|いいえ|B>B||R>R|ある|T>T|ある|L": {
+          "id": "DD-PLATRES-BADGE-P003",
+          "status": "active",
+          "title": "行 → 並べるプラットフォーム = 接続先のプラットフォーム と 結果があるプラットフォーム → web だけ か 空 → [いいえ] プラットフォームごとにバッジ → そのプラットフォームの結果がある → [ある] トレースがある → [ある] ✓ か ✗ ・トレースへ"
+        },
+        "P:A||P>P||W>W|いいえ|B>B||R>R|ある|T>T|ない|L2": {
+          "id": "DD-PLATRES-BADGE-P004",
+          "status": "active",
+          "title": "行 → 並べるプラットフォーム = 接続先のプラットフォーム と 結果があるプラットフォーム → web だけ か 空 → [いいえ] プラットフォームごとにバッジ → そのプラットフォームの結果がある → [ある] トレースがある → [ない] ✓ か ✗ ・押せない"
+        },
+        "T:A||P": {
+          "id": "DD-PLATRES-BADGE-T001",
+          "status": "active",
+          "title": "行 --> 並べるプラットフォーム = 接続先のプラットフォーム と 結果があるプラットフォーム"
+        },
+        "T:P||W": {
+          "id": "DD-PLATRES-BADGE-T002",
+          "status": "active",
+          "title": "並べるプラットフォーム = 接続先のプラットフォーム と 結果があるプラットフォーム --> web だけ か 空"
+        },
+        "T:W|はい|OLD": {
+          "id": "DD-PLATRES-BADGE-T003",
+          "status": "active",
+          "title": "web だけ か 空 --[はい]--> バッジを出さず 従来の表示"
+        },
+        "T:W|いいえ|B": {
+          "id": "DD-PLATRES-BADGE-T004",
+          "status": "active",
+          "title": "web だけ か 空 --[いいえ]--> プラットフォームごとにバッジ"
+        },
+        "T:B||R": {
+          "id": "DD-PLATRES-BADGE-T005",
+          "status": "active",
+          "title": "プラットフォームごとにバッジ --> そのプラットフォームの結果がある"
+        },
+        "T:R|ない|N1": {
+          "id": "DD-PLATRES-BADGE-T006",
+          "status": "active",
+          "title": "そのプラットフォームの結果がある --[ない]--> – （押せない）"
+        },
+        "T:R|ある|T": {
+          "id": "DD-PLATRES-BADGE-T007",
+          "status": "active",
+          "title": "そのプラットフォームの結果がある --[ある]--> トレースがある"
+        },
+        "T:T|ある|L": {
+          "id": "DD-PLATRES-BADGE-T008",
+          "status": "active",
+          "title": "トレースがある --[ある]--> ✓ か ✗ ・トレースへ"
+        },
+        "T:T|ない|L2": {
+          "id": "DD-PLATRES-BADGE-T009",
+          "status": "active",
+          "title": "トレースがある --[ない]--> ✓ か ✗ ・押せない"
+        }
+      }
+    },
+    "DD-PLATRES-COVMERGE": {
+      "doc": "docs/design/detailed/platform-results.md",
+      "diagram": "combine",
+      "next": {
+        "P": 5,
+        "T": 8
+      },
+      "cases": {
+        "P:A||N>N|ない|U": {
+          "id": "DD-PLATRES-COVMERGE-P001",
+          "status": "active",
+          "title": "テストIDのプラットフォーム別の結果 → 結果がある → [ない] 未実行"
+        },
+        "P:A||N>N|ある|F>F|ある|X": {
+          "id": "DD-PLATRES-COVMERGE-P002",
+          "status": "active",
+          "title": "テストIDのプラットフォーム別の結果 → 結果がある → [ある] failed か error が 1 つでもある → [ある] 失敗（最初の失敗のメッセージ）"
+        },
+        "P:A||N>N|ある|F>F|ない|P>P|はい|OK": {
+          "id": "DD-PLATRES-COVMERGE-P003",
+          "status": "active",
+          "title": "テストIDのプラットフォーム別の結果 → 結果がある → [ある] failed か error が 1 つでもある → [ない] すべて passed → [はい] 成功"
+        },
+        "P:A||N>N|ある|F>F|ない|P>P|いいえ|S": {
+          "id": "DD-PLATRES-COVMERGE-P004",
+          "status": "active",
+          "title": "テストIDのプラットフォーム別の結果 → 結果がある → [ある] failed か error が 1 つでもある → [ない] すべて passed → [いいえ] skipped"
+        },
+        "T:A||N": {
+          "id": "DD-PLATRES-COVMERGE-T001",
+          "status": "active",
+          "title": "テストIDのプラットフォーム別の結果 --> 結果がある"
+        },
+        "T:N|ない|U": {
+          "id": "DD-PLATRES-COVMERGE-T002",
+          "status": "active",
+          "title": "結果がある --[ない]--> 未実行"
+        },
+        "T:N|ある|F": {
+          "id": "DD-PLATRES-COVMERGE-T003",
+          "status": "active",
+          "title": "結果がある --[ある]--> failed か error が 1 つでもある"
+        },
+        "T:F|ある|X": {
+          "id": "DD-PLATRES-COVMERGE-T004",
+          "status": "active",
+          "title": "failed か error が 1 つでもある --[ある]--> 失敗（最初の失敗のメッセージ）"
+        },
+        "T:F|ない|P": {
+          "id": "DD-PLATRES-COVMERGE-T005",
+          "status": "active",
+          "title": "failed か error が 1 つでもある --[ない]--> すべて passed"
+        },
+        "T:P|はい|OK": {
+          "id": "DD-PLATRES-COVMERGE-T006",
+          "status": "active",
+          "title": "すべて passed --[はい]--> 成功"
+        },
+        "T:P|いいえ|S": {
+          "id": "DD-PLATRES-COVMERGE-T007",
+          "status": "active",
+          "title": "すべて passed --[いいえ]--> skipped"
+        }
+      }
+    },
+    "DD-PLATRES-RKEY": {
+      "doc": "docs/design/detailed/platform-results.md",
+      "diagram": "result-key",
+      "next": {
+        "P": 4,
+        "T": 6
+      },
+      "cases": {
+        "P:A||B>B|含まない|W": {
+          "id": "DD-PLATRES-RKEY-P001",
+          "status": "active",
+          "title": "parseResultKey(key) → @ を含む → [含まない] testId=key・platform=web"
+        },
+        "P:A||B>B|含む|C>C|はい|D": {
+          "id": "DD-PLATRES-RKEY-P002",
+          "status": "active",
+          "title": "parseResultKey(key) → @ を含む → [含む] 最後の @ の後が wpf か winforms → [はい] testId=@ の前・platform=@ の後"
+        },
+        "P:A||B>B|含む|C>C|いいえ|E": {
+          "id": "DD-PLATRES-RKEY-P003",
+          "status": "active",
+          "title": "parseResultKey(key) → @ を含む → [含む] 最後の @ の後が wpf か winforms → [いいえ] testId=key・platform=web（不明な形は従来のキーとみなす）"
+        },
+        "T:A||B": {
+          "id": "DD-PLATRES-RKEY-T001",
+          "status": "active",
+          "title": "parseResultKey(key) --> @ を含む"
+        },
+        "T:B|含まない|W": {
+          "id": "DD-PLATRES-RKEY-T002",
+          "status": "active",
+          "title": "@ を含む --[含まない]--> testId=key・platform=web"
+        },
+        "T:B|含む|C": {
+          "id": "DD-PLATRES-RKEY-T003",
+          "status": "active",
+          "title": "@ を含む --[含む]--> 最後の @ の後が wpf か winforms"
+        },
+        "T:C|はい|D": {
+          "id": "DD-PLATRES-RKEY-T004",
+          "status": "active",
+          "title": "最後の @ の後が wpf か winforms --[はい]--> testId=@ の前・platform=@ の後"
+        },
+        "T:C|いいえ|E": {
+          "id": "DD-PLATRES-RKEY-T005",
+          "status": "active",
+          "title": "最後の @ の後が wpf か winforms --[いいえ]--> testId=key・platform=web（不明な形は従来のキーとみなす）"
+        }
+      }
+    },
+    "DD-PLATRES-RUNOPEN": {
+      "doc": "docs/design/detailed/platform-results.md",
+      "diagram": "run-open",
+      "next": {
+        "P": 4,
+        "T": 6
+      },
+      "cases": {
+        "P:A||S>S|ない|D": {
+          "id": "DD-PLATRES-RUNOPEN-P001",
+          "status": "active",
+          "title": "実行を押す → 実行するテストIDにシナリオに紐づくものがある → [ない] そのまま開始（従来どおり）"
+        },
+        "P:A||S>S|ある|T>T|1 つ以下|D": {
+          "id": "DD-PLATRES-RUNOPEN-P002",
+          "status": "active",
+          "title": "実行を押す → 実行するテストIDにシナリオに紐づくものがある → [ある] 設定の接続先が 2 つ以上 → [1 つ以下] そのまま開始（従来どおり）"
+        },
+        "P:A||S>S|ある|T>T|2 つ以上|O": {
+          "id": "DD-PLATRES-RUNOPEN-P003",
+          "status": "active",
+          "title": "実行を押す → 実行するテストIDにシナリオに紐づくものがある → [ある] 設定の接続先が 2 つ以上 → [2 つ以上] 接続先の選択を開く"
+        },
+        "T:A||S": {
+          "id": "DD-PLATRES-RUNOPEN-T001",
+          "status": "active",
+          "title": "実行を押す --> 実行するテストIDにシナリオに紐づくものがある"
+        },
+        "T:S|ない|D": {
+          "id": "DD-PLATRES-RUNOPEN-T002",
+          "status": "active",
+          "title": "実行するテストIDにシナリオに紐づくものがある --[ない]--> そのまま開始（従来どおり）"
+        },
+        "T:S|ある|T": {
+          "id": "DD-PLATRES-RUNOPEN-T003",
+          "status": "active",
+          "title": "実行するテストIDにシナリオに紐づくものがある --[ある]--> 設定の接続先が 2 つ以上"
+        },
+        "T:T|1 つ以下|D": {
+          "id": "DD-PLATRES-RUNOPEN-T004",
+          "status": "active",
+          "title": "設定の接続先が 2 つ以上 --[1 つ以下]--> そのまま開始（従来どおり）"
+        },
+        "T:T|2 つ以上|O": {
+          "id": "DD-PLATRES-RUNOPEN-T005",
+          "status": "active",
+          "title": "設定の接続先が 2 つ以上 --[2 つ以上]--> 接続先の選択を開く"
+        }
+      }
+    },
+    "DD-PLATRES-RUNREQ": {
+      "doc": "docs/design/detailed/platform-results.md",
+      "diagram": "run-request",
+      "next": {
+        "P": 8,
+        "T": 14
+      },
+      "cases": {
+        "P:A||B>B|ある|E1": {
+          "id": "DD-PLATRES-RUNREQ-P001",
+          "status": "active",
+          "title": "本文 → runner と runners が両方ある → [ある] 400: runner と runners は同時に指定できません"
+        },
+        "P:A||B>B|ない|C>C|ない|OK0": {
+          "id": "DD-PLATRES-RUNREQ-P002",
+          "status": "active",
+          "title": "本文 → runner と runners が両方ある → [ない] runners がある → [ない] 従来どおり"
+        },
+        "P:A||B>B|ない|C>C|ある|D>D|空|E2": {
+          "id": "DD-PLATRES-RUNREQ-P003",
+          "status": "active",
+          "title": "本文 → runner と runners が両方ある → [ない] runners がある → [ある] 空の配列 → [空] 400 no-target: 接続先を選んでください"
+        },
+        "P:A||B>B|ない|C>C|ある|D>D|空でない|F>F|ない名前がある|E3": {
+          "id": "DD-PLATRES-RUNREQ-P004",
+          "status": "active",
+          "title": "本文 → runner と runners が両方ある → [ない] runners がある → [ある] 空の配列 → [空でない] すべて接続先の名前 → [ない名前がある] 400: 接続先がありません: 名前"
+        },
+        "P:A||B>B|ない|C>C|ある|D>D|空でない|F>F|すべてある|G>G|ある|E4": {
+          "id": "DD-PLATRES-RUNREQ-P005",
+          "status": "active",
+          "title": "本文 → runner と runners が両方ある → [ない] runners がある → [ある] 空の配列 → [空でない] すべて接続先の名前 → [すべてある] 同じプラットフォームが 2 つ以上 → [ある] 400 platform-duplicate: 同じプラットフォームの接続先は 1 回の実行で 1 つまでです"
+        },
+        "P:A||B>B|ない|C>C|ある|D>D|空でない|F>F|すべてある|G>G|ない|H>H|使えないものがある|E5": {
+          "id": "DD-PLATRES-RUNREQ-P006",
+          "status": "active",
+          "title": "本文 → runner と runners が両方ある → [ない] runners がある → [ある] 空の配列 → [空でない] すべて接続先の名前 → [すべてある] 同じプラットフォームが 2 つ以上 → [ない] すべて available → [使えないものがある] 409 target-unavailable: 名前 は使えません: 理由"
+        },
+        "P:A||B>B|ない|C>C|ある|D>D|空でない|F>F|すべてある|G>G|ない|H>H|すべて使える|OK": {
+          "id": "DD-PLATRES-RUNREQ-P007",
+          "status": "active",
+          "title": "本文 → runner と runners が両方ある → [ない] runners がある → [ある] 空の配列 → [空でない] すべて接続先の名前 → [すべてある] 同じプラットフォームが 2 つ以上 → [ない] すべて available → [すべて使える] 開始"
+        },
+        "T:A||B": {
+          "id": "DD-PLATRES-RUNREQ-T001",
+          "status": "active",
+          "title": "本文 --> runner と runners が両方ある"
+        },
+        "T:B|ある|E1": {
+          "id": "DD-PLATRES-RUNREQ-T002",
+          "status": "active",
+          "title": "runner と runners が両方ある --[ある]--> 400: runner と runners は同時に指定できません"
+        },
+        "T:B|ない|C": {
+          "id": "DD-PLATRES-RUNREQ-T003",
+          "status": "active",
+          "title": "runner と runners が両方ある --[ない]--> runners がある"
+        },
+        "T:C|ない|OK0": {
+          "id": "DD-PLATRES-RUNREQ-T004",
+          "status": "active",
+          "title": "runners がある --[ない]--> 従来どおり"
+        },
+        "T:C|ある|D": {
+          "id": "DD-PLATRES-RUNREQ-T005",
+          "status": "active",
+          "title": "runners がある --[ある]--> 空の配列"
+        },
+        "T:D|空|E2": {
+          "id": "DD-PLATRES-RUNREQ-T006",
+          "status": "active",
+          "title": "空の配列 --[空]--> 400 no-target: 接続先を選んでください"
+        },
+        "T:D|空でない|F": {
+          "id": "DD-PLATRES-RUNREQ-T007",
+          "status": "active",
+          "title": "空の配列 --[空でない]--> すべて接続先の名前"
+        },
+        "T:F|ない名前がある|E3": {
+          "id": "DD-PLATRES-RUNREQ-T008",
+          "status": "active",
+          "title": "すべて接続先の名前 --[ない名前がある]--> 400: 接続先がありません: 名前"
+        },
+        "T:F|すべてある|G": {
+          "id": "DD-PLATRES-RUNREQ-T009",
+          "status": "active",
+          "title": "すべて接続先の名前 --[すべてある]--> 同じプラットフォームが 2 つ以上"
+        },
+        "T:G|ある|E4": {
+          "id": "DD-PLATRES-RUNREQ-T010",
+          "status": "active",
+          "title": "同じプラットフォームが 2 つ以上 --[ある]--> 400 platform-duplicate: 同じプラットフォームの接続先は 1 回の実行で 1 つまでです"
+        },
+        "T:G|ない|H": {
+          "id": "DD-PLATRES-RUNREQ-T011",
+          "status": "active",
+          "title": "同じプラットフォームが 2 つ以上 --[ない]--> すべて available"
+        },
+        "T:H|使えないものがある|E5": {
+          "id": "DD-PLATRES-RUNREQ-T012",
+          "status": "active",
+          "title": "すべて available --[使えないものがある]--> 409 target-unavailable: 名前 は使えません: 理由"
+        },
+        "T:H|すべて使える|OK": {
+          "id": "DD-PLATRES-RUNREQ-T013",
+          "status": "active",
+          "title": "すべて available --[すべて使える]--> 開始"
+        }
+      }
+    },
+    "DD-PLATRES-TRPATH": {
+      "doc": "docs/design/detailed/platform-results.md",
+      "diagram": "trace-path",
+      "next": {
+        "P": 6,
+        "T": 9
+      },
+      "cases": {
+        "P:A||P>P|なし・web|K1>K1||V>V|ある|E2": {
+          "id": "DD-PLATRES-TRPATH-P001",
+          "status": "active",
+          "title": "GET /api/traces/:runId/:testId?platform= → platform → [なし・web] キー = testId → testId に @ や / が無い → [ある] 400: 既存の検査と同じ"
+        },
+        "P:A||P>P|なし・web|K1>K1||V>V|ない|R": {
+          "id": "DD-PLATRES-TRPATH-P002",
+          "status": "active",
+          "title": "GET /api/traces/:runId/:testId?platform= → platform → [なし・web] キー = testId → testId に @ や / が無い → [ない] 既存の読み込み"
+        },
+        "P:A||P>P|wpf・winforms|K2>K2||V>V|ある|E2": {
+          "id": "DD-PLATRES-TRPATH-P003",
+          "status": "active",
+          "title": "GET /api/traces/:runId/:testId?platform= → platform → [wpf・winforms] キー = testId@platform → testId に @ や / が無い → [ある] 400: 既存の検査と同じ"
+        },
+        "P:A||P>P|wpf・winforms|K2>K2||V>V|ない|R": {
+          "id": "DD-PLATRES-TRPATH-P004",
+          "status": "active",
+          "title": "GET /api/traces/:runId/:testId?platform= → platform → [wpf・winforms] キー = testId@platform → testId に @ や / が無い → [ない] 既存の読み込み"
+        },
+        "P:A||P>P|その他|E1": {
+          "id": "DD-PLATRES-TRPATH-P005",
+          "status": "active",
+          "title": "GET /api/traces/:runId/:testId?platform= → platform → [その他] 400 bad-platform: 不明なプラットフォームです"
+        },
+        "T:A||P": {
+          "id": "DD-PLATRES-TRPATH-T001",
+          "status": "active",
+          "title": "GET /api/traces/:runId/:testId?platform= --> platform"
+        },
+        "T:P|なし・web|K1": {
+          "id": "DD-PLATRES-TRPATH-T002",
+          "status": "active",
+          "title": "platform --[なし・web]--> キー = testId"
+        },
+        "T:P|wpf・winforms|K2": {
+          "id": "DD-PLATRES-TRPATH-T003",
+          "status": "active",
+          "title": "platform --[wpf・winforms]--> キー = testId@platform"
+        },
+        "T:P|その他|E1": {
+          "id": "DD-PLATRES-TRPATH-T004",
+          "status": "active",
+          "title": "platform --[その他]--> 400 bad-platform: 不明なプラットフォームです"
+        },
+        "T:K1||V": {
+          "id": "DD-PLATRES-TRPATH-T005",
+          "status": "active",
+          "title": "キー = testId --> testId に @ や / が無い"
+        },
+        "T:K2||V": {
+          "id": "DD-PLATRES-TRPATH-T006",
+          "status": "active",
+          "title": "キー = testId@platform --> testId に @ や / が無い"
+        },
+        "T:V|ある|E2": {
+          "id": "DD-PLATRES-TRPATH-T007",
+          "status": "active",
+          "title": "testId に @ や / が無い --[ある]--> 400: 既存の検査と同じ"
+        },
+        "T:V|ない|R": {
+          "id": "DD-PLATRES-TRPATH-T008",
+          "status": "active",
+          "title": "testId に @ や / が無い --[ない]--> 既存の読み込み"
+        }
+      }
+    },
+    "DD-PLATRES-TSEL": {
+      "doc": "docs/design/detailed/platform-results.md",
+      "diagram": "target-select",
+      "next": {
+        "P": 15,
+        "T": 11,
+        "X": 21
+      },
+      "cases": {
+        "P:[*]start||Loading>Loading|成功|Choosing>Choosing|開始 [選んでいない]|Choosing>Choosing|開始 [選んでいる]|Starting>Starting|202|[*]end": {
+          "id": "DD-PLATRES-TSEL-P001",
+          "status": "active",
+          "title": "開始 → 読み込み中 → [成功] 選択 → [開始 [選んでいない]] 選択 → [開始 [選んでいる]] 開始中 → [202] 終了"
+        },
+        "P:[*]start||Loading>Loading|成功|Choosing>Choosing|開始 [選んでいない]|Choosing>Choosing|キャンセル|[*]end": {
+          "id": "DD-PLATRES-TSEL-P002",
+          "status": "active",
+          "title": "開始 → 読み込み中 → [成功] 選択 → [開始 [選んでいない]] 選択 → [キャンセル] 終了"
+        },
+        "P:[*]start||Loading>Loading|成功|Choosing>Choosing|開始 [選んでいる]|Starting>Starting|400 / 409|Choosing>Choosing|開始 [選んでいる]|Starting>Starting|202|[*]end": {
+          "id": "DD-PLATRES-TSEL-P003",
+          "status": "active",
+          "title": "開始 → 読み込み中 → [成功] 選択 → [開始 [選んでいる]] 開始中 → [400 / 409] 選択 → [開始 [選んでいる]] 開始中 → [202] 終了"
+        },
+        "P:[*]start||Loading>Loading|成功|Choosing>Choosing|開始 [選んでいる]|Starting>Starting|400 / 409|Choosing>Choosing|キャンセル|[*]end": {
+          "id": "DD-PLATRES-TSEL-P004",
+          "status": "active",
+          "title": "開始 → 読み込み中 → [成功] 選択 → [開始 [選んでいる]] 開始中 → [400 / 409] 選択 → [キャンセル] 終了"
+        },
+        "P:[*]start||Loading>Loading|成功|Choosing>Choosing|開始 [選んでいる]|Starting>Starting|202|[*]end": {
+          "id": "DD-PLATRES-TSEL-P005",
+          "status": "active",
+          "title": "開始 → 読み込み中 → [成功] 選択 → [開始 [選んでいる]] 開始中 → [202] 終了"
+        },
+        "P:[*]start||Loading>Loading|成功|Choosing>Choosing|キャンセル|[*]end": {
+          "id": "DD-PLATRES-TSEL-P006",
+          "status": "active",
+          "title": "開始 → 読み込み中 → [成功] 選択 → [キャンセル] 終了"
+        },
+        "P:[*]start||Loading>Loading|失敗|LoadError>LoadError|開き直す|Loading>Loading|成功|Choosing>Choosing|開始 [選んでいない]|Choosing>Choosing|開始 [選んでいる]|Starting>Starting|202|[*]end": {
+          "id": "DD-PLATRES-TSEL-P007",
+          "status": "active",
+          "title": "開始 → 読み込み中 → [失敗] 読み込みの失敗 → [開き直す] 読み込み中 → [成功] 選択 → [開始 [選んでいない]] 選択 → [開始 [選んでいる]] 開始中 → [202] 終了"
+        },
+        "P:[*]start||Loading>Loading|失敗|LoadError>LoadError|開き直す|Loading>Loading|成功|Choosing>Choosing|開始 [選んでいない]|Choosing>Choosing|キャンセル|[*]end": {
+          "id": "DD-PLATRES-TSEL-P008",
+          "status": "active",
+          "title": "開始 → 読み込み中 → [失敗] 読み込みの失敗 → [開き直す] 読み込み中 → [成功] 選択 → [開始 [選んでいない]] 選択 → [キャンセル] 終了"
+        },
+        "P:[*]start||Loading>Loading|失敗|LoadError>LoadError|開き直す|Loading>Loading|成功|Choosing>Choosing|開始 [選んでいる]|Starting>Starting|400 / 409|Choosing>Choosing|開始 [選んでいる]|Starting>Starting|202|[*]end": {
+          "id": "DD-PLATRES-TSEL-P009",
+          "status": "active",
+          "title": "開始 → 読み込み中 → [失敗] 読み込みの失敗 → [開き直す] 読み込み中 → [成功] 選択 → [開始 [選んでいる]] 開始中 → [400 / 409] 選択 → [開始 [選んでいる]] 開始中 → [202] 終了"
+        },
+        "P:[*]start||Loading>Loading|失敗|LoadError>LoadError|開き直す|Loading>Loading|成功|Choosing>Choosing|開始 [選んでいる]|Starting>Starting|400 / 409|Choosing>Choosing|キャンセル|[*]end": {
+          "id": "DD-PLATRES-TSEL-P010",
+          "status": "active",
+          "title": "開始 → 読み込み中 → [失敗] 読み込みの失敗 → [開き直す] 読み込み中 → [成功] 選択 → [開始 [選んでいる]] 開始中 → [400 / 409] 選択 → [キャンセル] 終了"
+        },
+        "P:[*]start||Loading>Loading|失敗|LoadError>LoadError|開き直す|Loading>Loading|成功|Choosing>Choosing|開始 [選んでいる]|Starting>Starting|202|[*]end": {
+          "id": "DD-PLATRES-TSEL-P011",
+          "status": "active",
+          "title": "開始 → 読み込み中 → [失敗] 読み込みの失敗 → [開き直す] 読み込み中 → [成功] 選択 → [開始 [選んでいる]] 開始中 → [202] 終了"
+        },
+        "P:[*]start||Loading>Loading|失敗|LoadError>LoadError|開き直す|Loading>Loading|成功|Choosing>Choosing|キャンセル|[*]end": {
+          "id": "DD-PLATRES-TSEL-P012",
+          "status": "active",
+          "title": "開始 → 読み込み中 → [失敗] 読み込みの失敗 → [開き直す] 読み込み中 → [成功] 選択 → [キャンセル] 終了"
+        },
+        "P:[*]start||Loading>Loading|失敗|LoadError>LoadError|開き直す|Loading>Loading|失敗|LoadError>LoadError|キャンセル|[*]end": {
+          "id": "DD-PLATRES-TSEL-P013",
+          "status": "active",
+          "title": "開始 → 読み込み中 → [失敗] 読み込みの失敗 → [開き直す] 読み込み中 → [失敗] 読み込みの失敗 → [キャンセル] 終了"
+        },
+        "P:[*]start||Loading>Loading|失敗|LoadError>LoadError|キャンセル|[*]end": {
+          "id": "DD-PLATRES-TSEL-P014",
+          "status": "active",
+          "title": "開始 → 読み込み中 → [失敗] 読み込みの失敗 → [キャンセル] 終了"
+        },
+        "T:[*]start||Loading": {
+          "id": "DD-PLATRES-TSEL-T001",
+          "status": "active",
+          "title": "開始 --> 読み込み中"
+        },
+        "T:Loading|成功|Choosing": {
+          "id": "DD-PLATRES-TSEL-T002",
+          "status": "active",
+          "title": "読み込み中 --[成功]--> 選択"
+        },
+        "T:Loading|失敗|LoadError": {
+          "id": "DD-PLATRES-TSEL-T003",
+          "status": "active",
+          "title": "読み込み中 --[失敗]--> 読み込みの失敗"
+        },
+        "T:LoadError|開き直す|Loading": {
+          "id": "DD-PLATRES-TSEL-T004",
+          "status": "active",
+          "title": "読み込みの失敗 --[開き直す]--> 読み込み中"
+        },
+        "T:Choosing|開始 [選んでいない]|Choosing": {
+          "id": "DD-PLATRES-TSEL-T005",
+          "status": "active",
+          "title": "選択 --[開始 [選んでいない]]--> 選択"
+        },
+        "T:Choosing|開始 [選んでいる]|Starting": {
+          "id": "DD-PLATRES-TSEL-T006",
+          "status": "active",
+          "title": "選択 --[開始 [選んでいる]]--> 開始中"
+        },
+        "T:Starting|400 / 409|Choosing": {
+          "id": "DD-PLATRES-TSEL-T007",
+          "status": "active",
+          "title": "開始中 --[400 / 409]--> 選択"
+        },
+        "T:Starting|202|[*]end": {
+          "id": "DD-PLATRES-TSEL-T008",
+          "status": "active",
+          "title": "開始中 --[202]--> 終了"
+        },
+        "T:Choosing|キャンセル|[*]end": {
+          "id": "DD-PLATRES-TSEL-T009",
+          "status": "active",
+          "title": "選択 --[キャンセル]--> 終了"
+        },
+        "T:LoadError|キャンセル|[*]end": {
+          "id": "DD-PLATRES-TSEL-T010",
+          "status": "active",
+          "title": "読み込みの失敗 --[キャンセル]--> 終了"
+        },
+        "X:Loading|開き直す": {
+          "id": "DD-PLATRES-TSEL-X001",
+          "status": "active",
+          "title": "読み込み中 で [開き直す]"
+        },
+        "X:Loading|開始": {
+          "id": "DD-PLATRES-TSEL-X002",
+          "status": "active",
+          "title": "読み込み中 で [開始]"
+        },
+        "X:Loading|400": {
+          "id": "DD-PLATRES-TSEL-X003",
+          "status": "active",
+          "title": "読み込み中 で [400]"
+        },
+        "X:Loading|202": {
+          "id": "DD-PLATRES-TSEL-X004",
+          "status": "active",
+          "title": "読み込み中 で [202]"
+        },
+        "X:Loading|キャンセル": {
+          "id": "DD-PLATRES-TSEL-X005",
+          "status": "active",
+          "title": "読み込み中 で [キャンセル]"
+        },
+        "X:Choosing|成功": {
+          "id": "DD-PLATRES-TSEL-X006",
+          "status": "active",
+          "title": "選択 で [成功]"
+        },
+        "X:Choosing|失敗": {
+          "id": "DD-PLATRES-TSEL-X007",
+          "status": "active",
+          "title": "選択 で [失敗]"
+        },
+        "X:Choosing|開き直す": {
+          "id": "DD-PLATRES-TSEL-X008",
+          "status": "active",
+          "title": "選択 で [開き直す]"
+        },
+        "X:Choosing|400": {
+          "id": "DD-PLATRES-TSEL-X009",
+          "status": "active",
+          "title": "選択 で [400]"
+        },
+        "X:Choosing|202": {
+          "id": "DD-PLATRES-TSEL-X010",
+          "status": "active",
+          "title": "選択 で [202]"
+        },
+        "X:LoadError|成功": {
+          "id": "DD-PLATRES-TSEL-X011",
+          "status": "active",
+          "title": "読み込みの失敗 で [成功]"
+        },
+        "X:LoadError|失敗": {
+          "id": "DD-PLATRES-TSEL-X012",
+          "status": "active",
+          "title": "読み込みの失敗 で [失敗]"
+        },
+        "X:LoadError|開始": {
+          "id": "DD-PLATRES-TSEL-X013",
+          "status": "active",
+          "title": "読み込みの失敗 で [開始]"
+        },
+        "X:LoadError|400": {
+          "id": "DD-PLATRES-TSEL-X014",
+          "status": "active",
+          "title": "読み込みの失敗 で [400]"
+        },
+        "X:LoadError|202": {
+          "id": "DD-PLATRES-TSEL-X015",
+          "status": "active",
+          "title": "読み込みの失敗 で [202]"
+        },
+        "X:Starting|成功": {
+          "id": "DD-PLATRES-TSEL-X016",
+          "status": "active",
+          "title": "開始中 で [成功]"
+        },
+        "X:Starting|失敗": {
+          "id": "DD-PLATRES-TSEL-X017",
+          "status": "active",
+          "title": "開始中 で [失敗]"
+        },
+        "X:Starting|開き直す": {
+          "id": "DD-PLATRES-TSEL-X018",
+          "status": "active",
+          "title": "開始中 で [開き直す]"
+        },
+        "X:Starting|開始": {
+          "id": "DD-PLATRES-TSEL-X019",
+          "status": "active",
+          "title": "開始中 で [開始]"
+        },
+        "X:Starting|キャンセル": {
+          "id": "DD-PLATRES-TSEL-X020",
+          "status": "active",
+          "title": "開始中 で [キャンセル]"
+        }
+      }
+    },
     "DD-REVCMT-ANCHOR": {
       "doc": "docs/design/detailed/review-comment.md",
       "diagram": "anchor",
@@ -14729,6 +16380,1016 @@
           "id": "DD-TESTID-LOCK-T005",
           "status": "active",
           "title": "欠番 --[再生成 [経路なし]]--> 欠番"
+        }
+      }
+    },
+    "DD-TOKENGEN-CIMPORT": {
+      "doc": "docs/design/detailed/tokens.md",
+      "diagram": "css-import",
+      "next": {
+        "P": 6,
+        "T": 10
+      },
+      "cases": {
+        "P:A||U>U|いいえ|P": {
+          "id": "DD-TOKENGEN-CIMPORT-P001",
+          "status": "active",
+          "title": "@import の引数 → url() か文字列の値が ./ ../ / で始まる → [いいえ] パッケージとして無視する（数えるだけ）"
+        },
+        "P:A||U>U|はい|L>L|ある|W1": {
+          "id": "DD-TOKENGEN-CIMPORT-P002",
+          "status": "active",
+          "title": "@import の引数 → url() か文字列の値が ./ ../ / で始まる → [はい] layer・supports・メディアの条件がある → [ある] warning: 条件付きの @import は辿りません"
+        },
+        "P:A||U>U|はい|L>L|ない|C>C|同じ|W2": {
+          "id": "DD-TOKENGEN-CIMPORT-P003",
+          "status": "active",
+          "title": "@import の引数 → url() か文字列の値が ./ ../ / で始まる → [はい] layer・supports・メディアの条件がある → [ない] 辿っている途中のファイルと同じ → [同じ] warning: 循環して読み込んでいます"
+        },
+        "P:A||U>U|はい|L>L|ない|C>C|違う|R>R|読めない|W3": {
+          "id": "DD-TOKENGEN-CIMPORT-P004",
+          "status": "active",
+          "title": "@import の引数 → url() か文字列の値が ./ ../ / で始まる → [はい] layer・supports・メディアの条件がある → [ない] 辿っている途中のファイルと同じ → [違う] 読める → [読めない] warning: ファイルが読めません"
+        },
+        "P:A||U>U|はい|L>L|ない|C>C|違う|R>R|読める|E": {
+          "id": "DD-TOKENGEN-CIMPORT-P005",
+          "status": "active",
+          "title": "@import の引数 → url() か文字列の値が ./ ../ / で始まる → [はい] layer・supports・メディアの条件がある → [ない] 辿っている途中のファイルと同じ → [違う] 読める → [読める] その位置に展開して生成元に記録する"
+        },
+        "T:A||U": {
+          "id": "DD-TOKENGEN-CIMPORT-T001",
+          "status": "active",
+          "title": "@import の引数 --> url() か文字列の値が ./ ../ / で始まる"
+        },
+        "T:U|いいえ|P": {
+          "id": "DD-TOKENGEN-CIMPORT-T002",
+          "status": "active",
+          "title": "url() か文字列の値が ./ ../ / で始まる --[いいえ]--> パッケージとして無視する（数えるだけ）"
+        },
+        "T:U|はい|L": {
+          "id": "DD-TOKENGEN-CIMPORT-T003",
+          "status": "active",
+          "title": "url() か文字列の値が ./ ../ / で始まる --[はい]--> layer・supports・メディアの条件がある"
+        },
+        "T:L|ある|W1": {
+          "id": "DD-TOKENGEN-CIMPORT-T004",
+          "status": "active",
+          "title": "layer・supports・メディアの条件がある --[ある]--> warning: 条件付きの @import は辿りません"
+        },
+        "T:L|ない|C": {
+          "id": "DD-TOKENGEN-CIMPORT-T005",
+          "status": "active",
+          "title": "layer・supports・メディアの条件がある --[ない]--> 辿っている途中のファイルと同じ"
+        },
+        "T:C|同じ|W2": {
+          "id": "DD-TOKENGEN-CIMPORT-T006",
+          "status": "active",
+          "title": "辿っている途中のファイルと同じ --[同じ]--> warning: 循環して読み込んでいます"
+        },
+        "T:C|違う|R": {
+          "id": "DD-TOKENGEN-CIMPORT-T007",
+          "status": "active",
+          "title": "辿っている途中のファイルと同じ --[違う]--> 読める"
+        },
+        "T:R|読めない|W3": {
+          "id": "DD-TOKENGEN-CIMPORT-T008",
+          "status": "active",
+          "title": "読める --[読めない]--> warning: ファイルが読めません"
+        },
+        "T:R|読める|E": {
+          "id": "DD-TOKENGEN-CIMPORT-T009",
+          "status": "active",
+          "title": "読める --[読める]--> その位置に展開して生成元に記録する"
+        }
+      }
+    },
+    "DD-TOKENGEN-CRULE": {
+      "doc": "docs/design/detailed/tokens.md",
+      "diagram": "css-rule",
+      "next": {
+        "P": 8,
+        "T": 10
+      },
+      "cases": {
+        "P:A||T>T|@theme|TH": {
+          "id": "DD-TOKENGEN-CRULE-P001",
+          "status": "active",
+          "title": "ノード → 種類 → [@theme] テーマの定義として読む"
+        },
+        "P:A||T>T|@media・@supports・@layer|AT": {
+          "id": "DD-TOKENGEN-CRULE-P002",
+          "status": "active",
+          "title": "ノード → 種類 → [@media・@supports・@layer] 中を同じ規則で読み 取り込んだものがあれば at-rule ごと出す"
+        },
+        "P:A||T>T|規則|S>S|:root・html・:host だけ|V": {
+          "id": "DD-TOKENGEN-CRULE-P003",
+          "status": "active",
+          "title": "ノード → 種類 → [規則] セレクタ → [:root・html・:host だけ] -- の宣言を変数にする"
+        },
+        "P:A||T>T|規則|S>S|classes のクラスで始まる|CL": {
+          "id": "DD-TOKENGEN-CRULE-P004",
+          "status": "active",
+          "title": "ノード → 種類 → [規則] セレクタ → [classes のクラスで始まる] 共通クラスとして出す"
+        },
+        "P:A||T>T|規則|S>S|elements の要素だけ|EL": {
+          "id": "DD-TOKENGEN-CRULE-P005",
+          "status": "active",
+          "title": "ノード → 種類 → [規則] セレクタ → [elements の要素だけ] 要素の規則として出す"
+        },
+        "P:A||T>T|規則|S>S|その他|SK": {
+          "id": "DD-TOKENGEN-CRULE-P006",
+          "status": "active",
+          "title": "ノード → 種類 → [規則] セレクタ → [その他] 出さない"
+        },
+        "P:A||T>T|その他|SK": {
+          "id": "DD-TOKENGEN-CRULE-P007",
+          "status": "active",
+          "title": "ノード → 種類 → [その他] 出さない"
+        },
+        "T:A||T": {
+          "id": "DD-TOKENGEN-CRULE-T001",
+          "status": "active",
+          "title": "ノード --> 種類"
+        },
+        "T:T|@theme|TH": {
+          "id": "DD-TOKENGEN-CRULE-T002",
+          "status": "active",
+          "title": "種類 --[@theme]--> テーマの定義として読む"
+        },
+        "T:T|@media・@supports・@layer|AT": {
+          "id": "DD-TOKENGEN-CRULE-T003",
+          "status": "active",
+          "title": "種類 --[@media・@supports・@layer]--> 中を同じ規則で読み 取り込んだものがあれば at-rule ごと出す"
+        },
+        "T:T|規則|S": {
+          "id": "DD-TOKENGEN-CRULE-T004",
+          "status": "active",
+          "title": "種類 --[規則]--> セレクタ"
+        },
+        "T:S|:root・html・:host だけ|V": {
+          "id": "DD-TOKENGEN-CRULE-T005",
+          "status": "active",
+          "title": "セレクタ --[:root・html・:host だけ]--> -- の宣言を変数にする"
+        },
+        "T:S|classes のクラスで始まる|CL": {
+          "id": "DD-TOKENGEN-CRULE-T006",
+          "status": "active",
+          "title": "セレクタ --[classes のクラスで始まる]--> 共通クラスとして出す"
+        },
+        "T:S|elements の要素だけ|EL": {
+          "id": "DD-TOKENGEN-CRULE-T007",
+          "status": "active",
+          "title": "セレクタ --[elements の要素だけ]--> 要素の規則として出す"
+        },
+        "T:S|その他|SK": {
+          "id": "DD-TOKENGEN-CRULE-T008",
+          "status": "active",
+          "title": "セレクタ --[その他]--> 出さない"
+        },
+        "T:T|その他|SK": {
+          "id": "DD-TOKENGEN-CRULE-T009",
+          "status": "active",
+          "title": "種類 --[その他]--> 出さない"
+        }
+      }
+    },
+    "DD-TOKENGEN-KEBAB": {
+      "doc": "docs/design/detailed/tokens.md",
+      "diagram": "kebab",
+      "next": {
+        "P": 7,
+        "T": 12
+      },
+      "cases": {
+        "P:A||B>B||C>C|ある|C1>C1||D>D||E>E||F>F|なった|W": {
+          "id": "DD-TOKENGEN-KEBAB-P001",
+          "status": "active",
+          "title": "x:Key → 区切り文字 . _ 空白 を - にする → 大文字が続く略語がある → [ある] 略語の最後の大文字の前で区切る（UIFont → UI-Font） → 小文字・数字の後の大文字の前で区切る → すべて小文字にし 英数字とハイフン以外を除き 連続するハイフンを 1 つにする → 空になった → [なった] warning: キーから名前を作れません・出さない"
+        },
+        "P:A||B>B||C>C|ある|C1>C1||D>D||E>E||F>F|ならない|G>G|ある|W2": {
+          "id": "DD-TOKENGEN-KEBAB-P002",
+          "status": "active",
+          "title": "x:Key → 区切り文字 . _ 空白 を - にする → 大文字が続く略語がある → [ある] 略語の最後の大文字の前で区切る（UIFont → UI-Font） → 小文字・数字の後の大文字の前で区切る → すべて小文字にし 英数字とハイフン以外を除き 連続するハイフンを 1 つにする → 空になった → [ならない] 同じセットで同じ名前が既にある → [ある] warning: 同じ名前になるキー・後のキーを捨てる"
+        },
+        "P:A||B>B||C>C|ある|C1>C1||D>D||E>E||F>F|ならない|G>G|ない|OK": {
+          "id": "DD-TOKENGEN-KEBAB-P003",
+          "status": "active",
+          "title": "x:Key → 区切り文字 . _ 空白 を - にする → 大文字が続く略語がある → [ある] 略語の最後の大文字の前で区切る（UIFont → UI-Font） → 小文字・数字の後の大文字の前で区切る → すべて小文字にし 英数字とハイフン以外を除き 連続するハイフンを 1 つにする → 空になった → [ならない] 同じセットで同じ名前が既にある → [ない] 名前を決める"
+        },
+        "P:A||B>B||C>C|ない|D>D||E>E||F>F|なった|W": {
+          "id": "DD-TOKENGEN-KEBAB-P004",
+          "status": "active",
+          "title": "x:Key → 区切り文字 . _ 空白 を - にする → 大文字が続く略語がある → [ない] 小文字・数字の後の大文字の前で区切る → すべて小文字にし 英数字とハイフン以外を除き 連続するハイフンを 1 つにする → 空になった → [なった] warning: キーから名前を作れません・出さない"
+        },
+        "P:A||B>B||C>C|ない|D>D||E>E||F>F|ならない|G>G|ある|W2": {
+          "id": "DD-TOKENGEN-KEBAB-P005",
+          "status": "active",
+          "title": "x:Key → 区切り文字 . _ 空白 を - にする → 大文字が続く略語がある → [ない] 小文字・数字の後の大文字の前で区切る → すべて小文字にし 英数字とハイフン以外を除き 連続するハイフンを 1 つにする → 空になった → [ならない] 同じセットで同じ名前が既にある → [ある] warning: 同じ名前になるキー・後のキーを捨てる"
+        },
+        "P:A||B>B||C>C|ない|D>D||E>E||F>F|ならない|G>G|ない|OK": {
+          "id": "DD-TOKENGEN-KEBAB-P006",
+          "status": "active",
+          "title": "x:Key → 区切り文字 . _ 空白 を - にする → 大文字が続く略語がある → [ない] 小文字・数字の後の大文字の前で区切る → すべて小文字にし 英数字とハイフン以外を除き 連続するハイフンを 1 つにする → 空になった → [ならない] 同じセットで同じ名前が既にある → [ない] 名前を決める"
+        },
+        "T:A||B": {
+          "id": "DD-TOKENGEN-KEBAB-T001",
+          "status": "active",
+          "title": "x:Key --> 区切り文字 . _ 空白 を - にする"
+        },
+        "T:B||C": {
+          "id": "DD-TOKENGEN-KEBAB-T002",
+          "status": "active",
+          "title": "区切り文字 . _ 空白 を - にする --> 大文字が続く略語がある"
+        },
+        "T:C|ある|C1": {
+          "id": "DD-TOKENGEN-KEBAB-T003",
+          "status": "active",
+          "title": "大文字が続く略語がある --[ある]--> 略語の最後の大文字の前で区切る（UIFont → UI-Font）"
+        },
+        "T:C|ない|D": {
+          "id": "DD-TOKENGEN-KEBAB-T004",
+          "status": "active",
+          "title": "大文字が続く略語がある --[ない]--> 小文字・数字の後の大文字の前で区切る"
+        },
+        "T:C1||D": {
+          "id": "DD-TOKENGEN-KEBAB-T005",
+          "status": "active",
+          "title": "略語の最後の大文字の前で区切る（UIFont → UI-Font） --> 小文字・数字の後の大文字の前で区切る"
+        },
+        "T:D||E": {
+          "id": "DD-TOKENGEN-KEBAB-T006",
+          "status": "active",
+          "title": "小文字・数字の後の大文字の前で区切る --> すべて小文字にし 英数字とハイフン以外を除き 連続するハイフンを 1 つにする"
+        },
+        "T:E||F": {
+          "id": "DD-TOKENGEN-KEBAB-T007",
+          "status": "active",
+          "title": "すべて小文字にし 英数字とハイフン以外を除き 連続するハイフンを 1 つにする --> 空になった"
+        },
+        "T:F|なった|W": {
+          "id": "DD-TOKENGEN-KEBAB-T008",
+          "status": "active",
+          "title": "空になった --[なった]--> warning: キーから名前を作れません・出さない"
+        },
+        "T:F|ならない|G": {
+          "id": "DD-TOKENGEN-KEBAB-T009",
+          "status": "active",
+          "title": "空になった --[ならない]--> 同じセットで同じ名前が既にある"
+        },
+        "T:G|ある|W2": {
+          "id": "DD-TOKENGEN-KEBAB-T010",
+          "status": "active",
+          "title": "同じセットで同じ名前が既にある --[ある]--> warning: 同じ名前になるキー・後のキーを捨てる"
+        },
+        "T:G|ない|OK": {
+          "id": "DD-TOKENGEN-KEBAB-T011",
+          "status": "active",
+          "title": "同じセットで同じ名前が既にある --[ない]--> 名前を決める"
+        }
+      }
+    },
+    "DD-TOKENGEN-TCHK": {
+      "doc": "docs/design/detailed/tokens.md",
+      "diagram": "drift-check",
+      "next": {
+        "P": 10,
+        "T": 18
+      },
+      "cases": {
+        "P:A||O>O|ない|W1": {
+          "id": "DD-TOKENGEN-TCHK-P001",
+          "status": "active",
+          "title": "有効なセット → 出力ファイルがある → [ない] warning: 未生成です（ddv tokens generate を実行してください）"
+        },
+        "P:A||O>O|ある|H>H|読めない|W2": {
+          "id": "DD-TOKENGEN-TCHK-P002",
+          "status": "active",
+          "title": "有効なセット → 出力ファイルがある → [ある] ヘッダを読める → [読めない] warning: ヘッダがありません（再生成してください）"
+        },
+        "P:A||O>O|ある|H>H|読める|F>F|違う|W3": {
+          "id": "DD-TOKENGEN-TCHK-P003",
+          "status": "active",
+          "title": "有効なセット → 出力ファイルがある → [ある] ヘッダを読める → [読める] 記録した format が今の format と同じ → [違う] warning: 生成の規則が変わりました（再生成してください）"
+        },
+        "P:A||O>O|ある|H>H|読める|F>F|同じ|C>C|違う|W3B": {
+          "id": "DD-TOKENGEN-TCHK-P004",
+          "status": "active",
+          "title": "有効なセット → 出力ファイルがある → [ある] ヘッダを読める → [読める] 記録した format が今の format と同じ → [同じ] 記録した config が今の設定のハッシュと同じ → [違う] warning: 設定が変わりました（再生成してください）"
+        },
+        "P:A||O>O|ある|H>H|読める|F>F|同じ|C>C|同じ|S>S|含まれない|W3B": {
+          "id": "DD-TOKENGEN-TCHK-P005",
+          "status": "active",
+          "title": "有効なセット → 出力ファイルがある → [ある] ヘッダを読める → [読める] 記録した format が今の format と同じ → [同じ] 記録した config が今の設定のハッシュと同じ → [同じ] 記録した生成元に 設定の sources がすべて含まれる → [含まれない] warning: 設定が変わりました（再生成してください）"
+        },
+        "P:A||O>O|ある|H>H|読める|F>F|同じ|C>C|同じ|S>S|含まれる|R>R|読めない|OP>OP|はい|SK": {
+          "id": "DD-TOKENGEN-TCHK-P006",
+          "status": "active",
+          "title": "有効なセット → 出力ファイルがある → [ある] ヘッダを読める → [読める] 記録した format が今の format と同じ → [同じ] 記録した config が今の設定のハッシュと同じ → [同じ] 記録した生成元に 設定の sources がすべて含まれる → [含まれる] 記録した生成元をすべて読める → [読めない] optional または DDV_TOKENS_OPTIONAL=1 → [はい] lint では出さない（tokens check は情報として表示）"
+        },
+        "P:A||O>O|ある|H>H|読める|F>F|同じ|C>C|同じ|S>S|含まれる|R>R|読めない|OP>OP|いいえ|W4": {
+          "id": "DD-TOKENGEN-TCHK-P007",
+          "status": "active",
+          "title": "有効なセット → 出力ファイルがある → [ある] ヘッダを読める → [読める] 記録した format が今の format と同じ → [同じ] 記録した config が今の設定のハッシュと同じ → [同じ] 記録した生成元に 設定の sources がすべて含まれる → [含まれる] 記録した生成元をすべて読める → [読めない] optional または DDV_TOKENS_OPTIONAL=1 → [いいえ] warning: 生成元が見つかりません: path"
+        },
+        "P:A||O>O|ある|H>H|読める|F>F|同じ|C>C|同じ|S>S|含まれる|R>R|読める|D>D|不一致|W5": {
+          "id": "DD-TOKENGEN-TCHK-P008",
+          "status": "active",
+          "title": "有効なセット → 出力ファイルがある → [ある] ヘッダを読める → [読める] 記録した format が今の format と同じ → [同じ] 記録した config が今の設定のハッシュと同じ → [同じ] 記録した生成元に 設定の sources がすべて含まれる → [含まれる] 記録した生成元をすべて読める → [読める] 各ハッシュが今の内容と一致 → [不一致] warning: 生成元が変更されました（再生成してください）: path"
+        },
+        "P:A||O>O|ある|H>H|読める|F>F|同じ|C>C|同じ|S>S|含まれる|R>R|読める|D>D|一致|OK": {
+          "id": "DD-TOKENGEN-TCHK-P009",
+          "status": "active",
+          "title": "有効なセット → 出力ファイルがある → [ある] ヘッダを読める → [読める] 記録した format が今の format と同じ → [同じ] 記録した config が今の設定のハッシュと同じ → [同じ] 記録した生成元に 設定の sources がすべて含まれる → [含まれる] 記録した生成元をすべて読める → [読める] 各ハッシュが今の内容と一致 → [一致] 問題なし"
+        },
+        "T:A||O": {
+          "id": "DD-TOKENGEN-TCHK-T001",
+          "status": "active",
+          "title": "有効なセット --> 出力ファイルがある"
+        },
+        "T:O|ない|W1": {
+          "id": "DD-TOKENGEN-TCHK-T002",
+          "status": "active",
+          "title": "出力ファイルがある --[ない]--> warning: 未生成です（ddv tokens generate を実行してください）"
+        },
+        "T:O|ある|H": {
+          "id": "DD-TOKENGEN-TCHK-T003",
+          "status": "active",
+          "title": "出力ファイルがある --[ある]--> ヘッダを読める"
+        },
+        "T:H|読めない|W2": {
+          "id": "DD-TOKENGEN-TCHK-T004",
+          "status": "active",
+          "title": "ヘッダを読める --[読めない]--> warning: ヘッダがありません（再生成してください）"
+        },
+        "T:H|読める|F": {
+          "id": "DD-TOKENGEN-TCHK-T005",
+          "status": "active",
+          "title": "ヘッダを読める --[読める]--> 記録した format が今の format と同じ"
+        },
+        "T:F|違う|W3": {
+          "id": "DD-TOKENGEN-TCHK-T006",
+          "status": "active",
+          "title": "記録した format が今の format と同じ --[違う]--> warning: 生成の規則が変わりました（再生成してください）"
+        },
+        "T:F|同じ|C": {
+          "id": "DD-TOKENGEN-TCHK-T007",
+          "status": "active",
+          "title": "記録した format が今の format と同じ --[同じ]--> 記録した config が今の設定のハッシュと同じ"
+        },
+        "T:C|違う|W3B": {
+          "id": "DD-TOKENGEN-TCHK-T008",
+          "status": "active",
+          "title": "記録した config が今の設定のハッシュと同じ --[違う]--> warning: 設定が変わりました（再生成してください）"
+        },
+        "T:C|同じ|S": {
+          "id": "DD-TOKENGEN-TCHK-T009",
+          "status": "active",
+          "title": "記録した config が今の設定のハッシュと同じ --[同じ]--> 記録した生成元に 設定の sources がすべて含まれる"
+        },
+        "T:S|含まれない|W3B": {
+          "id": "DD-TOKENGEN-TCHK-T010",
+          "status": "active",
+          "title": "記録した生成元に 設定の sources がすべて含まれる --[含まれない]--> warning: 設定が変わりました（再生成してください）"
+        },
+        "T:S|含まれる|R": {
+          "id": "DD-TOKENGEN-TCHK-T011",
+          "status": "active",
+          "title": "記録した生成元に 設定の sources がすべて含まれる --[含まれる]--> 記録した生成元をすべて読める"
+        },
+        "T:R|読めない|OP": {
+          "id": "DD-TOKENGEN-TCHK-T012",
+          "status": "active",
+          "title": "記録した生成元をすべて読める --[読めない]--> optional または DDV_TOKENS_OPTIONAL=1"
+        },
+        "T:OP|はい|SK": {
+          "id": "DD-TOKENGEN-TCHK-T013",
+          "status": "active",
+          "title": "optional または DDV_TOKENS_OPTIONAL=1 --[はい]--> lint では出さない（tokens check は情報として表示）"
+        },
+        "T:OP|いいえ|W4": {
+          "id": "DD-TOKENGEN-TCHK-T014",
+          "status": "active",
+          "title": "optional または DDV_TOKENS_OPTIONAL=1 --[いいえ]--> warning: 生成元が見つかりません: path"
+        },
+        "T:R|読める|D": {
+          "id": "DD-TOKENGEN-TCHK-T015",
+          "status": "active",
+          "title": "記録した生成元をすべて読める --[読める]--> 各ハッシュが今の内容と一致"
+        },
+        "T:D|不一致|W5": {
+          "id": "DD-TOKENGEN-TCHK-T016",
+          "status": "active",
+          "title": "各ハッシュが今の内容と一致 --[不一致]--> warning: 生成元が変更されました（再生成してください）: path"
+        },
+        "T:D|一致|OK": {
+          "id": "DD-TOKENGEN-TCHK-T017",
+          "status": "active",
+          "title": "各ハッシュが今の内容と一致 --[一致]--> 問題なし"
+        }
+      }
+    },
+    "DD-TOKENGEN-TCLI": {
+      "doc": "docs/design/detailed/tokens.md",
+      "diagram": "tokens-cli",
+      "next": {
+        "P": 6,
+        "T": 11
+      },
+      "cases": {
+        "P:A||S>S|generate|G>G||GE>GE|ある|X1": {
+          "id": "DD-TOKENGEN-TCLI-P001",
+          "status": "active",
+          "title": "ddv tokens → サブコマンド → [generate] generateTokens（--name・--repo） → error がある → [ある] 終了コード 1"
+        },
+        "P:A||S>S|generate|G>G||GE>GE|ない|X0": {
+          "id": "DD-TOKENGEN-TCLI-P002",
+          "status": "active",
+          "title": "ddv tokens → サブコマンド → [generate] generateTokens（--name・--repo） → error がある → [ない] 終了コード 0"
+        },
+        "P:A||S>S|check|C>C||CE>CE|ある|X1": {
+          "id": "DD-TOKENGEN-TCLI-P003",
+          "status": "active",
+          "title": "ddv tokens → サブコマンド → [check] checkTokens の結果を表示 → warning がある → [ある] 終了コード 1"
+        },
+        "P:A||S>S|check|C>C||CE>CE|ない|X0": {
+          "id": "DD-TOKENGEN-TCLI-P004",
+          "status": "active",
+          "title": "ddv tokens → サブコマンド → [check] checkTokens の結果を表示 → warning がある → [ない] 終了コード 0"
+        },
+        "P:A||S>S|その他・なし|E": {
+          "id": "DD-TOKENGEN-TCLI-P005",
+          "status": "active",
+          "title": "ddv tokens → サブコマンド → [その他・なし] error: 不明なサブコマンドとヘルプ・終了コード 2"
+        },
+        "T:A||S": {
+          "id": "DD-TOKENGEN-TCLI-T001",
+          "status": "active",
+          "title": "ddv tokens --> サブコマンド"
+        },
+        "T:S|generate|G": {
+          "id": "DD-TOKENGEN-TCLI-T002",
+          "status": "active",
+          "title": "サブコマンド --[generate]--> generateTokens（--name・--repo）"
+        },
+        "T:S|check|C": {
+          "id": "DD-TOKENGEN-TCLI-T003",
+          "status": "active",
+          "title": "サブコマンド --[check]--> checkTokens の結果を表示"
+        },
+        "T:S|その他・なし|E": {
+          "id": "DD-TOKENGEN-TCLI-T004",
+          "status": "active",
+          "title": "サブコマンド --[その他・なし]--> error: 不明なサブコマンドとヘルプ・終了コード 2"
+        },
+        "T:G||GE": {
+          "id": "DD-TOKENGEN-TCLI-T005",
+          "status": "active",
+          "title": "generateTokens（--name・--repo） --> error がある"
+        },
+        "T:GE|ある|X1": {
+          "id": "DD-TOKENGEN-TCLI-T006",
+          "status": "active",
+          "title": "error がある --[ある]--> 終了コード 1"
+        },
+        "T:GE|ない|X0": {
+          "id": "DD-TOKENGEN-TCLI-T007",
+          "status": "active",
+          "title": "error がある --[ない]--> 終了コード 0"
+        },
+        "T:C||CE": {
+          "id": "DD-TOKENGEN-TCLI-T008",
+          "status": "active",
+          "title": "checkTokens の結果を表示 --> warning がある"
+        },
+        "T:CE|ある|X1": {
+          "id": "DD-TOKENGEN-TCLI-T009",
+          "status": "active",
+          "title": "warning がある --[ある]--> 終了コード 1"
+        },
+        "T:CE|ない|X0": {
+          "id": "DD-TOKENGEN-TCLI-T010",
+          "status": "active",
+          "title": "warning がある --[ない]--> 終了コード 0"
+        }
+      }
+    },
+    "DD-TOKENGEN-TGEN": {
+      "doc": "docs/design/detailed/tokens.md",
+      "diagram": "generate",
+      "next": {
+        "P": 9,
+        "T": 14
+      },
+      "cases": {
+        "P:A||B>B|ない|E1": {
+          "id": "DD-TOKENGEN-TGEN-P001",
+          "status": "active",
+          "title": "ddv tokens generate → 設定の tokens に有効なセットがある → [ない] error: tokens が未設定です"
+        },
+        "P:A||B>B|ある|N>N|ない|S>S||R>R|読めない|E3": {
+          "id": "DD-TOKENGEN-TGEN-P002",
+          "status": "active",
+          "title": "ddv tokens generate → 設定の tokens に有効なセットがある → [ある] --name がある → [ない] すべてのセット → 入口のファイルをすべて読める → [読めない] error: 読めないファイルと理由・そのセットは書かない"
+        },
+        "P:A||B>B|ある|N>N|ない|S>S||R>R|読める|W>W|ある|W1": {
+          "id": "DD-TOKENGEN-TGEN-P003",
+          "status": "active",
+          "title": "ddv tokens generate → 設定の tokens に有効なセットがある → [ある] --name がある → [ない] すべてのセット → 入口のファイルをすべて読める → [読める] 変換しなかった項目がある → [ある] warning を表示して書く"
+        },
+        "P:A||B>B|ある|N>N|ない|S>S||R>R|読める|W>W|ない|O": {
+          "id": "DD-TOKENGEN-TGEN-P004",
+          "status": "active",
+          "title": "ddv tokens generate → 設定の tokens に有効なセットがある → [ある] --name がある → [ない] すべてのセット → 入口のファイルをすべて読める → [読める] 変換しなかった項目がある → [ない] 書く"
+        },
+        "P:A||B>B|ある|N>N|ある|M>M|ない|E2": {
+          "id": "DD-TOKENGEN-TGEN-P005",
+          "status": "active",
+          "title": "ddv tokens generate → 設定の tokens に有効なセットがある → [ある] --name がある → [ある] その名前のセットがある → [ない] error: tokens に name のセットがありません"
+        },
+        "P:A||B>B|ある|N>N|ある|M>M|ある|S1>S1||R>R|読めない|E3": {
+          "id": "DD-TOKENGEN-TGEN-P006",
+          "status": "active",
+          "title": "ddv tokens generate → 設定の tokens に有効なセットがある → [ある] --name がある → [ある] その名前のセットがある → [ある] そのセットだけ → 入口のファイルをすべて読める → [読めない] error: 読めないファイルと理由・そのセットは書かない"
+        },
+        "P:A||B>B|ある|N>N|ある|M>M|ある|S1>S1||R>R|読める|W>W|ある|W1": {
+          "id": "DD-TOKENGEN-TGEN-P007",
+          "status": "active",
+          "title": "ddv tokens generate → 設定の tokens に有効なセットがある → [ある] --name がある → [ある] その名前のセットがある → [ある] そのセットだけ → 入口のファイルをすべて読める → [読める] 変換しなかった項目がある → [ある] warning を表示して書く"
+        },
+        "P:A||B>B|ある|N>N|ある|M>M|ある|S1>S1||R>R|読める|W>W|ない|O": {
+          "id": "DD-TOKENGEN-TGEN-P008",
+          "status": "active",
+          "title": "ddv tokens generate → 設定の tokens に有効なセットがある → [ある] --name がある → [ある] その名前のセットがある → [ある] そのセットだけ → 入口のファイルをすべて読める → [読める] 変換しなかった項目がある → [ない] 書く"
+        },
+        "T:A||B": {
+          "id": "DD-TOKENGEN-TGEN-T001",
+          "status": "active",
+          "title": "ddv tokens generate --> 設定の tokens に有効なセットがある"
+        },
+        "T:B|ない|E1": {
+          "id": "DD-TOKENGEN-TGEN-T002",
+          "status": "active",
+          "title": "設定の tokens に有効なセットがある --[ない]--> error: tokens が未設定です"
+        },
+        "T:B|ある|N": {
+          "id": "DD-TOKENGEN-TGEN-T003",
+          "status": "active",
+          "title": "設定の tokens に有効なセットがある --[ある]--> --name がある"
+        },
+        "T:N|ない|S": {
+          "id": "DD-TOKENGEN-TGEN-T004",
+          "status": "active",
+          "title": "--name がある --[ない]--> すべてのセット"
+        },
+        "T:N|ある|M": {
+          "id": "DD-TOKENGEN-TGEN-T005",
+          "status": "active",
+          "title": "--name がある --[ある]--> その名前のセットがある"
+        },
+        "T:M|ない|E2": {
+          "id": "DD-TOKENGEN-TGEN-T006",
+          "status": "active",
+          "title": "その名前のセットがある --[ない]--> error: tokens に name のセットがありません"
+        },
+        "T:M|ある|S1": {
+          "id": "DD-TOKENGEN-TGEN-T007",
+          "status": "active",
+          "title": "その名前のセットがある --[ある]--> そのセットだけ"
+        },
+        "T:S||R": {
+          "id": "DD-TOKENGEN-TGEN-T008",
+          "status": "active",
+          "title": "すべてのセット --> 入口のファイルをすべて読める"
+        },
+        "T:S1||R": {
+          "id": "DD-TOKENGEN-TGEN-T009",
+          "status": "active",
+          "title": "そのセットだけ --> 入口のファイルをすべて読める"
+        },
+        "T:R|読めない|E3": {
+          "id": "DD-TOKENGEN-TGEN-T010",
+          "status": "active",
+          "title": "入口のファイルをすべて読める --[読めない]--> error: 読めないファイルと理由・そのセットは書かない"
+        },
+        "T:R|読める|W": {
+          "id": "DD-TOKENGEN-TGEN-T011",
+          "status": "active",
+          "title": "入口のファイルをすべて読める --[読める]--> 変換しなかった項目がある"
+        },
+        "T:W|ある|W1": {
+          "id": "DD-TOKENGEN-TGEN-T012",
+          "status": "active",
+          "title": "変換しなかった項目がある --[ある]--> warning を表示して書く"
+        },
+        "T:W|ない|O": {
+          "id": "DD-TOKENGEN-TGEN-T013",
+          "status": "active",
+          "title": "変換しなかった項目がある --[ない]--> 書く"
+        }
+      }
+    },
+    "DD-TOKENGEN-THEME": {
+      "doc": "docs/design/detailed/tokens.md",
+      "diagram": "css-theme",
+      "next": {
+        "P": 6,
+        "T": 10
+      },
+      "cases": {
+        "P:A||R>R|含む|SK": {
+          "id": "DD-TOKENGEN-THEME-P001",
+          "status": "active",
+          "title": "@theme の修飾子 → reference を含む → [含む] 出さない"
+        },
+        "P:A||R>R|含まない|D>D||I>I|--*|C1": {
+          "id": "DD-TOKENGEN-THEME-P002",
+          "status": "active",
+          "title": "@theme の修飾子 → reference を含む → [含まない] 宣言ごとに → 値が initial → [--*] これまでの @theme 由来の変数をすべて消す"
+        },
+        "P:A||R>R|含まない|D>D||I>I|--名前空間-*|C2": {
+          "id": "DD-TOKENGEN-THEME-P003",
+          "status": "active",
+          "title": "@theme の修飾子 → reference を含む → [含まない] 宣言ごとに → 値が initial → [--名前空間-*] その名前空間の @theme 由来の変数を消す"
+        },
+        "P:A||R>R|含まない|D>D||I>I|initial でない|V>V|含む|V1": {
+          "id": "DD-TOKENGEN-THEME-P004",
+          "status": "active",
+          "title": "@theme の修飾子 → reference を含む → [含まない] 宣言ごとに → 値が initial → [initial でない] inline を含む → [含む] 変数にし 印 @theme inline を付ける"
+        },
+        "P:A||R>R|含まない|D>D||I>I|initial でない|V>V|含まない|V2": {
+          "id": "DD-TOKENGEN-THEME-P005",
+          "status": "active",
+          "title": "@theme の修飾子 → reference を含む → [含まない] 宣言ごとに → 値が initial → [initial でない] inline を含む → [含まない] 変数にする"
+        },
+        "T:A||R": {
+          "id": "DD-TOKENGEN-THEME-T001",
+          "status": "active",
+          "title": "@theme の修飾子 --> reference を含む"
+        },
+        "T:R|含む|SK": {
+          "id": "DD-TOKENGEN-THEME-T002",
+          "status": "active",
+          "title": "reference を含む --[含む]--> 出さない"
+        },
+        "T:R|含まない|D": {
+          "id": "DD-TOKENGEN-THEME-T003",
+          "status": "active",
+          "title": "reference を含む --[含まない]--> 宣言ごとに"
+        },
+        "T:D||I": {
+          "id": "DD-TOKENGEN-THEME-T004",
+          "status": "active",
+          "title": "宣言ごとに --> 値が initial"
+        },
+        "T:I|--*|C1": {
+          "id": "DD-TOKENGEN-THEME-T005",
+          "status": "active",
+          "title": "値が initial --[--*]--> これまでの @theme 由来の変数をすべて消す"
+        },
+        "T:I|--名前空間-*|C2": {
+          "id": "DD-TOKENGEN-THEME-T006",
+          "status": "active",
+          "title": "値が initial --[--名前空間-*]--> その名前空間の @theme 由来の変数を消す"
+        },
+        "T:I|initial でない|V": {
+          "id": "DD-TOKENGEN-THEME-T007",
+          "status": "active",
+          "title": "値が initial --[initial でない]--> inline を含む"
+        },
+        "T:V|含む|V1": {
+          "id": "DD-TOKENGEN-THEME-T008",
+          "status": "active",
+          "title": "inline を含む --[含む]--> 変数にし 印 @theme inline を付ける"
+        },
+        "T:V|含まない|V2": {
+          "id": "DD-TOKENGEN-THEME-T009",
+          "status": "active",
+          "title": "inline を含む --[含まない]--> 変数にする"
+        }
+      }
+    },
+    "DD-TOKENGEN-XRES": {
+      "doc": "docs/design/detailed/tokens.md",
+      "diagram": "xaml-resource",
+      "next": {
+        "P": 9,
+        "T": 13
+      },
+      "cases": {
+        "P:A||K>K|ない|I>I|はい|WS": {
+          "id": "DD-TOKENGEN-XRES-P001",
+          "status": "active",
+          "title": "辞書の直下の要素 → x:Key がある → [ない] Window を対象にしたキーの無い Style → [はい] 標準の項目の上書きとして Setter を読む"
+        },
+        "P:A||K>K|ない|I>I|いいえ|SK1": {
+          "id": "DD-TOKENGEN-XRES-P002",
+          "status": "active",
+          "title": "辞書の直下の要素 → x:Key がある → [ない] Window を対象にしたキーの無い Style → [いいえ] 読み飛ばす"
+        },
+        "P:A||K>K|ある|T>T|Color・SolidColorBrush・FontFamily・Thickness・CornerRadius|CV": {
+          "id": "DD-TOKENGEN-XRES-P003",
+          "status": "active",
+          "title": "辞書の直下の要素 → x:Key がある → [ある] 局所名 → [Color・SolidColorBrush・FontFamily・Thickness・CornerRadius] 変換する"
+        },
+        "P:A||K>K|ある|T>T|Double|D>D|はい|CV": {
+          "id": "DD-TOKENGEN-XRES-P004",
+          "status": "active",
+          "title": "辞書の直下の要素 → x:Key がある → [ある] 局所名 → [Double] キーが FontSize・TextSize を含むか fontSizeKeys にある → [はい] 変換する"
+        },
+        "P:A||K>K|ある|T>T|Double|D>D|いいえ|SK2": {
+          "id": "DD-TOKENGEN-XRES-P005",
+          "status": "active",
+          "title": "辞書の直下の要素 → x:Key がある → [ある] 局所名 → [Double] キーが FontSize・TextSize を含むか fontSizeKeys にある → [いいえ] 対象外として数える"
+        },
+        "P:A||K>K|ある|T>T|LinearGradientBrush・RadialGradientBrush・ImageBrush・VisualBrush・DrawingBrush|W1": {
+          "id": "DD-TOKENGEN-XRES-P006",
+          "status": "active",
+          "title": "辞書の直下の要素 → x:Key がある → [ある] 局所名 → [LinearGradientBrush・RadialGradientBrush・ImageBrush・VisualBrush・DrawingBrush] warning: グラデーション・画像のブラシは変換しません"
+        },
+        "P:A||K>K|ある|T>T|Style・ControlTemplate・DataTemplate|SK3": {
+          "id": "DD-TOKENGEN-XRES-P007",
+          "status": "active",
+          "title": "辞書の直下の要素 → x:Key がある → [ある] 局所名 → [Style・ControlTemplate・DataTemplate] 読まない"
+        },
+        "P:A||K>K|ある|T>T|その他|SK2": {
+          "id": "DD-TOKENGEN-XRES-P008",
+          "status": "active",
+          "title": "辞書の直下の要素 → x:Key がある → [ある] 局所名 → [その他] 対象外として数える"
+        },
+        "T:A||K": {
+          "id": "DD-TOKENGEN-XRES-T001",
+          "status": "active",
+          "title": "辞書の直下の要素 --> x:Key がある"
+        },
+        "T:K|ない|I": {
+          "id": "DD-TOKENGEN-XRES-T002",
+          "status": "active",
+          "title": "x:Key がある --[ない]--> Window を対象にしたキーの無い Style"
+        },
+        "T:I|はい|WS": {
+          "id": "DD-TOKENGEN-XRES-T003",
+          "status": "active",
+          "title": "Window を対象にしたキーの無い Style --[はい]--> 標準の項目の上書きとして Setter を読む"
+        },
+        "T:I|いいえ|SK1": {
+          "id": "DD-TOKENGEN-XRES-T004",
+          "status": "active",
+          "title": "Window を対象にしたキーの無い Style --[いいえ]--> 読み飛ばす"
+        },
+        "T:K|ある|T": {
+          "id": "DD-TOKENGEN-XRES-T005",
+          "status": "active",
+          "title": "x:Key がある --[ある]--> 局所名"
+        },
+        "T:T|Color・SolidColorBrush・FontFamily・Thickness・CornerRadius|CV": {
+          "id": "DD-TOKENGEN-XRES-T006",
+          "status": "active",
+          "title": "局所名 --[Color・SolidColorBrush・FontFamily・Thickness・CornerRadius]--> 変換する"
+        },
+        "T:T|Double|D": {
+          "id": "DD-TOKENGEN-XRES-T007",
+          "status": "active",
+          "title": "局所名 --[Double]--> キーが FontSize・TextSize を含むか fontSizeKeys にある"
+        },
+        "T:D|はい|CV": {
+          "id": "DD-TOKENGEN-XRES-T008",
+          "status": "active",
+          "title": "キーが FontSize・TextSize を含むか fontSizeKeys にある --[はい]--> 変換する"
+        },
+        "T:D|いいえ|SK2": {
+          "id": "DD-TOKENGEN-XRES-T009",
+          "status": "active",
+          "title": "キーが FontSize・TextSize を含むか fontSizeKeys にある --[いいえ]--> 対象外として数える"
+        },
+        "T:T|LinearGradientBrush・RadialGradientBrush・ImageBrush・VisualBrush・DrawingBrush|W1": {
+          "id": "DD-TOKENGEN-XRES-T010",
+          "status": "active",
+          "title": "局所名 --[LinearGradientBrush・RadialGradientBrush・ImageBrush・VisualBrush・DrawingBrush]--> warning: グラデーション・画像のブラシは変換しません"
+        },
+        "T:T|Style・ControlTemplate・DataTemplate|SK3": {
+          "id": "DD-TOKENGEN-XRES-T011",
+          "status": "active",
+          "title": "局所名 --[Style・ControlTemplate・DataTemplate]--> 読まない"
+        },
+        "T:T|その他|SK2": {
+          "id": "DD-TOKENGEN-XRES-T012",
+          "status": "active",
+          "title": "局所名 --[その他]--> 対象外として数える"
+        }
+      }
+    },
+    "DD-TOKENGEN-XURI": {
+      "doc": "docs/design/detailed/tokens.md",
+      "diagram": "xaml-uri",
+      "next": {
+        "P": 23,
+        "T": 20
+      },
+      "cases": {
+        "P:A||P>P|はい|P1>P1||Q>Q|含む|AS>AS|ない|W1": {
+          "id": "DD-TOKENGEN-XURI-P001",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [はい] その部分を外す → アセンブリ名；component の形を含む → [含む] 同じリポジトリにその AssemblyName の csproj がある → [ない] warning: 外部のアセンブリは辿りません"
+        },
+        "P:A||P>P|はい|P1>P1||Q>Q|含む|AS>AS|ある|R1>R1||C>C|同じ|W3": {
+          "id": "DD-TOKENGEN-XURI-P002",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [はい] その部分を外す → アセンブリ名；component の形を含む → [含む] 同じリポジトリにその AssemblyName の csproj がある → [ある] その csproj の場所から component の後のパス → 辿っている途中のファイルと同じ → [同じ] warning: 循環して参照しています"
+        },
+        "P:A||P>P|はい|P1>P1||Q>Q|含む|AS>AS|ある|R1>R1||C>C|違う|RD>RD|読めない|W4": {
+          "id": "DD-TOKENGEN-XURI-P003",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [はい] その部分を外す → アセンブリ名；component の形を含む → [含む] 同じリポジトリにその AssemblyName の csproj がある → [ある] その csproj の場所から component の後のパス → 辿っている途中のファイルと同じ → [違う] 読める → [読めない] warning: ファイルが読めません"
+        },
+        "P:A||P>P|はい|P1>P1||Q>Q|含む|AS>AS|ある|R1>R1||C>C|違う|RD>RD|読める|OK": {
+          "id": "DD-TOKENGEN-XURI-P004",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [はい] その部分を外す → アセンブリ名；component の形を含む → [含む] 同じリポジトリにその AssemblyName の csproj がある → [ある] その csproj の場所から component の後のパス → 辿っている途中のファイルと同じ → [違う] 読める → [読める] 辿る"
+        },
+        "P:A||P>P|はい|P1>P1||Q>Q|含まない|S>S|はい|R2>R2||C>C|同じ|W3": {
+          "id": "DD-TOKENGEN-XURI-P005",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [はい] その部分を外す → アセンブリ名；component の形を含む → [含まない] / で始まる → [はい] 入口の csproj の場所から → 辿っている途中のファイルと同じ → [同じ] warning: 循環して参照しています"
+        },
+        "P:A||P>P|はい|P1>P1||Q>Q|含まない|S>S|はい|R2>R2||C>C|違う|RD>RD|読めない|W4": {
+          "id": "DD-TOKENGEN-XURI-P006",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [はい] その部分を外す → アセンブリ名；component の形を含む → [含まない] / で始まる → [はい] 入口の csproj の場所から → 辿っている途中のファイルと同じ → [違う] 読める → [読めない] warning: ファイルが読めません"
+        },
+        "P:A||P>P|はい|P1>P1||Q>Q|含まない|S>S|はい|R2>R2||C>C|違う|RD>RD|読める|OK": {
+          "id": "DD-TOKENGEN-XURI-P007",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [はい] その部分を外す → アセンブリ名；component の形を含む → [含まない] / で始まる → [はい] 入口の csproj の場所から → 辿っている途中のファイルと同じ → [違う] 読める → [読める] 辿る"
+        },
+        "P:A||P>P|はい|P1>P1||Q>Q|含まない|S>S|いいえ|H>H|はい|W2": {
+          "id": "DD-TOKENGEN-XURI-P008",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [はい] その部分を外す → アセンブリ名；component の形を含む → [含まない] / で始まる → [いいえ] http: など ほかのスキーム → [はい] warning: 対応していない URI です"
+        },
+        "P:A||P>P|はい|P1>P1||Q>Q|含まない|S>S|いいえ|H>H|いいえ|R3>R3||C>C|同じ|W3": {
+          "id": "DD-TOKENGEN-XURI-P009",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [はい] その部分を外す → アセンブリ名；component の形を含む → [含まない] / で始まる → [いいえ] http: など ほかのスキーム → [いいえ] その XAML のある場所からの相対 → 辿っている途中のファイルと同じ → [同じ] warning: 循環して参照しています"
+        },
+        "P:A||P>P|はい|P1>P1||Q>Q|含まない|S>S|いいえ|H>H|いいえ|R3>R3||C>C|違う|RD>RD|読めない|W4": {
+          "id": "DD-TOKENGEN-XURI-P010",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [はい] その部分を外す → アセンブリ名；component の形を含む → [含まない] / で始まる → [いいえ] http: など ほかのスキーム → [いいえ] その XAML のある場所からの相対 → 辿っている途中のファイルと同じ → [違う] 読める → [読めない] warning: ファイルが読めません"
+        },
+        "P:A||P>P|はい|P1>P1||Q>Q|含まない|S>S|いいえ|H>H|いいえ|R3>R3||C>C|違う|RD>RD|読める|OK": {
+          "id": "DD-TOKENGEN-XURI-P011",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [はい] その部分を外す → アセンブリ名；component の形を含む → [含まない] / で始まる → [いいえ] http: など ほかのスキーム → [いいえ] その XAML のある場所からの相対 → 辿っている途中のファイルと同じ → [違う] 読める → [読める] 辿る"
+        },
+        "P:A||P>P|いいえ|Q>Q|含む|AS>AS|ない|W1": {
+          "id": "DD-TOKENGEN-XURI-P012",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [いいえ] アセンブリ名；component の形を含む → [含む] 同じリポジトリにその AssemblyName の csproj がある → [ない] warning: 外部のアセンブリは辿りません"
+        },
+        "P:A||P>P|いいえ|Q>Q|含む|AS>AS|ある|R1>R1||C>C|同じ|W3": {
+          "id": "DD-TOKENGEN-XURI-P013",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [いいえ] アセンブリ名；component の形を含む → [含む] 同じリポジトリにその AssemblyName の csproj がある → [ある] その csproj の場所から component の後のパス → 辿っている途中のファイルと同じ → [同じ] warning: 循環して参照しています"
+        },
+        "P:A||P>P|いいえ|Q>Q|含む|AS>AS|ある|R1>R1||C>C|違う|RD>RD|読めない|W4": {
+          "id": "DD-TOKENGEN-XURI-P014",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [いいえ] アセンブリ名；component の形を含む → [含む] 同じリポジトリにその AssemblyName の csproj がある → [ある] その csproj の場所から component の後のパス → 辿っている途中のファイルと同じ → [違う] 読める → [読めない] warning: ファイルが読めません"
+        },
+        "P:A||P>P|いいえ|Q>Q|含む|AS>AS|ある|R1>R1||C>C|違う|RD>RD|読める|OK": {
+          "id": "DD-TOKENGEN-XURI-P015",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [いいえ] アセンブリ名；component の形を含む → [含む] 同じリポジトリにその AssemblyName の csproj がある → [ある] その csproj の場所から component の後のパス → 辿っている途中のファイルと同じ → [違う] 読める → [読める] 辿る"
+        },
+        "P:A||P>P|いいえ|Q>Q|含まない|S>S|はい|R2>R2||C>C|同じ|W3": {
+          "id": "DD-TOKENGEN-XURI-P016",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [いいえ] アセンブリ名；component の形を含む → [含まない] / で始まる → [はい] 入口の csproj の場所から → 辿っている途中のファイルと同じ → [同じ] warning: 循環して参照しています"
+        },
+        "P:A||P>P|いいえ|Q>Q|含まない|S>S|はい|R2>R2||C>C|違う|RD>RD|読めない|W4": {
+          "id": "DD-TOKENGEN-XURI-P017",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [いいえ] アセンブリ名；component の形を含む → [含まない] / で始まる → [はい] 入口の csproj の場所から → 辿っている途中のファイルと同じ → [違う] 読める → [読めない] warning: ファイルが読めません"
+        },
+        "P:A||P>P|いいえ|Q>Q|含まない|S>S|はい|R2>R2||C>C|違う|RD>RD|読める|OK": {
+          "id": "DD-TOKENGEN-XURI-P018",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [いいえ] アセンブリ名；component の形を含む → [含まない] / で始まる → [はい] 入口の csproj の場所から → 辿っている途中のファイルと同じ → [違う] 読める → [読める] 辿る"
+        },
+        "P:A||P>P|いいえ|Q>Q|含まない|S>S|いいえ|H>H|はい|W2": {
+          "id": "DD-TOKENGEN-XURI-P019",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [いいえ] アセンブリ名；component の形を含む → [含まない] / で始まる → [いいえ] http: など ほかのスキーム → [はい] warning: 対応していない URI です"
+        },
+        "P:A||P>P|いいえ|Q>Q|含まない|S>S|いいえ|H>H|いいえ|R3>R3||C>C|同じ|W3": {
+          "id": "DD-TOKENGEN-XURI-P020",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [いいえ] アセンブリ名；component の形を含む → [含まない] / で始まる → [いいえ] http: など ほかのスキーム → [いいえ] その XAML のある場所からの相対 → 辿っている途中のファイルと同じ → [同じ] warning: 循環して参照しています"
+        },
+        "P:A||P>P|いいえ|Q>Q|含まない|S>S|いいえ|H>H|いいえ|R3>R3||C>C|違う|RD>RD|読めない|W4": {
+          "id": "DD-TOKENGEN-XURI-P021",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [いいえ] アセンブリ名；component の形を含む → [含まない] / で始まる → [いいえ] http: など ほかのスキーム → [いいえ] その XAML のある場所からの相対 → 辿っている途中のファイルと同じ → [違う] 読める → [読めない] warning: ファイルが読めません"
+        },
+        "P:A||P>P|いいえ|Q>Q|含まない|S>S|いいえ|H>H|いいえ|R3>R3||C>C|違う|RD>RD|読める|OK": {
+          "id": "DD-TOKENGEN-XURI-P022",
+          "status": "active",
+          "title": "Source の URI → pack://application:,,, で始まる → [いいえ] アセンブリ名；component の形を含む → [含まない] / で始まる → [いいえ] http: など ほかのスキーム → [いいえ] その XAML のある場所からの相対 → 辿っている途中のファイルと同じ → [違う] 読める → [読める] 辿る"
+        },
+        "T:A||P": {
+          "id": "DD-TOKENGEN-XURI-T001",
+          "status": "active",
+          "title": "Source の URI --> pack://application:,,, で始まる"
+        },
+        "T:P|はい|P1": {
+          "id": "DD-TOKENGEN-XURI-T002",
+          "status": "active",
+          "title": "pack://application:,,, で始まる --[はい]--> その部分を外す"
+        },
+        "T:P|いいえ|Q": {
+          "id": "DD-TOKENGEN-XURI-T003",
+          "status": "active",
+          "title": "pack://application:,,, で始まる --[いいえ]--> アセンブリ名；component の形を含む"
+        },
+        "T:P1||Q": {
+          "id": "DD-TOKENGEN-XURI-T004",
+          "status": "active",
+          "title": "その部分を外す --> アセンブリ名；component の形を含む"
+        },
+        "T:Q|含む|AS": {
+          "id": "DD-TOKENGEN-XURI-T005",
+          "status": "active",
+          "title": "アセンブリ名；component の形を含む --[含む]--> 同じリポジトリにその AssemblyName の csproj がある"
+        },
+        "T:AS|ない|W1": {
+          "id": "DD-TOKENGEN-XURI-T006",
+          "status": "active",
+          "title": "同じリポジトリにその AssemblyName の csproj がある --[ない]--> warning: 外部のアセンブリは辿りません"
+        },
+        "T:AS|ある|R1": {
+          "id": "DD-TOKENGEN-XURI-T007",
+          "status": "active",
+          "title": "同じリポジトリにその AssemblyName の csproj がある --[ある]--> その csproj の場所から component の後のパス"
+        },
+        "T:Q|含まない|S": {
+          "id": "DD-TOKENGEN-XURI-T008",
+          "status": "active",
+          "title": "アセンブリ名；component の形を含む --[含まない]--> / で始まる"
+        },
+        "T:S|はい|R2": {
+          "id": "DD-TOKENGEN-XURI-T009",
+          "status": "active",
+          "title": "/ で始まる --[はい]--> 入口の csproj の場所から"
+        },
+        "T:S|いいえ|H": {
+          "id": "DD-TOKENGEN-XURI-T010",
+          "status": "active",
+          "title": "/ で始まる --[いいえ]--> http: など ほかのスキーム"
+        },
+        "T:H|はい|W2": {
+          "id": "DD-TOKENGEN-XURI-T011",
+          "status": "active",
+          "title": "http: など ほかのスキーム --[はい]--> warning: 対応していない URI です"
+        },
+        "T:H|いいえ|R3": {
+          "id": "DD-TOKENGEN-XURI-T012",
+          "status": "active",
+          "title": "http: など ほかのスキーム --[いいえ]--> その XAML のある場所からの相対"
+        },
+        "T:R1||C": {
+          "id": "DD-TOKENGEN-XURI-T013",
+          "status": "active",
+          "title": "その csproj の場所から component の後のパス --> 辿っている途中のファイルと同じ"
+        },
+        "T:R2||C": {
+          "id": "DD-TOKENGEN-XURI-T014",
+          "status": "active",
+          "title": "入口の csproj の場所から --> 辿っている途中のファイルと同じ"
+        },
+        "T:R3||C": {
+          "id": "DD-TOKENGEN-XURI-T015",
+          "status": "active",
+          "title": "その XAML のある場所からの相対 --> 辿っている途中のファイルと同じ"
+        },
+        "T:C|同じ|W3": {
+          "id": "DD-TOKENGEN-XURI-T016",
+          "status": "active",
+          "title": "辿っている途中のファイルと同じ --[同じ]--> warning: 循環して参照しています"
+        },
+        "T:C|違う|RD": {
+          "id": "DD-TOKENGEN-XURI-T017",
+          "status": "active",
+          "title": "辿っている途中のファイルと同じ --[違う]--> 読める"
+        },
+        "T:RD|読めない|W4": {
+          "id": "DD-TOKENGEN-XURI-T018",
+          "status": "active",
+          "title": "読める --[読めない]--> warning: ファイルが読めません"
+        },
+        "T:RD|読める|OK": {
+          "id": "DD-TOKENGEN-XURI-T019",
+          "status": "active",
+          "title": "読める --[読める]--> 辿る"
         }
       }
     },
