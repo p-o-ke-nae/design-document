@@ -24,6 +24,7 @@ runners:
     type: playwright
     cwd: .
     level: integration
+    scenarios: true                 # シナリオのトレース・証跡を記録する
     include: ['e2e/**/*.spec.ts']
   - name: e2e-pages
     type: command
