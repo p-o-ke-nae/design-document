@@ -1,0 +1,139 @@
+/* ddv tokens: pokenae-web（ddv tokens generate が生成。編集しない）
+ * source: ../pokenae.Web/app/globals.css sha256=b11963a437a185a066898db7558108d28c2dd1391c670a447c750b988af61aa1
+ * config: sha256=5509236e38769b454fdf3c268d6bdd281904d8c7340396404ba1e31ddb98b53f
+ * generated-by: ddv 0.1.0 format=1
+ */
+:root {
+  --background: #ffffff;
+  --color-accent-25: #a77ca5;
+  --color-accent-25-light: #eadbea;
+  --color-accent-25-strong: #795576;
+  --color-background: var(--background); /* @theme inline */
+  --color-base-70: #e4e3e8;
+  --color-base-70-dark: #c9c6ce;
+  --color-base-70-light: #f6f5f7;
+  --color-danger: #b3261e;
+  --color-foreground: var(--foreground); /* @theme inline */
+  --color-link: #674663;
+  --color-success: #1f6b3a;
+  --color-text-inverse: #fff;
+  --color-text-muted: #605966;
+  --color-text-strong: #28232b;
+  --color-warning: #815500;
+  --content-width: 850px;
+  --font-mono: var(--font-geist-mono); /* @theme inline */
+  --font-sans: var(--font-geist-sans); /* @theme inline */
+  --foreground: #30303b;
+  --shadow-card: 0 5px 18px rgba(65, 44, 63, 0.12);
+  --site-width: 1180px;
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 1000;
+  top: .5rem;
+  left: .5rem;
+  transform: translateY(-200%);
+  padding: .65rem 1rem;
+  color: #fff;
+  background: #222;
+  border-radius: .25rem;
+}
+
+.skip-link:focus { transform: translateY(0); }
+
+.page-header { margin-bottom: 1.5rem; }
+
+.page-lead { color: var(--color-text-muted); max-width: 70ch; }
+
+.admin-card {
+  display: grid;
+  gap: .45rem;
+  min-height: 170px;
+  padding: 1.25rem;
+  border: 1px solid var(--color-base-70);
+  border-radius: .35rem;
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+  box-shadow: var(--shadow-card);
+}
+
+.admin-card:hover { border-color: var(--color-accent-25-strong); }
+
+.admin-card strong { color: var(--color-accent-25-strong); font-size: 1.15rem; }
+
+.admin-card__action { align-self: end; color: var(--color-link); font-weight: 700; }
+
+.admin-card__eyebrow { color: var(--color-text-muted); font-size: .75rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+
+.admin-card__title { margin: 0; color: var(--color-accent-25-strong); font-size: 1.15rem; line-height: 1.4; }
+
+.tool-page { display: grid; gap: 2rem; min-width: 0; }
+
+.tool-page > .page-header { display: grid; gap: .75rem; margin-bottom: 0; }
+
+.tool-page > .page-header .page-lead { margin: 0; }
+
+.tool-page__eyebrow { margin: 0; color: var(--color-accent-25-strong); font-size: .75rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; user-select: none; }
+
+.tool-page__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1rem; }
+
+.tool-page__actions > * { min-width: 0; }
+
+.tool-page__actions[data-layout-mode="mobile"] { display: grid; grid-template-columns: minmax(0, 1fr); align-items: stretch; }
+
+@media (max-width: 639.98px) {
+  .tool-page__actions { display: grid; grid-template-columns: minmax(0, 1fr); align-items: stretch; }
+}
+
+.tool-page__body { display: grid; gap: 2.5rem; min-width: 0; }
+
+.tool-page__notices { display: grid; gap: .75rem; }
+
+.tool-page__body > .content-tags { margin-top: 0; }
+
+.tool-section { display: grid; gap: 1rem; min-width: 0; }
+
+.tool-section__header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: .75rem 1rem; }
+
+.tool-section__header > :first-child { flex: 1 1 16rem; min-width: 0; }
+
+.tool-section__lead { margin: 0; color: var(--color-text-muted); font-size: .9rem; line-height: 1.7; }
+
+.tool-section__body { display: grid; gap: 1rem; min-width: 0; }
+
+.tool-page > .admin-content-nav { margin-block-end: -1rem; }
+
+.notice {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--color-base-70);
+  border-radius: .35rem;
+  background: var(--color-base-70-light);
+}
+
+.notice--error { border-color: #e4aaa6; color: #751b16; background: #fff5f4; }
+
+.pill {
+  display: inline-flex;
+  padding: .12rem .55rem;
+  border-radius: 999px;
+  background: var(--color-accent-25-light);
+  color: var(--color-accent-25-strong);
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+.sr-only {
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+  border:0;
+}

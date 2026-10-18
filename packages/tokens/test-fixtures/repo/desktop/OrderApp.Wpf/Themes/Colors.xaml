@@ -1,0 +1,11 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+  <Color x:Key="AccentColor">#0078D4</Color>
+  <Color x:Key="TextColor">#FF1F1F1F</Color>
+  <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F3F3F3" />
+  <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}" />
+  <SolidColorBrush x:Key="OverlayBrush" Color="Black" Opacity="0.4" />
+  <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#005A9E" />
+  <LinearGradientBrush x:Key="HeaderGradient" />
+</ResourceDictionary>

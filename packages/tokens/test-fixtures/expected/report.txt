@@ -1,0 +1,2 @@
+[{"file":"desktop/OrderApp.Wpf/App.xaml","line":11,"message":"外部のアセンブリは辿りません: pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml"},{"file":"desktop/OrderApp.Wpf/Themes/Colors.xaml","line":10,"message":"グラデーション・画像のブラシは変換しません: HeaderGradient（LinearGradientBrush）"}]
+[{"message":"未定義の変数を参照しています（overrides で値を与えてください）: --font-geist-mono"},{"message":"未定義の変数を参照しています（overrides で値を与えてください）: --font-geist-sans"}]
