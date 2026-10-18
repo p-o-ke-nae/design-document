@@ -35,7 +35,7 @@ class FakeTransport implements PlayerTransport {
   steps: Array<{ index: number; d: Deferred<StepResult>; highlight?: { holdMs: number }; trace?: boolean }> = [];
   manual = false;
   hangReset = false;
-  results: (i: number) => StepResult = (i) => OK(SCENARIO.steps[i].expect.screen);
+  results: (i: number) => StepResult = (i) => OK(SCENARIO.steps[i].expect!.screen!);
   reset(fixtures: string[], start?: string, data?: unknown) {
     this.resets.push({ fixtures, start, ...(data ? { data } : {}) });
     return this.hangReset ? new Promise<{ screen: string | null }>(() => {}) : Promise.resolve({ screen: start ?? null });
@@ -118,7 +118,7 @@ async function toDone() {
 
 async function toFailed() {
   const t = setup();
-  t.transport.results = (i) => (i === 1 ? NG : OK(SCENARIO.steps[i].expect.screen));
+  t.transport.results = (i) => (i === 1 ? NG : OK(SCENARIO.steps[i].expect!.screen!));
   t.c.play();
   await flush();
   expect(t.state()).toBe('Failed');
@@ -280,7 +280,7 @@ describe('PlayerController', () => {
 
   it('[BD-MOCK-PLAYER-T014] 失敗で巻き戻すと一時停止になり失敗表示が消える', async () => {
     const t = await toFailed();
-    t.transport.results = (i) => OK(SCENARIO.steps[i].expect.screen);
+    t.transport.results = (i) => OK(SCENARIO.steps[i].expect!.screen!);
     expect(t.c.rewind(1)).toBe(true);
     await flush();
     expect(t.snap()).toMatchObject({ state: 'Paused', cursor: 1, failure: null });
@@ -390,6 +390,25 @@ describe('PlayerController', () => {
   });
 });
 
+describe('補助ステップと only（DD-DSCN）', () => {
+  it('Web で実行しないステップは送らずに進め、expect.screen の無い補助ステップには直前の画面を補って送る', async () => {
+    const transport = new FakeTransport();
+    const sent: Step[] = [];
+    transport.step = (index, s) => {
+      sent.push(s);
+      return Promise.resolve(OK(s.expect!.screen!));
+    };
+    const finished: boolean[] = [];
+    const c = new PlayerController(transport, { timer: new FakeTimer(), speed: 0, onFinish: (r) => finished.push(r.ok) });
+    c.load({ ...SCENARIO, steps: [{ click: 'closeDialog', only: 'desktop' }, step('新規', 'Input'), { click: 'tab', expect: { visible: ['a'] } }, step('次へ', 'Confirm')] });
+    c.play();
+    await flush();
+    expect(c.getSnapshot().state).toBe('Done');
+    expect(finished).toEqual([true]);
+    expect(sent).toEqual([step('新規', 'Input'), { click: 'tab', expect: { screen: 'Input', visible: ['a'] } }, step('次へ', 'Confirm')]);
+  });
+});
+
 describe('速度とハイライト（設定）', () => {
   it('速度は 0.25×〜4× と最速の 8 段で、待機は 1000ms ÷ 倍率', () => {
     expect(SPEEDS.map((s) => s.label)).toEqual(['0.25×', '0.5×', '0.75×', '1×', '1.5×', '2×', '4×', '最速']);
@@ -432,11 +451,11 @@ describe('速度とハイライト（設定）', () => {
 });
 
 describe('ライブ表示（LiveTrace）', () => {
-  const TRACE = (i: number) => ({ screenBefore: i ? SCENARIO.steps[i - 1].expect.screen : 'List', calls: [{ method: 'GET', path: '/api/x', status: 200, durationMs: 1 }], db: [], expects: [{ kind: 'screen' as const, key: '', expected: SCENARIO.steps[i].expect.screen, actual: SCENARIO.steps[i].expect.screen, ok: true }] });
+  const TRACE = (i: number) => ({ screenBefore: i ? SCENARIO.steps[i - 1].expect!.screen! : 'List', calls: [{ method: 'GET', path: '/api/x', status: 200, durationMs: 1 }], db: [], expects: [{ kind: 'screen' as const, key: '', expected: SCENARIO.steps[i].expect!.screen!, actual: SCENARIO.steps[i].expect!.screen!, ok: true }] });
 
   it('各ステップを trace: true で送り、結果から TraceStep を作る（screenAfter = screen、error = message）', async () => {
     const t = setup();
-    t.transport.results = (i) => (i === 1 ? { ...NG, message: '期待と違います', trace: { ...TRACE(1), expects: [] } } : { ...OK(SCENARIO.steps[i].expect.screen), trace: TRACE(i) });
+    t.transport.results = (i) => (i === 1 ? { ...NG, message: '期待と違います', trace: { ...TRACE(1), expects: [] } } : { ...OK(SCENARIO.steps[i].expect!.screen!), trace: TRACE(i) });
     t.c.play();
     await flush();
     expect(t.transport.steps.every((s) => s.trace === true)).toBe(true);
@@ -469,7 +488,7 @@ describe('ライブ表示（LiveTrace）', () => {
 
   it('リセット・シナリオの切り替え・巻き戻しで消え、巻き戻しの再実行の結果も同じ index で入る', async () => {
     const t = setup();
-    t.transport.results = (i) => ({ ...OK(SCENARIO.steps[i].expect.screen), trace: TRACE(i) });
+    t.transport.results = (i) => ({ ...OK(SCENARIO.steps[i].expect!.screen!), trace: TRACE(i) });
     t.c.play();
     await flush();
     expect(t.c.liveTrace.steps).toHaveLength(3);
@@ -546,7 +565,7 @@ describe('編集中の再生（playDraft・DD-TDEDIT）', () => {
 
   it('失敗も onDraftFinish に渡し、load で通常の再生（data なし・onFinish）に戻る', async () => {
     const transport = new FakeTransport();
-    transport.results = (i) => (i === 1 ? NG : OK(SCENARIO.steps[i].expect.screen));
+    transport.results = (i) => (i === 1 ? NG : OK(SCENARIO.steps[i].expect!.screen!));
     const finished: boolean[] = [];
     const drafts: Array<{ ok: boolean; keys: string[] }> = [];
     const c = new PlayerController(transport, { timer: new FakeTimer(), speed: 0, onFinish: (r) => finished.push(r.ok), onDraftFinish: (r) => drafts.push({ ok: r.ok, keys: r.failures.map((f) => f.key) }) });
@@ -557,7 +576,7 @@ describe('編集中の再生（playDraft・DD-TDEDIT）', () => {
     c.load(SCENARIO);
     expect(c.getSnapshot().draft).toBe(false);
     expect(c.liveTrace.draft).toBe(false);
-    transport.results = (i) => OK(SCENARIO.steps[i].expect.screen);
+    transport.results = (i) => OK(SCENARIO.steps[i].expect!.screen!);
     c.play();
     await flush();
     expect(transport.resets.at(-1)).toEqual({ fixtures: ['default'], start: 'List' });

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser, Page } from '@playwright/test';
 import { BrowserLauncher } from './browser.ts';
-import { ScreenMapSchema } from './map.ts';
+import { screenMapFrom } from './map.ts';
 import { runScenario } from './run-scenario.ts';
 import { startStaticServer, type StaticServer } from './static-server.ts';
 import { StepError } from './step.ts';
@@ -40,6 +40,16 @@ window.addEventListener('hashchange', render); render();
 document.getElementById('go').onclick = () => { document.getElementById('title').textContent = '完了:' + document.getElementById('name').value; history.replaceState(null, '', '#/done'); };
 </script></body></html>`;
 
+// Real app for auxiliary clicks: a mapped button, a data-testid button and the transition button.
+const AUX = `<!doctype html><html><body>
+<h1 id="title">一覧</h1><p id="log"></p><button id="close-x">閉じる</button><button data-testid="dismiss">消す</button><button id="go">送信</button>
+<script>
+const log = (c) => (document.getElementById('log').textContent += c);
+document.getElementById('close-x').onclick = () => log('X');
+document.querySelector('[data-testid="dismiss"]').onclick = () => log('D');
+document.getElementById('go').onclick = () => { log('G'); document.getElementById('title').textContent = '完了'; };
+</script></body></html>`;
+
 // Mock whose runtime exposes a fake `__ddv.trace` (begin / take).
 const TRACED = MOCK.replace(
   'window.__ddv = {',
@@ -68,6 +78,7 @@ beforeAll(async () => {
   await fs.mkdir(path.join(dir, 'demo'), { recursive: true });
   await fs.writeFile(path.join(dir, 'demo/index.html'), MOCK);
   await fs.writeFile(path.join(dir, 'app.html'), APP);
+  await fs.writeFile(path.join(dir, 'aux.html'), AUX);
   await fs.mkdir(path.join(dir, 'traced'), { recursive: true });
   await fs.writeFile(path.join(dir, 'traced/index.html'), TRACED);
   await fs.writeFile(path.join(dir, 'fetching.html'), FETCHING);
@@ -117,7 +128,7 @@ describe('runScenario / PlaywrightDriver', () => {
   });
 
   it('実アプリ: _map.yaml で画面・イベント・項目を解決し、seed と do を呼ぶ', async () => {
-    const map = ScreenMapSchema.parse({
+    const map = screenMapFrom({
       screens: { List: { url: '/app\\.html$', selector: "h1:text-is('一覧')" }, Input: { selector: "h1:text-is('入力')" }, Done: { selector: "h1:has-text('完了')" } },
       events: { 新規: '#add', 送信: '#go' },
       fields: { customer: '#name', title: '#title' },
@@ -142,6 +153,37 @@ describe('runScenario / PlaywrightDriver', () => {
     const missing: Scenario = { ...s, steps: [{ event: '削除', click: 'del', expect: { screen: 'List' } }] };
     const err = await runScenario(page, missing, { kind: 'app', url: `${server.url}app.html`, map }, { timeout: 200 }).catch((e) => e);
     expect(err.message).toContain('対応表（_map.yaml）にイベント 削除 がありません');
+  });
+});
+
+describe('Web の補助ステップのクリック（DD-DSCN-WCLICK）', () => {
+  const map = screenMapFrom({
+    screens: { List: { selector: "h1:text-is('一覧')" }, Done: { selector: "h1:text-is('完了')" } },
+    events: { 送信: '#go', 消す: '#close-x' },
+    fields: { closeDialog: '#close-x', log: '#log' },
+  });
+  const run = (steps: Scenario['steps'], timeout = 1000) => runScenario(page, { id: 'x', title: '', fixtures: [], start: 'List', steps }, { kind: 'app', url: `${server.url}aux.html`, map }, { timeout });
+
+  it('[DD-DSCN-WCLICK-P001][DD-DSCN-WCLICK-T001][DD-DSCN-WCLICK-T002] モックは補助ステップでも表示中の画面内の data-testid をクリックする', async () => {
+    const s: Scenario = { id: 'x', title: '', fixtures: [], start: 'List', steps: [{ click: 'new', expect: { screen: 'Input' } }, { click: 'new', only: 'desktop' }, { input: { customer: '山田' }, click: 'next', expect: { screen: 'Confirm', visible: ['out'] } }] };
+    const seen: number[] = [];
+    await runScenario(page, s, { kind: 'mock', url: `${server.url}demo/index.html` }, { onStep: (i) => void seen.push(i), timeout: 1000 });
+    expect(seen).toEqual([0, 2]);
+    expect(await page.textContent('[data-testid="out"]')).toBe('山田///false');
+    const err = await runScenario(page, { ...s, steps: [{ click: 'next' }] }, { kind: 'mock', url: `${server.url}demo/index.html` }, { timeout: 200 }).catch((e) => e);
+    expect(err.message).toBe('ステップ 1（補助・next）: 操作要素が見つかりません: next（画面 List）');
+  });
+  it('[DD-DSCN-WCLICK-P002][DD-DSCN-WCLICK-T003][DD-DSCN-WCLICK-T004] 実アプリで event があれば map.events のイベントの要素をクリックする', async () => {
+    await run([{ event: '送信', click: 'unused', expect: { screen: 'Done', text: { log: 'G' } } }]);
+  });
+  it('[DD-DSCN-WCLICK-P003][DD-DSCN-WCLICK-T005][DD-DSCN-WCLICK-T006] 実アプリの補助ステップは map.fields の読み替え先をクリックする（同名のイベントは使わない）', async () => {
+    await run([{ click: 'closeDialog', expect: { text: { log: 'X' } } }]);
+    const err = await run([{ click: '消す' }], 200).catch((e) => e);
+    expect(err.kind).toBe('notFound');
+    expect(err.message).toBe('ステップ 1（補助・消す）: 操作要素が見つかりません: 消す（[data-testid="消す"]）');
+  });
+  it('[DD-DSCN-WCLICK-P004][DD-DSCN-WCLICK-T007] 実アプリで map.fields に無ければ [data-testid=key] をクリックする', async () => {
+    await run([{ click: 'dismiss', expect: { screen: 'List', text: { log: 'D' } } }, { click: 'closeDialog' }, { event: '送信', click: 'go', expect: { screen: 'Done', text: { log: 'DXG' } } }]);
   });
 });
 
@@ -184,7 +226,7 @@ describe('runScenario のトレース記録（DD-TRREC）', () => {
     await page.route('**/slow*', () => {});
     await page.route('**/post-me', (r) => r.fulfill({ status: 409, contentType: 'application/json', body: '{"message":"在庫が不足しています"}' }));
     try {
-      const map = ScreenMapSchema.parse({ screens: { List: { selector: "h1:text-is('一覧')" }, Loaded: { selector: "h1:has-text('読込:')" } }, events: { 読込: '#load' }, fields: { title: '#title' } });
+      const map = screenMapFrom({ screens: { List: { selector: "h1:text-is('一覧')" }, Loaded: { selector: "h1:has-text('読込:')" } }, events: { 読込: '#load' }, fields: { title: '#title' } });
       const s: Scenario = { id: 'BD-X-Y-P003', title: 't', fixtures: [], start: 'List', steps: [{ event: '読込', click: 'load', expect: { screen: 'Loaded', text: { title: '読込:太郎' } } }] };
       const rec = new TraceRecorder(out, meta(s.id, 'app'));
       await runScenario(page, s, { kind: 'app', url: `${server.url}fetching.html`, map }, { timeout: 2000, trace: rec });
@@ -206,7 +248,7 @@ describe('runScenario のトレース記録（DD-TRREC）', () => {
 
   it('ステップの前の失敗は failedStep 0・steps 空を書いてから投げる', async () => {
     const out = path.join(dir, 'traces', 'r3');
-    const map = ScreenMapSchema.parse({});
+    const map = screenMapFrom({});
     const rec = new TraceRecorder(out, meta('BD-X-Y-P004', 'app'));
     const s: Scenario = { id: 'BD-X-Y-P004', title: 't', fixtures: ['default'], start: 'List', steps: [{ event: '新規', click: 'new', expect: { screen: 'Input' } }] };
     const hooks = { seed: () => { throw new Error('seed に失敗'); } };

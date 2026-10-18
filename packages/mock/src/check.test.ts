@@ -231,6 +231,29 @@ describe('scaffoldMock', () => {
 
     await expect(scaffoldMock(repo, config, 'nope')).rejects.toThrow(/nope/);
   });
+
+  it('[DD-DSCN-AUXMRG-P001][DD-DSCN-AUXMRG-P002][DD-DSCN-AUXMRG-P003] 再生成は補助ステップと only・コメントを残し、消した補助ステップの件数を表示する', async () => {
+    const repo = await makeRepo();
+    await writeFile(repo, 'mocks/order/index.html', html({ done: true, confirm: true }));
+    await scaffoldMock(repo, config, 'order');
+    const f1 = path.join(repo, `mocks/order/scenarios/${P1}.yaml`);
+    await fs.writeFile(
+      f1,
+      `id: ${P1}\ntitle: t\nstart: List\nsteps:\n  - click: splash\n    only: desktop\n  - event: 新規\n    click: new\n    expect: { screen: Input }\n  - click: tab # 人間のコメント\n    only: [ wpf ]\n  - event: 旧\n    click: old\n    expect: { screen: Input }\n  - input: { a: 1 }\n  - event: 確定\n    input: { customer: 佐藤 }\n    click: ok\n    expect: { screen: Done }\n`,
+      'utf8',
+    );
+    const c = await scaffoldMock(repo, config);
+    expect(c).toMatchObject({ updated: 1, notes: [`${P1}: 更新（補助ステップを 1 件削除）`] });
+    const text = await fs.readFile(f1, 'utf8');
+    expect(text).toContain('click: tab # 人間のコメント');
+    expect(parseScenarioFile(text, f1).scenario?.steps).toEqual([
+      { click: 'splash', only: 'desktop' },
+      { event: '新規', click: 'new', expect: { screen: 'Input' } },
+      { click: 'tab', only: ['wpf'] },
+      { event: '確定', input: { customer: '佐藤' }, click: 'ok', expect: { screen: 'Done' } },
+    ]);
+    expect(await scaffoldMock(repo, config)).toMatchObject({ updated: 0, unchanged: 2, notes: [] });
+  });
 });
 
 const MULTI = `---
