@@ -1,7 +1,7 @@
 ---
 id: MOCKRT
 kind: detailed
-status: approved
+status: review
 title: モック runtime・プレイヤー連携 詳細設計
 traces: [BD-MOCK]
 ---
@@ -25,6 +25,7 @@ classDiagram
     +step(step) Promise~StepResult~
     +on(name, handler)
     +route(spec, handler)
+    +dump() TableDump[]
   }
   class MemoryDb {
     -tables: Map~string, Table~
@@ -34,6 +35,7 @@ classDiagram
     +insert(table, row) Row
     +update(table, key, patch) Row
     +remove(table, key)
+    +dump() TableDump[]
   }
   class Table {
     +name: string
@@ -86,6 +88,7 @@ classDiagram
 
 - ページから使う口は `window.__ddv`（`MockRuntime` のインスタンス）。`mock.js` は `import { mock } from '../_ddv/mock-runtime.js'` で `on` / `route` を使う
 - `api.yaml` の `tables` は文字列（キー `id`）または `{ name, key }`。`insert` でキーが無ければ `nextId` を採番する
+- `dump()` は全テーブルの `{ name, key, rows }` を `api.yaml` の `tables` の順に返す。行は `structuredClone` した写し（呼び出し側が変えても疑似 DB は変わらない）。証跡の `db: mock`（:ref[evidence-runner.md#接続と読み取り専用]）が `window.__ddv.dump()` を `page.evaluate` で呼ぶ
 
 ## 起動とリセット
 

@@ -1,7 +1,7 @@
 ---
 id: EVICAP
 kind: basic
-status: review
+status: approved
 title: シナリオからの証跡の取得（指定・組み込み・取得手段の登録）基本設計
 traces: [REQ-801, REQ-802, REQ-803, REQ-804, REQ-806, REQ-807, REQ-809, REQ-810, REQ-811]
 ---

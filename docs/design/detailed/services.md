@@ -1,7 +1,7 @@
 ---
 id: SVC
 kind: detailed
-status: approved
+status: review
 title: サービス層・Backend・RepoReader 詳細設計
 traces: [BD-HOSTV, BD-ACTRUN]
 ---
@@ -464,6 +464,7 @@ flowchart TD
 | `runs` / `run` | `GET /api/runs`・`runs/{id}` | 手元の実行が無いので `[]` / 404 `not-found`（Actions の実行は下の `actions*`） | — |
 | `historySummary` / `historyTest` / `flaky` / `coverage` | `GET /api/history/*`・`coverage` | `HistoryService` | — |
 | `trace` / `traceShot` | `GET /api/traces/...` | `ActionsService.file(結果ID, 'traces/...')`（結果ブランチ。[actions-run.md](actions-run.md)） | — |
+| `evidence` | `GET /api/traces/{runId}/{testId}/evidence/{file}` → `Blob` | `ActionsService.file(結果ID, 'traces/<キー>/evidence/<file>')` → `Blob`（記録との照合とメモリの保持は :ref[evidence-trace.md#本体の取得]） | — |
 | `scenarios` / `scenario` / `mockSource` | `GET /api/mocks/scenarios`・`scenario`、`POST /api/mock-source` | `MockService` | — |
 | `played` | `POST /api/mocks/played` | メモリに保持（タブを閉じると消える） | — |
 | `testData` / `validateTestData` | `GET /api/testdata`・`POST validate` | `TestDataService` | — |

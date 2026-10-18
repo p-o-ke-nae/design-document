@@ -1,7 +1,7 @@
 ---
 id: EVIVIEW
 kind: basic
-status: review
+status: approved
 title: トレースでの証跡の表示・保存（ローカル版・Pages 版）基本設計
 traces: [REQ-805, REQ-808, REQ-810]
 ---

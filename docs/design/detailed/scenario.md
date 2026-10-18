@@ -215,7 +215,7 @@ flowchart TD
   D -->|なし| E2[expect は生成値]
 ```
 
-- 生成項目（`title`・`start`・`event`・`click`・`expect.screen`）は常に生成値。`fixtures`・`wait`・`do` は既存を保持
+- 生成項目（`title`・`start`・`event`・`click`・`expect.screen`）は常に生成値。`fixtures`・`wait`・`do`・`evidence`（証跡の指定。:ref[evidence-spec.md#構造]）は既存を保持
 - 対応しなかった既存ステップは削除し、件数を「更新」に含めて報告する
 - 結果が既存と同じなら書き込まない（更新日時を変えない。シナリオの状態判定のため）
 
@@ -270,6 +270,7 @@ sequenceDiagram
 
 - モックの静的配信は、`globalSetup` で `mocksRoot` を一時ポートで配信する（`DDV_BASE_URL` 未設定時のみ）
 - `seed` と `do` の実装は利用側の `e2e/ddv-hooks.ts`（任意）から `export const seed / steps` として読み込む（AI が書く）
+- 証跡：`defineScenarioTests` は hooks の `export const evidence`（:ref[evidence-runner.md#hooks-の関数]）も読み、`DDV_TRACE_DIR` があるとき `createEvidenceRunner` を作って実行器に渡す。モックを対象にした実行でも hooks を読む（`seed` は使わない）。ステップごとの取得は :ref[desktop-scenario.md#実行器]
 - テスト紐づけ：`RunnerSchema` に `scenarios: boolean`（既定 false）を追加。true の playwright ランナーは `scanTestLinks` で `<mocksRoot>/**/scenarios/*.yaml` の `id:` 行も紐づける（`test` はシナリオの `title`）
 
 ## 要素の解決

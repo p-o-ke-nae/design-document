@@ -1,7 +1,7 @@
 ---
 id: TOKENGEN
 kind: detailed
-status: review
+status: approved
 title: 実アプリのデザインのトークン（XAML・CSS の取り込み）詳細設計
 traces: [BD-TOKENS]
 ---

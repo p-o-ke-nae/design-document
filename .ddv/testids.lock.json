@@ -8724,6 +8724,2313 @@
         }
       }
     },
+    "DD-EVRUN-ARGSUB": {
+      "doc": "docs/design/detailed/evidence-runner.md",
+      "diagram": "command-args",
+      "next": {
+        "P": 6,
+        "T": 9
+      },
+      "cases": {
+        "P:A||B>B|含まない|K": {
+          "id": "DD-EVRUN-ARGSUB-P001",
+          "status": "active",
+          "title": "args の 1 要素 → {名前} を含む → [含まない] そのまま"
+        },
+        "P:A||B>B|含む|C>C|out・testId・step・platform・at|S": {
+          "id": "DD-EVRUN-ARGSUB-P002",
+          "status": "active",
+          "title": "args の 1 要素 → {名前} を含む → [含む] 名前 → [out・testId・step・platform・at] 文脈の値に置き換え"
+        },
+        "P:A||B>B|含む|C>C|params の名前|V>V|ある|S2": {
+          "id": "DD-EVRUN-ARGSUB-P003",
+          "status": "active",
+          "title": "args の 1 要素 → {名前} を含む → [含む] 名前 → [params の名前] 引数の値がある → [ある] 値を文字列にして置き換え（配列はカンマ区切り）"
+        },
+        "P:A||B>B|含む|C>C|params の名前|V>V|ない|E1": {
+          "id": "DD-EVRUN-ARGSUB-P004",
+          "status": "active",
+          "title": "args の 1 要素 → {名前} を含む → [含む] 名前 → [params の名前] 引数の値がある → [ない] 失敗：引数 名前 がありません"
+        },
+        "P:A||B>B|含む|C>C|ほか|E2": {
+          "id": "DD-EVRUN-ARGSUB-P005",
+          "status": "active",
+          "title": "args の 1 要素 → {名前} を含む → [含む] 名前 → [ほか] 失敗：args の 名前 は params にありません"
+        },
+        "T:A||B": {
+          "id": "DD-EVRUN-ARGSUB-T001",
+          "status": "active",
+          "title": "args の 1 要素 --> {名前} を含む"
+        },
+        "T:B|含まない|K": {
+          "id": "DD-EVRUN-ARGSUB-T002",
+          "status": "active",
+          "title": "{名前} を含む --[含まない]--> そのまま"
+        },
+        "T:B|含む|C": {
+          "id": "DD-EVRUN-ARGSUB-T003",
+          "status": "active",
+          "title": "{名前} を含む --[含む]--> 名前"
+        },
+        "T:C|out・testId・step・platform・at|S": {
+          "id": "DD-EVRUN-ARGSUB-T004",
+          "status": "active",
+          "title": "名前 --[out・testId・step・platform・at]--> 文脈の値に置き換え"
+        },
+        "T:C|params の名前|V": {
+          "id": "DD-EVRUN-ARGSUB-T005",
+          "status": "active",
+          "title": "名前 --[params の名前]--> 引数の値がある"
+        },
+        "T:V|ある|S2": {
+          "id": "DD-EVRUN-ARGSUB-T006",
+          "status": "active",
+          "title": "引数の値がある --[ある]--> 値を文字列にして置き換え（配列はカンマ区切り）"
+        },
+        "T:V|ない|E1": {
+          "id": "DD-EVRUN-ARGSUB-T007",
+          "status": "active",
+          "title": "引数の値がある --[ない]--> 失敗：引数 名前 がありません"
+        },
+        "T:C|ほか|E2": {
+          "id": "DD-EVRUN-ARGSUB-T008",
+          "status": "active",
+          "title": "名前 --[ほか]--> 失敗：args の 名前 は params にありません"
+        }
+      }
+    },
+    "DD-EVRUN-CAPONE": {
+      "doc": "docs/design/detailed/evidence-runner.md",
+      "diagram": "capture-one",
+      "next": {
+        "P": 12,
+        "T": 20
+      },
+      "cases": {
+        "P:A||W>W|失敗|F>F||E>E|warn|WN": {
+          "id": "DD-EVRUN-CAPONE-P001",
+          "status": "active",
+          "title": "captureOne(spec) → resolveWith が成功 → [失敗] 失敗：入力 キー はこの時点ではありません → onError → [warn] status=warn・reason"
+        },
+        "P:A||W>W|失敗|F>F||E>E|fail|NG": {
+          "id": "DD-EVRUN-CAPONE-P002",
+          "status": "active",
+          "title": "captureOne(spec) → resolveWith が成功 → [失敗] 失敗：入力 キー はこの時点ではありません → onError → [fail] status=failed・reason"
+        },
+        "P:A||W>W|成功|R>R|null|F2>F2||E>E|warn|WN": {
+          "id": "DD-EVRUN-CAPONE-P003",
+          "status": "active",
+          "title": "captureOne(spec) → resolveWith が成功 → [成功] resolver.resolve(use) → [null] 失敗：取得手段 use は登録されていません → onError → [warn] status=warn・reason"
+        },
+        "P:A||W>W|成功|R>R|null|F2>F2||E>E|fail|NG": {
+          "id": "DD-EVRUN-CAPONE-P004",
+          "status": "active",
+          "title": "captureOne(spec) → resolveWith が成功 → [成功] resolver.resolve(use) → [null] 失敗：取得手段 use は登録されていません → onError → [fail] status=failed・reason"
+        },
+        "P:A||W>W|成功|R>R|あり|C>C||T>T|超えた|F3>F3||E>E|warn|WN": {
+          "id": "DD-EVRUN-CAPONE-P005",
+          "status": "active",
+          "title": "captureOne(spec) → resolveWith が成功 → [成功] resolver.resolve(use) → [あり] ctx を作り 出力フォルダを空で作る → 時間の上限までに capture が終わる → [超えた] 失敗：時間の上限 n ms を超えました（中止する） → onError → [warn] status=warn・reason"
+        },
+        "P:A||W>W|成功|R>R|あり|C>C||T>T|超えた|F3>F3||E>E|fail|NG": {
+          "id": "DD-EVRUN-CAPONE-P006",
+          "status": "active",
+          "title": "captureOne(spec) → resolveWith が成功 → [成功] resolver.resolve(use) → [あり] ctx を作り 出力フォルダを空で作る → 時間の上限までに capture が終わる → [超えた] 失敗：時間の上限 n ms を超えました（中止する） → onError → [fail] status=failed・reason"
+        },
+        "P:A||W>W|成功|R>R|あり|C>C||T>T|例外|F4>F4||E>E|warn|WN": {
+          "id": "DD-EVRUN-CAPONE-P007",
+          "status": "active",
+          "title": "captureOne(spec) → resolveWith が成功 → [成功] resolver.resolve(use) → [あり] ctx を作り 出力フォルダを空で作る → 時間の上限までに capture が終わる → [例外] 失敗：例外の文言 → onError → [warn] status=warn・reason"
+        },
+        "P:A||W>W|成功|R>R|あり|C>C||T>T|例外|F4>F4||E>E|fail|NG": {
+          "id": "DD-EVRUN-CAPONE-P008",
+          "status": "active",
+          "title": "captureOne(spec) → resolveWith が成功 → [成功] resolver.resolve(use) → [あり] ctx を作り 出力フォルダを空で作る → 時間の上限までに capture が終わる → [例外] 失敗：例外の文言 → onError → [fail] status=failed・reason"
+        },
+        "P:A||W>W|成功|R>R|あり|C>C||T>T|終わった|O>O|いいえ|F5>F5||E>E|warn|WN": {
+          "id": "DD-EVRUN-CAPONE-P009",
+          "status": "active",
+          "title": "captureOne(spec) → resolveWith が成功 → [成功] resolver.resolve(use) → [あり] ctx を作り 出力フォルダを空で作る → 時間の上限までに capture が終わる → [終わった] 出力が 1 つ以上 かつ 形が正しい → [いいえ] 失敗：取得手段が証跡を返しませんでした / 戻り値の形が不正です → onError → [warn] status=warn・reason"
+        },
+        "P:A||W>W|成功|R>R|あり|C>C||T>T|終わった|O>O|いいえ|F5>F5||E>E|fail|NG": {
+          "id": "DD-EVRUN-CAPONE-P010",
+          "status": "active",
+          "title": "captureOne(spec) → resolveWith が成功 → [成功] resolver.resolve(use) → [あり] ctx を作り 出力フォルダを空で作る → 時間の上限までに capture が終わる → [終わった] 出力が 1 つ以上 かつ 形が正しい → [いいえ] 失敗：取得手段が証跡を返しませんでした / 戻り値の形が不正です → onError → [fail] status=failed・reason"
+        },
+        "P:A||W>W|成功|R>R|あり|C>C||T>T|終わった|O>O|はい|S>S||OK": {
+          "id": "DD-EVRUN-CAPONE-P011",
+          "status": "active",
+          "title": "captureOne(spec) → resolveWith が成功 → [成功] resolver.resolve(use) → [あり] ctx を作り 出力フォルダを空で作る → 時間の上限までに capture が終わる → [終わった] 出力が 1 つ以上 かつ 形が正しい → [はい] EvidenceStore.save（大きさの上限は保存で扱う） → status=ok"
+        },
+        "T:A||W": {
+          "id": "DD-EVRUN-CAPONE-T001",
+          "status": "active",
+          "title": "captureOne(spec) --> resolveWith が成功"
+        },
+        "T:W|失敗|F": {
+          "id": "DD-EVRUN-CAPONE-T002",
+          "status": "active",
+          "title": "resolveWith が成功 --[失敗]--> 失敗：入力 キー はこの時点ではありません"
+        },
+        "T:W|成功|R": {
+          "id": "DD-EVRUN-CAPONE-T003",
+          "status": "active",
+          "title": "resolveWith が成功 --[成功]--> resolver.resolve(use)"
+        },
+        "T:R|null|F2": {
+          "id": "DD-EVRUN-CAPONE-T004",
+          "status": "active",
+          "title": "resolver.resolve(use) --[null]--> 失敗：取得手段 use は登録されていません"
+        },
+        "T:R|あり|C": {
+          "id": "DD-EVRUN-CAPONE-T005",
+          "status": "active",
+          "title": "resolver.resolve(use) --[あり]--> ctx を作り 出力フォルダを空で作る"
+        },
+        "T:C||T": {
+          "id": "DD-EVRUN-CAPONE-T006",
+          "status": "active",
+          "title": "ctx を作り 出力フォルダを空で作る --> 時間の上限までに capture が終わる"
+        },
+        "T:T|超えた|F3": {
+          "id": "DD-EVRUN-CAPONE-T007",
+          "status": "active",
+          "title": "時間の上限までに capture が終わる --[超えた]--> 失敗：時間の上限 n ms を超えました（中止する）"
+        },
+        "T:T|例外|F4": {
+          "id": "DD-EVRUN-CAPONE-T008",
+          "status": "active",
+          "title": "時間の上限までに capture が終わる --[例外]--> 失敗：例外の文言"
+        },
+        "T:T|終わった|O": {
+          "id": "DD-EVRUN-CAPONE-T009",
+          "status": "active",
+          "title": "時間の上限までに capture が終わる --[終わった]--> 出力が 1 つ以上 かつ 形が正しい"
+        },
+        "T:O|いいえ|F5": {
+          "id": "DD-EVRUN-CAPONE-T010",
+          "status": "active",
+          "title": "出力が 1 つ以上 かつ 形が正しい --[いいえ]--> 失敗：取得手段が証跡を返しませんでした / 戻り値の形が不正です"
+        },
+        "T:O|はい|S": {
+          "id": "DD-EVRUN-CAPONE-T011",
+          "status": "active",
+          "title": "出力が 1 つ以上 かつ 形が正しい --[はい]--> EvidenceStore.save（大きさの上限は保存で扱う）"
+        },
+        "T:S||OK": {
+          "id": "DD-EVRUN-CAPONE-T012",
+          "status": "active",
+          "title": "EvidenceStore.save（大きさの上限は保存で扱う） --> status=ok"
+        },
+        "T:F||E": {
+          "id": "DD-EVRUN-CAPONE-T013",
+          "status": "active",
+          "title": "失敗：入力 キー はこの時点ではありません --> onError"
+        },
+        "T:F2||E": {
+          "id": "DD-EVRUN-CAPONE-T014",
+          "status": "active",
+          "title": "失敗：取得手段 use は登録されていません --> onError"
+        },
+        "T:F3||E": {
+          "id": "DD-EVRUN-CAPONE-T015",
+          "status": "active",
+          "title": "失敗：時間の上限 n ms を超えました（中止する） --> onError"
+        },
+        "T:F4||E": {
+          "id": "DD-EVRUN-CAPONE-T016",
+          "status": "active",
+          "title": "失敗：例外の文言 --> onError"
+        },
+        "T:F5||E": {
+          "id": "DD-EVRUN-CAPONE-T017",
+          "status": "active",
+          "title": "失敗：取得手段が証跡を返しませんでした / 戻り値の形が不正です --> onError"
+        },
+        "T:E|warn|WN": {
+          "id": "DD-EVRUN-CAPONE-T018",
+          "status": "active",
+          "title": "onError --[warn]--> status=warn・reason"
+        },
+        "T:E|fail|NG": {
+          "id": "DD-EVRUN-CAPONE-T019",
+          "status": "active",
+          "title": "onError --[fail]--> status=failed・reason"
+        }
+      }
+    },
+    "DD-EVRUN-CMDOUT": {
+      "doc": "docs/design/detailed/evidence-runner.md",
+      "diagram": "command-out",
+      "next": {
+        "P": 6,
+        "T": 10
+      },
+      "cases": {
+        "P:A||X>X|いいえ|E1": {
+          "id": "DD-EVRUN-CMDOUT-P001",
+          "status": "active",
+          "title": "終了 → 終了コード 0（時間内） → [いいえ] 失敗：終了コード n：標準エラーの末尾"
+        },
+        "P:A||X>X|はい|O>O|stdout|J>J|はい|R1": {
+          "id": "DD-EVRUN-CMDOUT-P002",
+          "status": "active",
+          "title": "終了 → 終了コード 0（時間内） → [はい] output → [stdout] 標準出力が JSON として読める → [はい] { kind: json, data }"
+        },
+        "P:A||X>X|はい|O>O|stdout|J>J|いいえ|R2": {
+          "id": "DD-EVRUN-CMDOUT-P003",
+          "status": "active",
+          "title": "終了 → 終了コード 0（時間内） → [はい] output → [stdout] 標準出力が JSON として読める → [いいえ] { kind: text, text }"
+        },
+        "P:A||X>X|はい|O>O|dir|D>D|ない|E2": {
+          "id": "DD-EVRUN-CMDOUT-P004",
+          "status": "active",
+          "title": "終了 → 終了コード 0（時間内） → [はい] output → [dir] 出力フォルダにファイルがある（サブフォルダは見ない） → [ない] 失敗：出力フォルダにファイルがありません"
+        },
+        "P:A||X>X|はい|O>O|dir|D>D|ある|K": {
+          "id": "DD-EVRUN-CMDOUT-P005",
+          "status": "active",
+          "title": "終了 → 終了コード 0（時間内） → [はい] output → [dir] 出力フォルダにファイルがある（サブフォルダは見ない） → [ある] ファイルごとに拡張子で kind を決める・名前の昇順"
+        },
+        "T:A||X": {
+          "id": "DD-EVRUN-CMDOUT-T001",
+          "status": "active",
+          "title": "終了 --> 終了コード 0（時間内）"
+        },
+        "T:X|いいえ|E1": {
+          "id": "DD-EVRUN-CMDOUT-T002",
+          "status": "active",
+          "title": "終了コード 0（時間内） --[いいえ]--> 失敗：終了コード n：標準エラーの末尾"
+        },
+        "T:X|はい|O": {
+          "id": "DD-EVRUN-CMDOUT-T003",
+          "status": "active",
+          "title": "終了コード 0（時間内） --[はい]--> output"
+        },
+        "T:O|stdout|J": {
+          "id": "DD-EVRUN-CMDOUT-T004",
+          "status": "active",
+          "title": "output --[stdout]--> 標準出力が JSON として読める"
+        },
+        "T:J|はい|R1": {
+          "id": "DD-EVRUN-CMDOUT-T005",
+          "status": "active",
+          "title": "標準出力が JSON として読める --[はい]--> { kind: json, data }"
+        },
+        "T:J|いいえ|R2": {
+          "id": "DD-EVRUN-CMDOUT-T006",
+          "status": "active",
+          "title": "標準出力が JSON として読める --[いいえ]--> { kind: text, text }"
+        },
+        "T:O|dir|D": {
+          "id": "DD-EVRUN-CMDOUT-T007",
+          "status": "active",
+          "title": "output --[dir]--> 出力フォルダにファイルがある（サブフォルダは見ない）"
+        },
+        "T:D|ない|E2": {
+          "id": "DD-EVRUN-CMDOUT-T008",
+          "status": "active",
+          "title": "出力フォルダにファイルがある（サブフォルダは見ない） --[ない]--> 失敗：出力フォルダにファイルがありません"
+        },
+        "T:D|ある|K": {
+          "id": "DD-EVRUN-CMDOUT-T009",
+          "status": "active",
+          "title": "出力フォルダにファイルがある（サブフォルダは見ない） --[ある]--> ファイルごとに拡張子で kind を決める・名前の昇順"
+        }
+      }
+    },
+    "DD-EVRUN-DBTGT": {
+      "doc": "docs/design/detailed/evidence-runner.md",
+      "diagram": "db-target",
+      "next": {
+        "P": 13,
+        "T": 18
+      },
+      "cases": {
+        "P:A||W>W|ある|N>N||K>K|mock|T>T|いいえ|E2": {
+          "id": "DD-EVRUN-DBTGT-P001",
+          "status": "active",
+          "title": "接続先を決める → with.db がある → [ある] その名前 → mock → [mock] host.target が mock → [いいえ] 失敗：mock の疑似 DB はモックを対象にした実行でだけ使えます"
+        },
+        "P:A||W>W|ある|N>N||K>K|mock|T>T|はい|MK": {
+          "id": "DD-EVRUN-DBTGT-P002",
+          "status": "active",
+          "title": "接続先を決める → with.db がある → [ある] その名前 → mock → [mock] host.target が mock → [はい] mock"
+        },
+        "P:A||W>W|ある|N>N||K>K|databases の名前|V>V|ない|E3": {
+          "id": "DD-EVRUN-DBTGT-P003",
+          "status": "active",
+          "title": "接続先を決める → with.db がある → [ある] その名前 → mock → [databases の名前] databases にある → [ない] 失敗：接続先 名前 は定義されていません"
+        },
+        "P:A||W>W|ある|N>N||K>K|databases の名前|V>V|ある|EV>EV|ない|E4": {
+          "id": "DD-EVRUN-DBTGT-P004",
+          "status": "active",
+          "title": "接続先を決める → with.db がある → [ある] その名前 → mock → [databases の名前] databases にある → [ある] process.env[env] が空でない → [ない] 失敗：接続先 名前 の環境変数 env がありません"
+        },
+        "P:A||W>W|ある|N>N||K>K|databases の名前|V>V|ある|EV>EV|ある|OK": {
+          "id": "DD-EVRUN-DBTGT-P005",
+          "status": "active",
+          "title": "接続先を決める → with.db がある → [ある] その名前 → mock → [databases の名前] databases にある → [ある] process.env[env] が空でない → [ある] その接続先"
+        },
+        "P:A||W>W|ない|M>M|はい|MK": {
+          "id": "DD-EVRUN-DBTGT-P006",
+          "status": "active",
+          "title": "接続先を決める → with.db がある → [ない] host.target が mock（モックを対象にした Web の実行） → [はい] mock"
+        },
+        "P:A||W>W|ない|M>M|いいえ|D>D|ある|N2>N2||K>K|mock|T>T|いいえ|E2": {
+          "id": "DD-EVRUN-DBTGT-P007",
+          "status": "active",
+          "title": "接続先を決める → with.db がある → [ない] host.target が mock（モックを対象にした Web の実行） → [いいえ] evidence.defaultDatabase がある → [ある] defaultDatabase → mock → [mock] host.target が mock → [いいえ] 失敗：mock の疑似 DB はモックを対象にした実行でだけ使えます"
+        },
+        "P:A||W>W|ない|M>M|いいえ|D>D|ある|N2>N2||K>K|mock|T>T|はい|MK": {
+          "id": "DD-EVRUN-DBTGT-P008",
+          "status": "active",
+          "title": "接続先を決める → with.db がある → [ない] host.target が mock（モックを対象にした Web の実行） → [いいえ] evidence.defaultDatabase がある → [ある] defaultDatabase → mock → [mock] host.target が mock → [はい] mock"
+        },
+        "P:A||W>W|ない|M>M|いいえ|D>D|ある|N2>N2||K>K|databases の名前|V>V|ない|E3": {
+          "id": "DD-EVRUN-DBTGT-P009",
+          "status": "active",
+          "title": "接続先を決める → with.db がある → [ない] host.target が mock（モックを対象にした Web の実行） → [いいえ] evidence.defaultDatabase がある → [ある] defaultDatabase → mock → [databases の名前] databases にある → [ない] 失敗：接続先 名前 は定義されていません"
+        },
+        "P:A||W>W|ない|M>M|いいえ|D>D|ある|N2>N2||K>K|databases の名前|V>V|ある|EV>EV|ない|E4": {
+          "id": "DD-EVRUN-DBTGT-P010",
+          "status": "active",
+          "title": "接続先を決める → with.db がある → [ない] host.target が mock（モックを対象にした Web の実行） → [いいえ] evidence.defaultDatabase がある → [ある] defaultDatabase → mock → [databases の名前] databases にある → [ある] process.env[env] が空でない → [ない] 失敗：接続先 名前 の環境変数 env がありません"
+        },
+        "P:A||W>W|ない|M>M|いいえ|D>D|ある|N2>N2||K>K|databases の名前|V>V|ある|EV>EV|ある|OK": {
+          "id": "DD-EVRUN-DBTGT-P011",
+          "status": "active",
+          "title": "接続先を決める → with.db がある → [ない] host.target が mock（モックを対象にした Web の実行） → [いいえ] evidence.defaultDatabase がある → [ある] defaultDatabase → mock → [databases の名前] databases にある → [ある] process.env[env] が空でない → [ある] その接続先"
+        },
+        "P:A||W>W|ない|M>M|いいえ|D>D|ない|E1": {
+          "id": "DD-EVRUN-DBTGT-P012",
+          "status": "active",
+          "title": "接続先を決める → with.db がある → [ない] host.target が mock（モックを対象にした Web の実行） → [いいえ] evidence.defaultDatabase がある → [ない] 失敗：接続先が決まりません（with.db か evidence.defaultDatabase を書いてください）"
+        },
+        "T:A||W": {
+          "id": "DD-EVRUN-DBTGT-T001",
+          "status": "active",
+          "title": "接続先を決める --> with.db がある"
+        },
+        "T:W|ある|N": {
+          "id": "DD-EVRUN-DBTGT-T002",
+          "status": "active",
+          "title": "with.db がある --[ある]--> その名前"
+        },
+        "T:W|ない|M": {
+          "id": "DD-EVRUN-DBTGT-T003",
+          "status": "active",
+          "title": "with.db がある --[ない]--> host.target が mock（モックを対象にした Web の実行）"
+        },
+        "T:M|はい|MK": {
+          "id": "DD-EVRUN-DBTGT-T004",
+          "status": "active",
+          "title": "host.target が mock（モックを対象にした Web の実行） --[はい]--> mock"
+        },
+        "T:M|いいえ|D": {
+          "id": "DD-EVRUN-DBTGT-T005",
+          "status": "active",
+          "title": "host.target が mock（モックを対象にした Web の実行） --[いいえ]--> evidence.defaultDatabase がある"
+        },
+        "T:D|ある|N2": {
+          "id": "DD-EVRUN-DBTGT-T006",
+          "status": "active",
+          "title": "evidence.defaultDatabase がある --[ある]--> defaultDatabase"
+        },
+        "T:D|ない|E1": {
+          "id": "DD-EVRUN-DBTGT-T007",
+          "status": "active",
+          "title": "evidence.defaultDatabase がある --[ない]--> 失敗：接続先が決まりません（with.db か evidence.defaultDatabase を書いてください）"
+        },
+        "T:N||K": {
+          "id": "DD-EVRUN-DBTGT-T008",
+          "status": "active",
+          "title": "その名前 --> mock"
+        },
+        "T:N2||K": {
+          "id": "DD-EVRUN-DBTGT-T009",
+          "status": "active",
+          "title": "defaultDatabase --> mock"
+        },
+        "T:K|mock|T": {
+          "id": "DD-EVRUN-DBTGT-T010",
+          "status": "active",
+          "title": "mock --[mock]--> host.target が mock"
+        },
+        "T:T|いいえ|E2": {
+          "id": "DD-EVRUN-DBTGT-T011",
+          "status": "active",
+          "title": "host.target が mock --[いいえ]--> 失敗：mock の疑似 DB はモックを対象にした実行でだけ使えます"
+        },
+        "T:T|はい|MK": {
+          "id": "DD-EVRUN-DBTGT-T012",
+          "status": "active",
+          "title": "host.target が mock --[はい]--> mock"
+        },
+        "T:K|databases の名前|V": {
+          "id": "DD-EVRUN-DBTGT-T013",
+          "status": "active",
+          "title": "mock --[databases の名前]--> databases にある"
+        },
+        "T:V|ない|E3": {
+          "id": "DD-EVRUN-DBTGT-T014",
+          "status": "active",
+          "title": "databases にある --[ない]--> 失敗：接続先 名前 は定義されていません"
+        },
+        "T:V|ある|EV": {
+          "id": "DD-EVRUN-DBTGT-T015",
+          "status": "active",
+          "title": "databases にある --[ある]--> process.env[env] が空でない"
+        },
+        "T:EV|ない|E4": {
+          "id": "DD-EVRUN-DBTGT-T016",
+          "status": "active",
+          "title": "process.env[env] が空でない --[ない]--> 失敗：接続先 名前 の環境変数 env がありません"
+        },
+        "T:EV|ある|OK": {
+          "id": "DD-EVRUN-DBTGT-T017",
+          "status": "active",
+          "title": "process.env[env] が空でない --[ある]--> その接続先"
+        }
+      }
+    },
+    "DD-EVRUN-HOOKCALL": {
+      "doc": "docs/design/detailed/evidence-runner.md",
+      "diagram": "hooks-call",
+      "next": {
+        "P": 4,
+        "T": 8
+      },
+      "cases": {
+        "P:A||P>P|いいえ|E1": {
+          "id": "DD-EVRUN-HOOKCALL-P001",
+          "status": "active",
+          "title": "HooksProvider.capture → 必須の引数がそろう → [いいえ] 失敗：必須の引数 名前 がありません"
+        },
+        "P:A||P>P|はい|D>D||R>R||V>V|いいえ|E2": {
+          "id": "DD-EVRUN-HOOKCALL-P002",
+          "status": "active",
+          "title": "HooksProvider.capture → 必須の引数がそろう → [はい] params の default を補う → def.run(args, ctx) → 戻り値が EvidenceOutput か その配列 → [いいえ] 失敗：戻り値の形が不正です"
+        },
+        "P:A||P>P|はい|D>D||R>R||V>V|はい|OK": {
+          "id": "DD-EVRUN-HOOKCALL-P003",
+          "status": "active",
+          "title": "HooksProvider.capture → 必須の引数がそろう → [はい] params の default を補う → def.run(args, ctx) → 戻り値が EvidenceOutput か その配列 → [はい] 出力"
+        },
+        "T:A||P": {
+          "id": "DD-EVRUN-HOOKCALL-T001",
+          "status": "active",
+          "title": "HooksProvider.capture --> 必須の引数がそろう"
+        },
+        "T:P|いいえ|E1": {
+          "id": "DD-EVRUN-HOOKCALL-T002",
+          "status": "active",
+          "title": "必須の引数がそろう --[いいえ]--> 失敗：必須の引数 名前 がありません"
+        },
+        "T:P|はい|D": {
+          "id": "DD-EVRUN-HOOKCALL-T003",
+          "status": "active",
+          "title": "必須の引数がそろう --[はい]--> params の default を補う"
+        },
+        "T:D||R": {
+          "id": "DD-EVRUN-HOOKCALL-T004",
+          "status": "active",
+          "title": "params の default を補う --> def.run(args, ctx)"
+        },
+        "T:R||V": {
+          "id": "DD-EVRUN-HOOKCALL-T005",
+          "status": "active",
+          "title": "def.run(args, ctx) --> 戻り値が EvidenceOutput か その配列"
+        },
+        "T:V|いいえ|E2": {
+          "id": "DD-EVRUN-HOOKCALL-T006",
+          "status": "active",
+          "title": "戻り値が EvidenceOutput か その配列 --[いいえ]--> 失敗：戻り値の形が不正です"
+        },
+        "T:V|はい|OK": {
+          "id": "DD-EVRUN-HOOKCALL-T007",
+          "status": "active",
+          "title": "戻り値が EvidenceOutput か その配列 --[はい]--> 出力"
+        }
+      }
+    },
+    "DD-EVRUN-MASK": {
+      "doc": "docs/design/detailed/evidence-runner.md",
+      "diagram": "mask",
+      "next": {
+        "P": 3,
+        "T": 4
+      },
+      "cases": {
+        "P:A||B>B|一致|M": {
+          "id": "DD-EVRUN-MASK-P001",
+          "status": "active",
+          "title": "列名 → with.mask か databases.名前.mask に 大文字小文字を区別せず一致 → [一致] すべての行のその列を *** に・masked に列名を加える"
+        },
+        "P:A||B>B|一致しない|K": {
+          "id": "DD-EVRUN-MASK-P002",
+          "status": "active",
+          "title": "列名 → with.mask か databases.名前.mask に 大文字小文字を区別せず一致 → [一致しない] そのまま"
+        },
+        "T:A||B": {
+          "id": "DD-EVRUN-MASK-T001",
+          "status": "active",
+          "title": "列名 --> with.mask か databases.名前.mask に 大文字小文字を区別せず一致"
+        },
+        "T:B|一致|M": {
+          "id": "DD-EVRUN-MASK-T002",
+          "status": "active",
+          "title": "with.mask か databases.名前.mask に 大文字小文字を区別せず一致 --[一致]--> すべての行のその列を *** に・masked に列名を加える"
+        },
+        "T:B|一致しない|K": {
+          "id": "DD-EVRUN-MASK-T003",
+          "status": "active",
+          "title": "with.mask か databases.名前.mask に 大文字小文字を区別せず一致 --[一致しない]--> そのまま"
+        }
+      }
+    },
+    "DD-EVRUN-SHOT": {
+      "doc": "docs/design/detailed/evidence-runner.md",
+      "diagram": "screenshot",
+      "next": {
+        "P": 7,
+        "T": 13
+      },
+      "cases": {
+        "P:A||T>T|ない|F>F|true|P>P|いいえ|E1": {
+          "id": "DD-EVRUN-SHOT-P001",
+          "status": "active",
+          "title": "screenshot → target がある → [ない] fullPage → [true] platform が web → [いいえ] 失敗：fullPage は Web だけで使えます"
+        },
+        "P:A||T>T|ない|F>F|true|P>P|はい|W1": {
+          "id": "DD-EVRUN-SHOT-P002",
+          "status": "active",
+          "title": "screenshot → target がある → [ない] fullPage → [true] platform が web → [はい] host.screenshot(path, fullPage=true)"
+        },
+        "P:A||T>T|ない|F>F|false・なし|W2": {
+          "id": "DD-EVRUN-SHOT-P003",
+          "status": "active",
+          "title": "screenshot → target がある → [ない] fullPage → [false・なし] host.screenshot(path)"
+        },
+        "P:A||T>T|ある|G>G|はい|E2": {
+          "id": "DD-EVRUN-SHOT-P004",
+          "status": "active",
+          "title": "screenshot → target がある → [ある] fullPage も指定 → [はい] 失敗：target と fullPage は同時に指定できません"
+        },
+        "P:A||T>T|ある|G>G|いいえ|K>K||N>N|いいえ|E3": {
+          "id": "DD-EVRUN-SHOT-P005",
+          "status": "active",
+          "title": "screenshot → target がある → [ある] fullPage も指定 → [いいえ] host.screenshotElement(target, path) → 要素が見つかり 画面内にある → [いいえ] 失敗：要素 論理名 が見つかりません / 画面外です（探した名前・platform）"
+        },
+        "P:A||T>T|ある|G>G|いいえ|K>K||N>N|はい|OK": {
+          "id": "DD-EVRUN-SHOT-P006",
+          "status": "active",
+          "title": "screenshot → target がある → [ある] fullPage も指定 → [いいえ] host.screenshotElement(target, path) → 要素が見つかり 画面内にある → [はい] 要素の範囲の PNG"
+        },
+        "T:A||T": {
+          "id": "DD-EVRUN-SHOT-T001",
+          "status": "active",
+          "title": "screenshot --> target がある"
+        },
+        "T:T|ない|F": {
+          "id": "DD-EVRUN-SHOT-T002",
+          "status": "active",
+          "title": "target がある --[ない]--> fullPage"
+        },
+        "T:F|true|P": {
+          "id": "DD-EVRUN-SHOT-T003",
+          "status": "active",
+          "title": "fullPage --[true]--> platform が web"
+        },
+        "T:P|いいえ|E1": {
+          "id": "DD-EVRUN-SHOT-T004",
+          "status": "active",
+          "title": "platform が web --[いいえ]--> 失敗：fullPage は Web だけで使えます"
+        },
+        "T:P|はい|W1": {
+          "id": "DD-EVRUN-SHOT-T005",
+          "status": "active",
+          "title": "platform が web --[はい]--> host.screenshot(path, fullPage=true)"
+        },
+        "T:F|false・なし|W2": {
+          "id": "DD-EVRUN-SHOT-T006",
+          "status": "active",
+          "title": "fullPage --[false・なし]--> host.screenshot(path)"
+        },
+        "T:T|ある|G": {
+          "id": "DD-EVRUN-SHOT-T007",
+          "status": "active",
+          "title": "target がある --[ある]--> fullPage も指定"
+        },
+        "T:G|はい|E2": {
+          "id": "DD-EVRUN-SHOT-T008",
+          "status": "active",
+          "title": "fullPage も指定 --[はい]--> 失敗：target と fullPage は同時に指定できません"
+        },
+        "T:G|いいえ|K": {
+          "id": "DD-EVRUN-SHOT-T009",
+          "status": "active",
+          "title": "fullPage も指定 --[いいえ]--> host.screenshotElement(target, path)"
+        },
+        "T:K||N": {
+          "id": "DD-EVRUN-SHOT-T010",
+          "status": "active",
+          "title": "host.screenshotElement(target, path) --> 要素が見つかり 画面内にある"
+        },
+        "T:N|いいえ|E3": {
+          "id": "DD-EVRUN-SHOT-T011",
+          "status": "active",
+          "title": "要素が見つかり 画面内にある --[いいえ]--> 失敗：要素 論理名 が見つかりません / 画面外です（探した名前・platform）"
+        },
+        "T:N|はい|OK": {
+          "id": "DD-EVRUN-SHOT-T012",
+          "status": "active",
+          "title": "要素が見つかり 画面内にある --[はい]--> 要素の範囲の PNG"
+        }
+      }
+    },
+    "DD-EVRUN-SQLLEX": {
+      "doc": "docs/design/detailed/evidence-runner.md",
+      "diagram": "sql-lex",
+      "next": {
+        "P": 6,
+        "T": 11,
+        "X": 37
+      },
+      "cases": {
+        "P:[*]start||Normal>Normal|単一引用符|Str>Str|単一引用符（2 つ続けば文字列のまま）|Normal>Normal|終わり|[*]end": {
+          "id": "DD-EVRUN-SQLLEX-P001",
+          "status": "active",
+          "title": "開始 → 通常 → [単一引用符] 文字列 → [単一引用符（2 つ続けば文字列のまま）] 通常 → [終わり] 終了"
+        },
+        "P:[*]start||Normal>Normal|二重引用符か角かっこの開き|Quoted>Quoted|対応する閉じ|Normal>Normal|終わり|[*]end": {
+          "id": "DD-EVRUN-SQLLEX-P002",
+          "status": "active",
+          "title": "開始 → 通常 → [二重引用符か角かっこの開き] 引用の名前 → [対応する閉じ] 通常 → [終わり] 終了"
+        },
+        "P:[*]start||Normal>Normal|ハイフン 2 つ|Line>Line|改行|Normal>Normal|終わり|[*]end": {
+          "id": "DD-EVRUN-SQLLEX-P003",
+          "status": "active",
+          "title": "開始 → 通常 → [ハイフン 2 つ] 行コメント → [改行] 通常 → [終わり] 終了"
+        },
+        "P:[*]start||Normal>Normal|スラッシュとアスタリスク|Block>Block|アスタリスクとスラッシュ|Normal>Normal|終わり|[*]end": {
+          "id": "DD-EVRUN-SQLLEX-P004",
+          "status": "active",
+          "title": "開始 → 通常 → [スラッシュとアスタリスク] ブロックコメント → [アスタリスクとスラッシュ] 通常 → [終わり] 終了"
+        },
+        "P:[*]start||Normal>Normal|終わり|[*]end": {
+          "id": "DD-EVRUN-SQLLEX-P005",
+          "status": "active",
+          "title": "開始 → 通常 → [終わり] 終了"
+        },
+        "T:[*]start||Normal": {
+          "id": "DD-EVRUN-SQLLEX-T001",
+          "status": "active",
+          "title": "開始 --> 通常"
+        },
+        "T:Normal|単一引用符|Str": {
+          "id": "DD-EVRUN-SQLLEX-T002",
+          "status": "active",
+          "title": "通常 --[単一引用符]--> 文字列"
+        },
+        "T:Str|単一引用符（2 つ続けば文字列のまま）|Normal": {
+          "id": "DD-EVRUN-SQLLEX-T003",
+          "status": "active",
+          "title": "文字列 --[単一引用符（2 つ続けば文字列のまま）]--> 通常"
+        },
+        "T:Normal|二重引用符か角かっこの開き|Quoted": {
+          "id": "DD-EVRUN-SQLLEX-T004",
+          "status": "active",
+          "title": "通常 --[二重引用符か角かっこの開き]--> 引用の名前"
+        },
+        "T:Quoted|対応する閉じ|Normal": {
+          "id": "DD-EVRUN-SQLLEX-T005",
+          "status": "active",
+          "title": "引用の名前 --[対応する閉じ]--> 通常"
+        },
+        "T:Normal|ハイフン 2 つ|Line": {
+          "id": "DD-EVRUN-SQLLEX-T006",
+          "status": "active",
+          "title": "通常 --[ハイフン 2 つ]--> 行コメント"
+        },
+        "T:Line|改行|Normal": {
+          "id": "DD-EVRUN-SQLLEX-T007",
+          "status": "active",
+          "title": "行コメント --[改行]--> 通常"
+        },
+        "T:Normal|スラッシュとアスタリスク|Block": {
+          "id": "DD-EVRUN-SQLLEX-T008",
+          "status": "active",
+          "title": "通常 --[スラッシュとアスタリスク]--> ブロックコメント"
+        },
+        "T:Block|アスタリスクとスラッシュ|Normal": {
+          "id": "DD-EVRUN-SQLLEX-T009",
+          "status": "active",
+          "title": "ブロックコメント --[アスタリスクとスラッシュ]--> 通常"
+        },
+        "T:Normal|終わり|[*]end": {
+          "id": "DD-EVRUN-SQLLEX-T010",
+          "status": "active",
+          "title": "通常 --[終わり]--> 終了"
+        },
+        "X:Normal|単一引用符（2 つ続けば文字列のまま）": {
+          "id": "DD-EVRUN-SQLLEX-X001",
+          "status": "active",
+          "title": "通常 で [単一引用符（2 つ続けば文字列のまま）]"
+        },
+        "X:Normal|対応する閉じ": {
+          "id": "DD-EVRUN-SQLLEX-X002",
+          "status": "active",
+          "title": "通常 で [対応する閉じ]"
+        },
+        "X:Normal|改行": {
+          "id": "DD-EVRUN-SQLLEX-X003",
+          "status": "active",
+          "title": "通常 で [改行]"
+        },
+        "X:Normal|アスタリスクとスラッシュ": {
+          "id": "DD-EVRUN-SQLLEX-X004",
+          "status": "active",
+          "title": "通常 で [アスタリスクとスラッシュ]"
+        },
+        "X:Str|単一引用符": {
+          "id": "DD-EVRUN-SQLLEX-X005",
+          "status": "active",
+          "title": "文字列 で [単一引用符]"
+        },
+        "X:Str|二重引用符か角かっこの開き": {
+          "id": "DD-EVRUN-SQLLEX-X006",
+          "status": "active",
+          "title": "文字列 で [二重引用符か角かっこの開き]"
+        },
+        "X:Str|対応する閉じ": {
+          "id": "DD-EVRUN-SQLLEX-X007",
+          "status": "active",
+          "title": "文字列 で [対応する閉じ]"
+        },
+        "X:Str|ハイフン 2 つ": {
+          "id": "DD-EVRUN-SQLLEX-X008",
+          "status": "active",
+          "title": "文字列 で [ハイフン 2 つ]"
+        },
+        "X:Str|改行": {
+          "id": "DD-EVRUN-SQLLEX-X009",
+          "status": "active",
+          "title": "文字列 で [改行]"
+        },
+        "X:Str|スラッシュとアスタリスク": {
+          "id": "DD-EVRUN-SQLLEX-X010",
+          "status": "active",
+          "title": "文字列 で [スラッシュとアスタリスク]"
+        },
+        "X:Str|アスタリスクとスラッシュ": {
+          "id": "DD-EVRUN-SQLLEX-X011",
+          "status": "active",
+          "title": "文字列 で [アスタリスクとスラッシュ]"
+        },
+        "X:Str|終わり": {
+          "id": "DD-EVRUN-SQLLEX-X012",
+          "status": "active",
+          "title": "文字列 で [終わり]"
+        },
+        "X:Quoted|単一引用符": {
+          "id": "DD-EVRUN-SQLLEX-X013",
+          "status": "active",
+          "title": "引用の名前 で [単一引用符]"
+        },
+        "X:Quoted|単一引用符（2 つ続けば文字列のまま）": {
+          "id": "DD-EVRUN-SQLLEX-X014",
+          "status": "active",
+          "title": "引用の名前 で [単一引用符（2 つ続けば文字列のまま）]"
+        },
+        "X:Quoted|二重引用符か角かっこの開き": {
+          "id": "DD-EVRUN-SQLLEX-X015",
+          "status": "active",
+          "title": "引用の名前 で [二重引用符か角かっこの開き]"
+        },
+        "X:Quoted|ハイフン 2 つ": {
+          "id": "DD-EVRUN-SQLLEX-X016",
+          "status": "active",
+          "title": "引用の名前 で [ハイフン 2 つ]"
+        },
+        "X:Quoted|改行": {
+          "id": "DD-EVRUN-SQLLEX-X017",
+          "status": "active",
+          "title": "引用の名前 で [改行]"
+        },
+        "X:Quoted|スラッシュとアスタリスク": {
+          "id": "DD-EVRUN-SQLLEX-X018",
+          "status": "active",
+          "title": "引用の名前 で [スラッシュとアスタリスク]"
+        },
+        "X:Quoted|アスタリスクとスラッシュ": {
+          "id": "DD-EVRUN-SQLLEX-X019",
+          "status": "active",
+          "title": "引用の名前 で [アスタリスクとスラッシュ]"
+        },
+        "X:Quoted|終わり": {
+          "id": "DD-EVRUN-SQLLEX-X020",
+          "status": "active",
+          "title": "引用の名前 で [終わり]"
+        },
+        "X:Line|単一引用符": {
+          "id": "DD-EVRUN-SQLLEX-X021",
+          "status": "active",
+          "title": "行コメント で [単一引用符]"
+        },
+        "X:Line|単一引用符（2 つ続けば文字列のまま）": {
+          "id": "DD-EVRUN-SQLLEX-X022",
+          "status": "active",
+          "title": "行コメント で [単一引用符（2 つ続けば文字列のまま）]"
+        },
+        "X:Line|二重引用符か角かっこの開き": {
+          "id": "DD-EVRUN-SQLLEX-X023",
+          "status": "active",
+          "title": "行コメント で [二重引用符か角かっこの開き]"
+        },
+        "X:Line|対応する閉じ": {
+          "id": "DD-EVRUN-SQLLEX-X024",
+          "status": "active",
+          "title": "行コメント で [対応する閉じ]"
+        },
+        "X:Line|ハイフン 2 つ": {
+          "id": "DD-EVRUN-SQLLEX-X025",
+          "status": "active",
+          "title": "行コメント で [ハイフン 2 つ]"
+        },
+        "X:Line|スラッシュとアスタリスク": {
+          "id": "DD-EVRUN-SQLLEX-X026",
+          "status": "active",
+          "title": "行コメント で [スラッシュとアスタリスク]"
+        },
+        "X:Line|アスタリスクとスラッシュ": {
+          "id": "DD-EVRUN-SQLLEX-X027",
+          "status": "active",
+          "title": "行コメント で [アスタリスクとスラッシュ]"
+        },
+        "X:Line|終わり": {
+          "id": "DD-EVRUN-SQLLEX-X028",
+          "status": "active",
+          "title": "行コメント で [終わり]"
+        },
+        "X:Block|単一引用符": {
+          "id": "DD-EVRUN-SQLLEX-X029",
+          "status": "active",
+          "title": "ブロックコメント で [単一引用符]"
+        },
+        "X:Block|単一引用符（2 つ続けば文字列のまま）": {
+          "id": "DD-EVRUN-SQLLEX-X030",
+          "status": "active",
+          "title": "ブロックコメント で [単一引用符（2 つ続けば文字列のまま）]"
+        },
+        "X:Block|二重引用符か角かっこの開き": {
+          "id": "DD-EVRUN-SQLLEX-X031",
+          "status": "active",
+          "title": "ブロックコメント で [二重引用符か角かっこの開き]"
+        },
+        "X:Block|対応する閉じ": {
+          "id": "DD-EVRUN-SQLLEX-X032",
+          "status": "active",
+          "title": "ブロックコメント で [対応する閉じ]"
+        },
+        "X:Block|ハイフン 2 つ": {
+          "id": "DD-EVRUN-SQLLEX-X033",
+          "status": "active",
+          "title": "ブロックコメント で [ハイフン 2 つ]"
+        },
+        "X:Block|改行": {
+          "id": "DD-EVRUN-SQLLEX-X034",
+          "status": "active",
+          "title": "ブロックコメント で [改行]"
+        },
+        "X:Block|スラッシュとアスタリスク": {
+          "id": "DD-EVRUN-SQLLEX-X035",
+          "status": "active",
+          "title": "ブロックコメント で [スラッシュとアスタリスク]"
+        },
+        "X:Block|終わり": {
+          "id": "DD-EVRUN-SQLLEX-X036",
+          "status": "active",
+          "title": "ブロックコメント で [終わり]"
+        }
+      }
+    },
+    "DD-EVRUN-STEPRES": {
+      "doc": "docs/design/detailed/evidence-runner.md",
+      "diagram": "step-result",
+      "next": {
+        "P": 5,
+        "T": 8
+      },
+      "cases": {
+        "P:A||B>B|失敗|C>C|ある|R1": {
+          "id": "DD-EVRUN-STEPRES-P001",
+          "status": "active",
+          "title": "ステップの操作・判定の結果と before・after の AtResult → 操作・判定が失敗 → [失敗] 証跡の failures がある → [ある] 失敗：判定の文言 ＋ 改行 ＋ 証跡も失敗：理由の一覧"
+        },
+        "P:A||B>B|失敗|C>C|ない|R2": {
+          "id": "DD-EVRUN-STEPRES-P002",
+          "status": "active",
+          "title": "ステップの操作・判定の結果と before・after の AtResult → 操作・判定が失敗 → [失敗] 証跡の failures がある → [ない] 失敗：判定の文言（従来どおり）"
+        },
+        "P:A||B>B|成功|D>D|ある|R3": {
+          "id": "DD-EVRUN-STEPRES-P003",
+          "status": "active",
+          "title": "ステップの操作・判定の結果と before・after の AtResult → 操作・判定が失敗 → [成功] 証跡の failures がある → [ある] 失敗：StepError evidence・証跡の取得に失敗しました：理由の一覧"
+        },
+        "P:A||B>B|成功|D>D|ない|R4": {
+          "id": "DD-EVRUN-STEPRES-P004",
+          "status": "active",
+          "title": "ステップの操作・判定の結果と before・after の AtResult → 操作・判定が失敗 → [成功] 証跡の failures がある → [ない] 成功"
+        },
+        "T:A||B": {
+          "id": "DD-EVRUN-STEPRES-T001",
+          "status": "active",
+          "title": "ステップの操作・判定の結果と before・after の AtResult --> 操作・判定が失敗"
+        },
+        "T:B|失敗|C": {
+          "id": "DD-EVRUN-STEPRES-T002",
+          "status": "active",
+          "title": "操作・判定が失敗 --[失敗]--> 証跡の failures がある"
+        },
+        "T:C|ある|R1": {
+          "id": "DD-EVRUN-STEPRES-T003",
+          "status": "active",
+          "title": "証跡の failures がある --[ある]--> 失敗：判定の文言 ＋ 改行 ＋ 証跡も失敗：理由の一覧"
+        },
+        "T:C|ない|R2": {
+          "id": "DD-EVRUN-STEPRES-T004",
+          "status": "active",
+          "title": "証跡の failures がある --[ない]--> 失敗：判定の文言（従来どおり）"
+        },
+        "T:B|成功|D": {
+          "id": "DD-EVRUN-STEPRES-T005",
+          "status": "active",
+          "title": "操作・判定が失敗 --[成功]--> 証跡の failures がある"
+        },
+        "T:D|ある|R3": {
+          "id": "DD-EVRUN-STEPRES-T006",
+          "status": "active",
+          "title": "証跡の failures がある --[ある]--> 失敗：StepError evidence・証跡の取得に失敗しました：理由の一覧"
+        },
+        "T:D|ない|R4": {
+          "id": "DD-EVRUN-STEPRES-T007",
+          "status": "active",
+          "title": "証跡の failures がある --[ない]--> 成功"
+        }
+      }
+    },
+    "DD-EVRUN-TMO": {
+      "doc": "docs/design/detailed/evidence-runner.md",
+      "diagram": "timeout",
+      "next": {
+        "P": 4,
+        "T": 6
+      },
+      "cases": {
+        "P:A||S>S|ある|V1": {
+          "id": "DD-EVRUN-TMO-P001",
+          "status": "active",
+          "title": "上限を決める → spec.timeout がある → [ある] spec.timeout"
+        },
+        "P:A||S>S|ない|P>P|ある|V2": {
+          "id": "DD-EVRUN-TMO-P002",
+          "status": "active",
+          "title": "上限を決める → spec.timeout がある → [ない] provider.timeout がある → [ある] provider.timeout"
+        },
+        "P:A||S>S|ない|P>P|ない|V3": {
+          "id": "DD-EVRUN-TMO-P003",
+          "status": "active",
+          "title": "上限を決める → spec.timeout がある → [ない] provider.timeout がある → [ない] config.evidence.timeout（既定 30000）"
+        },
+        "T:A||S": {
+          "id": "DD-EVRUN-TMO-T001",
+          "status": "active",
+          "title": "上限を決める --> spec.timeout がある"
+        },
+        "T:S|ある|V1": {
+          "id": "DD-EVRUN-TMO-T002",
+          "status": "active",
+          "title": "spec.timeout がある --[ある]--> spec.timeout"
+        },
+        "T:S|ない|P": {
+          "id": "DD-EVRUN-TMO-T003",
+          "status": "active",
+          "title": "spec.timeout がある --[ない]--> provider.timeout がある"
+        },
+        "T:P|ある|V2": {
+          "id": "DD-EVRUN-TMO-T004",
+          "status": "active",
+          "title": "provider.timeout がある --[ある]--> provider.timeout"
+        },
+        "T:P|ない|V3": {
+          "id": "DD-EVRUN-TMO-T005",
+          "status": "active",
+          "title": "provider.timeout がある --[ない]--> config.evidence.timeout（既定 30000）"
+        }
+      }
+    },
+    "DD-EVSPEC-CFGCHK": {
+      "doc": "docs/design/detailed/evidence-spec.md",
+      "diagram": "config-check",
+      "next": {
+        "P": 7,
+        "T": 12
+      },
+      "cases": {
+        "P:A||S>S|合わない|E1": {
+          "id": "DD-EVSPEC-CFGCHK-P001",
+          "status": "active",
+          "title": "ddv.config.yaml の evidence → EvidenceConfigSchema に合う → [合わない] error: 設定 evidence の形式（zod の最初のエラー）"
+        },
+        "P:A||S>S|合う|D>D|ほか|E2": {
+          "id": "DD-EVSPEC-CFGCHK-P002",
+          "status": "active",
+          "title": "ddv.config.yaml の evidence → EvidenceConfigSchema に合う → [合う] databases の各 type が sqlite・sqlserver・postgres → [ほか] error: 接続先 名前 の type が不明です"
+        },
+        "P:A||S>S|合う|D>D|既知|V>V|ない|E3": {
+          "id": "DD-EVSPEC-CFGCHK-P003",
+          "status": "active",
+          "title": "ddv.config.yaml の evidence → EvidenceConfigSchema に合う → [合う] databases の各 type が sqlite・sqlserver・postgres → [既知] 各 databases に env がある → [ない] error: 接続先 名前 に env（接続文字列の環境変数の名前）が必要です"
+        },
+        "P:A||S>S|合う|D>D|既知|V>V|ある|F>F|いいえ|E4": {
+          "id": "DD-EVSPEC-CFGCHK-P004",
+          "status": "active",
+          "title": "ddv.config.yaml の evidence → EvidenceConfigSchema に合う → [合う] databases の各 type が sqlite・sqlserver・postgres → [既知] 各 databases に env がある → [ある] defaultDatabase が mock か databases の名前 → [いいえ] error: defaultDatabase の接続先 名前 がありません"
+        },
+        "P:A||S>S|合う|D>D|既知|V>V|ある|F>F|はい・無し|C>C|空|E5": {
+          "id": "DD-EVSPEC-CFGCHK-P005",
+          "status": "active",
+          "title": "ddv.config.yaml の evidence → EvidenceConfigSchema に合う → [合う] databases の各 type が sqlite・sqlserver・postgres → [既知] 各 databases に env がある → [ある] defaultDatabase が mock か databases の名前 → [はい・無し] commands の各 run が空でない → [空] error: 取得手段 名前 の run（実行ファイル）が必要です"
+        },
+        "P:A||S>S|合う|D>D|既知|V>V|ある|F>F|はい・無し|C>C|ある|OK": {
+          "id": "DD-EVSPEC-CFGCHK-P006",
+          "status": "active",
+          "title": "ddv.config.yaml の evidence → EvidenceConfigSchema に合う → [合う] databases の各 type が sqlite・sqlserver・postgres → [既知] 各 databases に env がある → [ある] defaultDatabase が mock か databases の名前 → [はい・無し] commands の各 run が空でない → [ある] 正しい"
+        },
+        "T:A||S": {
+          "id": "DD-EVSPEC-CFGCHK-T001",
+          "status": "active",
+          "title": "ddv.config.yaml の evidence --> EvidenceConfigSchema に合う"
+        },
+        "T:S|合わない|E1": {
+          "id": "DD-EVSPEC-CFGCHK-T002",
+          "status": "active",
+          "title": "EvidenceConfigSchema に合う --[合わない]--> error: 設定 evidence の形式（zod の最初のエラー）"
+        },
+        "T:S|合う|D": {
+          "id": "DD-EVSPEC-CFGCHK-T003",
+          "status": "active",
+          "title": "EvidenceConfigSchema に合う --[合う]--> databases の各 type が sqlite・sqlserver・postgres"
+        },
+        "T:D|ほか|E2": {
+          "id": "DD-EVSPEC-CFGCHK-T004",
+          "status": "active",
+          "title": "databases の各 type が sqlite・sqlserver・postgres --[ほか]--> error: 接続先 名前 の type が不明です"
+        },
+        "T:D|既知|V": {
+          "id": "DD-EVSPEC-CFGCHK-T005",
+          "status": "active",
+          "title": "databases の各 type が sqlite・sqlserver・postgres --[既知]--> 各 databases に env がある"
+        },
+        "T:V|ない|E3": {
+          "id": "DD-EVSPEC-CFGCHK-T006",
+          "status": "active",
+          "title": "各 databases に env がある --[ない]--> error: 接続先 名前 に env（接続文字列の環境変数の名前）が必要です"
+        },
+        "T:V|ある|F": {
+          "id": "DD-EVSPEC-CFGCHK-T007",
+          "status": "active",
+          "title": "各 databases に env がある --[ある]--> defaultDatabase が mock か databases の名前"
+        },
+        "T:F|いいえ|E4": {
+          "id": "DD-EVSPEC-CFGCHK-T008",
+          "status": "active",
+          "title": "defaultDatabase が mock か databases の名前 --[いいえ]--> error: defaultDatabase の接続先 名前 がありません"
+        },
+        "T:F|はい・無し|C": {
+          "id": "DD-EVSPEC-CFGCHK-T009",
+          "status": "active",
+          "title": "defaultDatabase が mock か databases の名前 --[はい・無し]--> commands の各 run が空でない"
+        },
+        "T:C|空|E5": {
+          "id": "DD-EVSPEC-CFGCHK-T010",
+          "status": "active",
+          "title": "commands の各 run が空でない --[空]--> error: 取得手段 名前 の run（実行ファイル）が必要です"
+        },
+        "T:C|ある|OK": {
+          "id": "DD-EVSPEC-CFGCHK-T011",
+          "status": "active",
+          "title": "commands の各 run が空でない --[ある]--> 正しい"
+        }
+      }
+    },
+    "DD-EVSPEC-HOOKSCAN": {
+      "doc": "docs/design/detailed/evidence-spec.md",
+      "diagram": "hooks-scan",
+      "next": {
+        "P": 7,
+        "T": 13
+      },
+      "cases": {
+        "P:A||B>B|ない|N": {
+          "id": "DD-EVSPEC-HOOKSCAN-P001",
+          "status": "active",
+          "title": "ddv-hooks.ts → export const evidence がある → [ない] found=false・登録なし"
+        },
+        "P:A||B>B|ある|C>C|いいえ|W1": {
+          "id": "DD-EVSPEC-HOOKSCAN-P002",
+          "status": "active",
+          "title": "ddv-hooks.ts → export const evidence がある → [ある] 初期値がオブジェクトのリテラル → [いいえ] warning: hooks の evidence を読めません・名前と引数の検査を省きます"
+        },
+        "P:A||B>B|ある|C>C|はい|D>D||K>K|いいえ|W2": {
+          "id": "DD-EVSPEC-HOOKSCAN-P003",
+          "status": "active",
+          "title": "ddv-hooks.ts → export const evidence がある → [ある] 初期値がオブジェクトのリテラル → [はい] プロパティごと → キーが文字列か識別子 → [いいえ] warning: 名前を読めないプロパティがあります"
+        },
+        "P:A||B>B|ある|C>C|はい|D>D||K>K|はい|F>F|いいえ|P1": {
+          "id": "DD-EVSPEC-HOOKSCAN-P004",
+          "status": "active",
+          "title": "ddv-hooks.ts → export const evidence がある → [ある] 初期値がオブジェクトのリテラル → [はい] プロパティごと → キーが文字列か識別子 → [はい] 値が defineEvidence（オブジェクトのリテラル）の呼び出し → [いいえ] 名前だけ登録・paramsKnown=false"
+        },
+        "P:A||B>B|ある|C>C|はい|D>D||K>K|はい|F>F|はい|G>G|いいえ|P1": {
+          "id": "DD-EVSPEC-HOOKSCAN-P005",
+          "status": "active",
+          "title": "ddv-hooks.ts → export const evidence がある → [ある] 初期値がオブジェクトのリテラル → [はい] プロパティごと → キーが文字列か識別子 → [はい] 値が defineEvidence（オブジェクトのリテラル）の呼び出し → [はい] params がオブジェクトのリテラル → [いいえ] 名前だけ登録・paramsKnown=false"
+        },
+        "P:A||B>B|ある|C>C|はい|D>D||K>K|はい|F>F|はい|G>G|はい|P2": {
+          "id": "DD-EVSPEC-HOOKSCAN-P006",
+          "status": "active",
+          "title": "ddv-hooks.ts → export const evidence がある → [ある] 初期値がオブジェクトのリテラル → [はい] プロパティごと → キーが文字列か識別子 → [はい] 値が defineEvidence（オブジェクトのリテラル）の呼び出し → [はい] params がオブジェクトのリテラル → [はい] 名前と params（required・default のリテラル）を登録・paramsKnown=true"
+        },
+        "T:A||B": {
+          "id": "DD-EVSPEC-HOOKSCAN-T001",
+          "status": "active",
+          "title": "ddv-hooks.ts --> export const evidence がある"
+        },
+        "T:B|ない|N": {
+          "id": "DD-EVSPEC-HOOKSCAN-T002",
+          "status": "active",
+          "title": "export const evidence がある --[ない]--> found=false・登録なし"
+        },
+        "T:B|ある|C": {
+          "id": "DD-EVSPEC-HOOKSCAN-T003",
+          "status": "active",
+          "title": "export const evidence がある --[ある]--> 初期値がオブジェクトのリテラル"
+        },
+        "T:C|いいえ|W1": {
+          "id": "DD-EVSPEC-HOOKSCAN-T004",
+          "status": "active",
+          "title": "初期値がオブジェクトのリテラル --[いいえ]--> warning: hooks の evidence を読めません・名前と引数の検査を省きます"
+        },
+        "T:C|はい|D": {
+          "id": "DD-EVSPEC-HOOKSCAN-T005",
+          "status": "active",
+          "title": "初期値がオブジェクトのリテラル --[はい]--> プロパティごと"
+        },
+        "T:D||K": {
+          "id": "DD-EVSPEC-HOOKSCAN-T006",
+          "status": "active",
+          "title": "プロパティごと --> キーが文字列か識別子"
+        },
+        "T:K|いいえ|W2": {
+          "id": "DD-EVSPEC-HOOKSCAN-T007",
+          "status": "active",
+          "title": "キーが文字列か識別子 --[いいえ]--> warning: 名前を読めないプロパティがあります"
+        },
+        "T:K|はい|F": {
+          "id": "DD-EVSPEC-HOOKSCAN-T008",
+          "status": "active",
+          "title": "キーが文字列か識別子 --[はい]--> 値が defineEvidence（オブジェクトのリテラル）の呼び出し"
+        },
+        "T:F|いいえ|P1": {
+          "id": "DD-EVSPEC-HOOKSCAN-T009",
+          "status": "active",
+          "title": "値が defineEvidence（オブジェクトのリテラル）の呼び出し --[いいえ]--> 名前だけ登録・paramsKnown=false"
+        },
+        "T:F|はい|G": {
+          "id": "DD-EVSPEC-HOOKSCAN-T010",
+          "status": "active",
+          "title": "値が defineEvidence（オブジェクトのリテラル）の呼び出し --[はい]--> params がオブジェクトのリテラル"
+        },
+        "T:G|いいえ|P1": {
+          "id": "DD-EVSPEC-HOOKSCAN-T011",
+          "status": "active",
+          "title": "params がオブジェクトのリテラル --[いいえ]--> 名前だけ登録・paramsKnown=false"
+        },
+        "T:G|はい|P2": {
+          "id": "DD-EVSPEC-HOOKSCAN-T012",
+          "status": "active",
+          "title": "params がオブジェクトのリテラル --[はい]--> 名前と params（required・default のリテラル）を登録・paramsKnown=true"
+        }
+      }
+    },
+    "DD-EVSPEC-REGMERGE": {
+      "doc": "docs/design/detailed/evidence-spec.md",
+      "diagram": "registry-merge",
+      "next": {
+        "P": 5,
+        "T": 8
+      },
+      "cases": {
+        "P:A||B>B|はい|E1": {
+          "id": "DD-EVSPEC-REGMERGE-P001",
+          "status": "active",
+          "title": "登録する名前 → screenshot か db → [はい] error: 組み込みと同じ名前は登録できません"
+        },
+        "P:A||B>B|いいえ|C>C|ある|E2": {
+          "id": "DD-EVSPEC-REGMERGE-P002",
+          "status": "active",
+          "title": "登録する名前 → screenshot か db → [いいえ] hooks と commands の両方にある → [ある] error: hooks と設定の両方に同じ名前があります"
+        },
+        "P:A||B>B|いいえ|C>C|ない|D>D|いいえ|E3": {
+          "id": "DD-EVSPEC-REGMERGE-P003",
+          "status": "active",
+          "title": "登録する名前 → screenshot か db → [いいえ] hooks と commands の両方にある → [ない] 名前が 英数字・ハイフン・アンダースコアで 1〜64 文字 → [いいえ] error: 取得手段の名前に使えない文字があります"
+        },
+        "P:A||B>B|いいえ|C>C|ない|D>D|はい|OK": {
+          "id": "DD-EVSPEC-REGMERGE-P004",
+          "status": "active",
+          "title": "登録する名前 → screenshot か db → [いいえ] hooks と commands の両方にある → [ない] 名前が 英数字・ハイフン・アンダースコアで 1〜64 文字 → [はい] 一覧に加える"
+        },
+        "T:A||B": {
+          "id": "DD-EVSPEC-REGMERGE-T001",
+          "status": "active",
+          "title": "登録する名前 --> screenshot か db"
+        },
+        "T:B|はい|E1": {
+          "id": "DD-EVSPEC-REGMERGE-T002",
+          "status": "active",
+          "title": "screenshot か db --[はい]--> error: 組み込みと同じ名前は登録できません"
+        },
+        "T:B|いいえ|C": {
+          "id": "DD-EVSPEC-REGMERGE-T003",
+          "status": "active",
+          "title": "screenshot か db --[いいえ]--> hooks と commands の両方にある"
+        },
+        "T:C|ある|E2": {
+          "id": "DD-EVSPEC-REGMERGE-T004",
+          "status": "active",
+          "title": "hooks と commands の両方にある --[ある]--> error: hooks と設定の両方に同じ名前があります"
+        },
+        "T:C|ない|D": {
+          "id": "DD-EVSPEC-REGMERGE-T005",
+          "status": "active",
+          "title": "hooks と commands の両方にある --[ない]--> 名前が 英数字・ハイフン・アンダースコアで 1〜64 文字"
+        },
+        "T:D|いいえ|E3": {
+          "id": "DD-EVSPEC-REGMERGE-T006",
+          "status": "active",
+          "title": "名前が 英数字・ハイフン・アンダースコアで 1〜64 文字 --[いいえ]--> error: 取得手段の名前に使えない文字があります"
+        },
+        "T:D|はい|OK": {
+          "id": "DD-EVSPEC-REGMERGE-T007",
+          "status": "active",
+          "title": "名前が 英数字・ハイフン・アンダースコアで 1〜64 文字 --[はい]--> 一覧に加える"
+        }
+      }
+    },
+    "DD-EVSPEC-SCOPE": {
+      "doc": "docs/design/detailed/evidence-spec.md",
+      "diagram": "input-scope",
+      "next": {
+        "P": 5,
+        "T": 8
+      },
+      "cases": {
+        "P:A||B>B|before|P>P||R>R|run=false|S": {
+          "id": "DD-EVSPEC-SCOPE-P001",
+          "status": "active",
+          "title": "ステップ n の指定 → at → [before] ステップ 1 から n-1 の input → そのステップが run=true → [run=false] 入れない（飛ばしたステップの入力は使わない）"
+        },
+        "P:A||B>B|before|P>P||R>R|run=true|T": {
+          "id": "DD-EVSPEC-SCOPE-P002",
+          "status": "active",
+          "title": "ステップ n の指定 → at → [before] ステップ 1 から n-1 の input → そのステップが run=true → [run=true] 後のステップの値で上書きして入れる"
+        },
+        "P:A||B>B|after|Q>Q||R>R|run=false|S": {
+          "id": "DD-EVSPEC-SCOPE-P003",
+          "status": "active",
+          "title": "ステップ n の指定 → at → [after] ステップ 1 から n の input → そのステップが run=true → [run=false] 入れない（飛ばしたステップの入力は使わない）"
+        },
+        "P:A||B>B|after|Q>Q||R>R|run=true|T": {
+          "id": "DD-EVSPEC-SCOPE-P004",
+          "status": "active",
+          "title": "ステップ n の指定 → at → [after] ステップ 1 から n の input → そのステップが run=true → [run=true] 後のステップの値で上書きして入れる"
+        },
+        "T:A||B": {
+          "id": "DD-EVSPEC-SCOPE-T001",
+          "status": "active",
+          "title": "ステップ n の指定 --> at"
+        },
+        "T:B|before|P": {
+          "id": "DD-EVSPEC-SCOPE-T002",
+          "status": "active",
+          "title": "at --[before]--> ステップ 1 から n-1 の input"
+        },
+        "T:B|after|Q": {
+          "id": "DD-EVSPEC-SCOPE-T003",
+          "status": "active",
+          "title": "at --[after]--> ステップ 1 から n の input"
+        },
+        "T:P||R": {
+          "id": "DD-EVSPEC-SCOPE-T004",
+          "status": "active",
+          "title": "ステップ 1 から n-1 の input --> そのステップが run=true"
+        },
+        "T:Q||R": {
+          "id": "DD-EVSPEC-SCOPE-T005",
+          "status": "active",
+          "title": "ステップ 1 から n の input --> そのステップが run=true"
+        },
+        "T:R|run=false|S": {
+          "id": "DD-EVSPEC-SCOPE-T006",
+          "status": "active",
+          "title": "そのステップが run=true --[run=false]--> 入れない（飛ばしたステップの入力は使わない）"
+        },
+        "T:R|run=true|T": {
+          "id": "DD-EVSPEC-SCOPE-T007",
+          "status": "active",
+          "title": "そのステップが run=true --[run=true]--> 後のステップの値で上書きして入れる"
+        }
+      }
+    },
+    "DD-EVSPEC-SPECVAL": {
+      "doc": "docs/design/detailed/evidence-spec.md",
+      "diagram": "spec-validate",
+      "next": {
+        "P": 7,
+        "T": 12
+      },
+      "cases": {
+        "P:A||U>U|いいえ|E1": {
+          "id": "DD-EVSPEC-SPECVAL-P001",
+          "status": "active",
+          "title": "ステップの evidence の 1 項目 → use が空でない文字列 → [いいえ] error: use（取得手段の名前）が必要です"
+        },
+        "P:A||U>U|はい|T>T|いいえ|E2": {
+          "id": "DD-EVSPEC-SPECVAL-P002",
+          "status": "active",
+          "title": "ステップの evidence の 1 項目 → use が空でない文字列 → [はい] at と onError が既知の値 → [いいえ] error: at は before か after / onError は fail か warn です"
+        },
+        "P:A||U>U|はい|T>T|はい|M>M|いいえ|E3": {
+          "id": "DD-EVSPEC-SPECVAL-P003",
+          "status": "active",
+          "title": "ステップの evidence の 1 項目 → use が空でない文字列 → [はい] at と onError が既知の値 → [はい] timeout が無いか 100 以上 600000 以下の整数 → [いいえ] error: timeout は 100〜600000 ミリ秒の整数です"
+        },
+        "P:A||U>U|はい|T>T|はい|M>M|はい|W>W|いいえ|E4": {
+          "id": "DD-EVSPEC-SPECVAL-P004",
+          "status": "active",
+          "title": "ステップの evidence の 1 項目 → use が空でない文字列 → [はい] at と onError が既知の値 → [はい] timeout が無いか 100 以上 600000 以下の整数 → [はい] with の値がすべて Scalar・Scalar の配列・input の参照 → [いいえ] error: with の値に使えない形があります"
+        },
+        "P:A||U>U|はい|T>T|はい|M>M|はい|W>W|はい|L>L|ある|E5": {
+          "id": "DD-EVSPEC-SPECVAL-P005",
+          "status": "active",
+          "title": "ステップの evidence の 1 項目 → use が空でない文字列 → [はい] at と onError が既知の値 → [はい] timeout が無いか 100 以上 600000 以下の整数 → [はい] with の値がすべて Scalar・Scalar の配列・input の参照 → [はい] 同じステップに同じ label が無い → [ある] error: 同じステップに同じ表示名があります"
+        },
+        "P:A||U>U|はい|T>T|はい|M>M|はい|W>W|はい|L>L|ない|OK": {
+          "id": "DD-EVSPEC-SPECVAL-P006",
+          "status": "active",
+          "title": "ステップの evidence の 1 項目 → use が空でない文字列 → [はい] at と onError が既知の値 → [はい] timeout が無いか 100 以上 600000 以下の整数 → [はい] with の値がすべて Scalar・Scalar の配列・input の参照 → [はい] 同じステップに同じ label が無い → [ない] 正しい"
+        },
+        "T:A||U": {
+          "id": "DD-EVSPEC-SPECVAL-T001",
+          "status": "active",
+          "title": "ステップの evidence の 1 項目 --> use が空でない文字列"
+        },
+        "T:U|いいえ|E1": {
+          "id": "DD-EVSPEC-SPECVAL-T002",
+          "status": "active",
+          "title": "use が空でない文字列 --[いいえ]--> error: use（取得手段の名前）が必要です"
+        },
+        "T:U|はい|T": {
+          "id": "DD-EVSPEC-SPECVAL-T003",
+          "status": "active",
+          "title": "use が空でない文字列 --[はい]--> at と onError が既知の値"
+        },
+        "T:T|いいえ|E2": {
+          "id": "DD-EVSPEC-SPECVAL-T004",
+          "status": "active",
+          "title": "at と onError が既知の値 --[いいえ]--> error: at は before か after / onError は fail か warn です"
+        },
+        "T:T|はい|M": {
+          "id": "DD-EVSPEC-SPECVAL-T005",
+          "status": "active",
+          "title": "at と onError が既知の値 --[はい]--> timeout が無いか 100 以上 600000 以下の整数"
+        },
+        "T:M|いいえ|E3": {
+          "id": "DD-EVSPEC-SPECVAL-T006",
+          "status": "active",
+          "title": "timeout が無いか 100 以上 600000 以下の整数 --[いいえ]--> error: timeout は 100〜600000 ミリ秒の整数です"
+        },
+        "T:M|はい|W": {
+          "id": "DD-EVSPEC-SPECVAL-T007",
+          "status": "active",
+          "title": "timeout が無いか 100 以上 600000 以下の整数 --[はい]--> with の値がすべて Scalar・Scalar の配列・input の参照"
+        },
+        "T:W|いいえ|E4": {
+          "id": "DD-EVSPEC-SPECVAL-T008",
+          "status": "active",
+          "title": "with の値がすべて Scalar・Scalar の配列・input の参照 --[いいえ]--> error: with の値に使えない形があります"
+        },
+        "T:W|はい|L": {
+          "id": "DD-EVSPEC-SPECVAL-T009",
+          "status": "active",
+          "title": "with の値がすべて Scalar・Scalar の配列・input の参照 --[はい]--> 同じステップに同じ label が無い"
+        },
+        "T:L|ある|E5": {
+          "id": "DD-EVSPEC-SPECVAL-T010",
+          "status": "active",
+          "title": "同じステップに同じ label が無い --[ある]--> error: 同じステップに同じ表示名があります"
+        },
+        "T:L|ない|OK": {
+          "id": "DD-EVSPEC-SPECVAL-T011",
+          "status": "active",
+          "title": "同じステップに同じ label が無い --[ない]--> 正しい"
+        }
+      }
+    },
+    "DD-EVSPEC-TRY": {
+      "doc": "docs/design/detailed/evidence-spec.md",
+      "diagram": "try",
+      "next": {
+        "P": 5,
+        "T": 10
+      },
+      "cases": {
+        "P:A||R>R|いいえ|X1": {
+          "id": "DD-EVSPEC-TRY-P001",
+          "status": "active",
+          "title": "try → 名前が登録されている → [いいえ] 終了コード 2: 取得手段 名前 は登録されていません"
+        },
+        "P:A||R>R|はい|S>S|はい|X2": {
+          "id": "DD-EVSPEC-TRY-P002",
+          "status": "active",
+          "title": "try → 名前が登録されている → [はい] use が screenshot → [はい] 終了コード 2: screenshot は画面の操作が要るため try では使えません"
+        },
+        "P:A||R>R|はい|S>S|いいえ|W>W||C>C||O>O|ok|P": {
+          "id": "DD-EVSPEC-TRY-P003",
+          "status": "active",
+          "title": "try → 名前が登録されている → [はい] use が screenshot → [いいえ] with を作る（key=value・--db は with.db） → EvidenceRunner.captureOne（ドライバ無し・input は空） → 結果 → [ok] 種類・ファイル・大きさ・時間を表示 終了コード 0"
+        },
+        "P:A||R>R|はい|S>S|いいえ|W>W||C>C||O>O|failed|F": {
+          "id": "DD-EVSPEC-TRY-P004",
+          "status": "active",
+          "title": "try → 名前が登録されている → [はい] use が screenshot → [いいえ] with を作る（key=value・--db は with.db） → EvidenceRunner.captureOne（ドライバ無し・input は空） → 結果 → [failed] 理由（伏せ字の後）を表示 終了コード 1"
+        },
+        "T:A||R": {
+          "id": "DD-EVSPEC-TRY-T001",
+          "status": "active",
+          "title": "try --> 名前が登録されている"
+        },
+        "T:R|いいえ|X1": {
+          "id": "DD-EVSPEC-TRY-T002",
+          "status": "active",
+          "title": "名前が登録されている --[いいえ]--> 終了コード 2: 取得手段 名前 は登録されていません"
+        },
+        "T:R|はい|S": {
+          "id": "DD-EVSPEC-TRY-T003",
+          "status": "active",
+          "title": "名前が登録されている --[はい]--> use が screenshot"
+        },
+        "T:S|はい|X2": {
+          "id": "DD-EVSPEC-TRY-T004",
+          "status": "active",
+          "title": "use が screenshot --[はい]--> 終了コード 2: screenshot は画面の操作が要るため try では使えません"
+        },
+        "T:S|いいえ|W": {
+          "id": "DD-EVSPEC-TRY-T005",
+          "status": "active",
+          "title": "use が screenshot --[いいえ]--> with を作る（key=value・--db は with.db）"
+        },
+        "T:W||C": {
+          "id": "DD-EVSPEC-TRY-T006",
+          "status": "active",
+          "title": "with を作る（key=value・--db は with.db） --> EvidenceRunner.captureOne（ドライバ無し・input は空）"
+        },
+        "T:C||O": {
+          "id": "DD-EVSPEC-TRY-T007",
+          "status": "active",
+          "title": "EvidenceRunner.captureOne（ドライバ無し・input は空） --> 結果"
+        },
+        "T:O|ok|P": {
+          "id": "DD-EVSPEC-TRY-T008",
+          "status": "active",
+          "title": "結果 --[ok]--> 種類・ファイル・大きさ・時間を表示 終了コード 0"
+        },
+        "T:O|failed|F": {
+          "id": "DD-EVSPEC-TRY-T009",
+          "status": "active",
+          "title": "結果 --[failed]--> 理由（伏せ字の後）を表示 終了コード 1"
+        }
+      }
+    },
+    "DD-EVSPEC-WITH": {
+      "doc": "docs/design/detailed/evidence-spec.md",
+      "diagram": "resolve-with",
+      "next": {
+        "P": 5,
+        "T": 7
+      },
+      "cases": {
+        "P:A||K>K|Scalar|V": {
+          "id": "DD-EVSPEC-WITH-P001",
+          "status": "active",
+          "title": "with の 1 つの値 → 形 → [Scalar] そのまま"
+        },
+        "P:A||K>K|Scalar の配列|V2": {
+          "id": "DD-EVSPEC-WITH-P002",
+          "status": "active",
+          "title": "with の 1 つの値 → 形 → [Scalar の配列] そのまま"
+        },
+        "P:A||K>K|input の参照|I>I|ある|V3": {
+          "id": "DD-EVSPEC-WITH-P003",
+          "status": "active",
+          "title": "with の 1 つの値 → 形 → [input の参照] scope にそのキーがある → [ある] その値"
+        },
+        "P:A||K>K|input の参照|I>I|ない|E1": {
+          "id": "DD-EVSPEC-WITH-P004",
+          "status": "active",
+          "title": "with の 1 つの値 → 形 → [input の参照] scope にそのキーがある → [ない] 失敗: 入力 キー はこの時点ではありません"
+        },
+        "T:A||K": {
+          "id": "DD-EVSPEC-WITH-T001",
+          "status": "active",
+          "title": "with の 1 つの値 --> 形"
+        },
+        "T:K|Scalar|V": {
+          "id": "DD-EVSPEC-WITH-T002",
+          "status": "active",
+          "title": "形 --[Scalar]--> そのまま"
+        },
+        "T:K|Scalar の配列|V2": {
+          "id": "DD-EVSPEC-WITH-T003",
+          "status": "active",
+          "title": "形 --[Scalar の配列]--> そのまま"
+        },
+        "T:K|input の参照|I": {
+          "id": "DD-EVSPEC-WITH-T004",
+          "status": "active",
+          "title": "形 --[input の参照]--> scope にそのキーがある"
+        },
+        "T:I|ある|V3": {
+          "id": "DD-EVSPEC-WITH-T005",
+          "status": "active",
+          "title": "scope にそのキーがある --[ある]--> その値"
+        },
+        "T:I|ない|E1": {
+          "id": "DD-EVSPEC-WITH-T006",
+          "status": "active",
+          "title": "scope にそのキーがある --[ない]--> 失敗: 入力 キー はこの時点ではありません"
+        }
+      }
+    },
+    "DD-EVTRACE-BRLIMIT": {
+      "doc": "docs/design/detailed/evidence-trace.md",
+      "diagram": "branch-limit",
+      "next": {
+        "P": 5,
+        "T": 11
+      },
+      "cases": {
+        "P:A||O>O|ある|NX": {
+          "id": "DD-EVTRACE-BRLIMIT-P001",
+          "status": "active",
+          "title": "トレースのファイルをキーの昇順 ステップ・seq・ファイルの順に → omitted がすでにある → [ある] 次へ"
+        },
+        "P:A||O>O|ない|B>B|超える|D>D||W>W||NX": {
+          "id": "DD-EVTRACE-BRLIMIT-P002",
+          "status": "active",
+          "title": "トレースのファイルをキーの昇順 ステップ・seq・ファイルの順に → omitted がすでにある → [ない] bytes が maxBytes（既定 5MB）を超える → [超える] 本体を消し omitted=branch-limit → トレースの JSON を書き直す → 次へ"
+        },
+        "P:A||O>O|ない|B>B|以下|C>C|超える|D>D||W>W||NX": {
+          "id": "DD-EVTRACE-BRLIMIT-P003",
+          "status": "active",
+          "title": "トレースのファイルをキーの昇順 ステップ・seq・ファイルの順に → omitted がすでにある → [ない] bytes が maxBytes（既定 5MB）を超える → [以下] 合計 ＋ bytes が maxTotal（既定 50MB）を超える → [超える] 本体を消し omitted=branch-limit → トレースの JSON を書き直す → 次へ"
+        },
+        "P:A||O>O|ない|B>B|以下|C>C|以下|K>K||NX": {
+          "id": "DD-EVTRACE-BRLIMIT-P004",
+          "status": "active",
+          "title": "トレースのファイルをキーの昇順 ステップ・seq・ファイルの順に → omitted がすでにある → [ない] bytes が maxBytes（既定 5MB）を超える → [以下] 合計 ＋ bytes が maxTotal（既定 50MB）を超える → [以下] 残し 合計に足す → 次へ"
+        },
+        "T:A||O": {
+          "id": "DD-EVTRACE-BRLIMIT-T001",
+          "status": "active",
+          "title": "トレースのファイルをキーの昇順 ステップ・seq・ファイルの順に --> omitted がすでにある"
+        },
+        "T:O|ある|NX": {
+          "id": "DD-EVTRACE-BRLIMIT-T002",
+          "status": "active",
+          "title": "omitted がすでにある --[ある]--> 次へ"
+        },
+        "T:O|ない|B": {
+          "id": "DD-EVTRACE-BRLIMIT-T003",
+          "status": "active",
+          "title": "omitted がすでにある --[ない]--> bytes が maxBytes（既定 5MB）を超える"
+        },
+        "T:B|超える|D": {
+          "id": "DD-EVTRACE-BRLIMIT-T004",
+          "status": "active",
+          "title": "bytes が maxBytes（既定 5MB）を超える --[超える]--> 本体を消し omitted=branch-limit"
+        },
+        "T:B|以下|C": {
+          "id": "DD-EVTRACE-BRLIMIT-T005",
+          "status": "active",
+          "title": "bytes が maxBytes（既定 5MB）を超える --[以下]--> 合計 ＋ bytes が maxTotal（既定 50MB）を超える"
+        },
+        "T:C|超える|D": {
+          "id": "DD-EVTRACE-BRLIMIT-T006",
+          "status": "active",
+          "title": "合計 ＋ bytes が maxTotal（既定 50MB）を超える --[超える]--> 本体を消し omitted=branch-limit"
+        },
+        "T:C|以下|K": {
+          "id": "DD-EVTRACE-BRLIMIT-T007",
+          "status": "active",
+          "title": "合計 ＋ bytes が maxTotal（既定 50MB）を超える --[以下]--> 残し 合計に足す"
+        },
+        "T:D||W": {
+          "id": "DD-EVTRACE-BRLIMIT-T008",
+          "status": "active",
+          "title": "本体を消し omitted=branch-limit --> トレースの JSON を書き直す"
+        },
+        "T:K||NX": {
+          "id": "DD-EVTRACE-BRLIMIT-T009",
+          "status": "active",
+          "title": "残し 合計に足す --> 次へ"
+        },
+        "T:W||NX": {
+          "id": "DD-EVTRACE-BRLIMIT-T010",
+          "status": "active",
+          "title": "トレースの JSON を書き直す --> 次へ"
+        }
+      }
+    },
+    "DD-EVTRACE-EVAPI": {
+      "doc": "docs/design/detailed/evidence-trace.md",
+      "diagram": "evidence-api",
+      "next": {
+        "P": 8,
+        "T": 14
+      },
+      "cases": {
+        "P:A||K>K|400|E0": {
+          "id": "DD-EVTRACE-EVAPI-P001",
+          "status": "active",
+          "title": "要求 → runId・testId・platform を TRPATH で検査しキーを得る → [400] 400（TRPATH の文言）"
+        },
+        "P:A||K>K|キー|F>F|いいえ|E1": {
+          "id": "DD-EVTRACE-EVAPI-P002",
+          "status": "active",
+          "title": "要求 → runId・testId・platform を TRPATH で検査しキーを得る → [キー] file が区切り文字（スラッシュ・バックスラッシュ）と .. を含まず 200 文字以下 → [いいえ] 400 bad-path: 証跡のパスが不正です"
+        },
+        "P:A||K>K|キー|F>F|はい|T>T|いいえ|E2": {
+          "id": "DD-EVTRACE-EVAPI-P003",
+          "status": "active",
+          "title": "要求 → runId・testId・platform を TRPATH で検査しキーを得る → [キー] file が区切り文字（スラッシュ・バックスラッシュ）と .. を含まず 200 文字以下 → [はい] トレースを読める → [いいえ] 404（トレースの読み込みと同じ code）"
+        },
+        "P:A||K>K|キー|F>F|はい|T>T|はい|R>R|ない|E3": {
+          "id": "DD-EVTRACE-EVAPI-P004",
+          "status": "active",
+          "title": "要求 → runId・testId・platform を TRPATH で検査しキーを得る → [キー] file が区切り文字（スラッシュ・バックスラッシュ）と .. を含まず 200 文字以下 → [はい] トレースを読める → [はい] どれかのステップの evidence.files に path = キー/evidence/file がある → [ない] 404 not-found: 証跡がありません"
+        },
+        "P:A||K>K|キー|F>F|はい|T>T|はい|R>R|ある|O>O|ある|E4": {
+          "id": "DD-EVTRACE-EVAPI-P005",
+          "status": "active",
+          "title": "要求 → runId・testId・platform を TRPATH で検査しキーを得る → [キー] file が区切り文字（スラッシュ・バックスラッシュ）と .. を含まず 200 文字以下 → [はい] トレースを読める → [はい] どれかのステップの evidence.files に path = キー/evidence/file がある → [ある] omitted → [ある] 404 evidence-omitted: 大きすぎるため保存していません / 結果ブランチに置いていません"
+        },
+        "P:A||K>K|キー|F>F|はい|T>T|はい|R>R|ある|O>O|ない|X>X|ない|E5": {
+          "id": "DD-EVTRACE-EVAPI-P006",
+          "status": "active",
+          "title": "要求 → runId・testId・platform を TRPATH で検査しキーを得る → [キー] file が区切り文字（スラッシュ・バックスラッシュ）と .. を含まず 200 文字以下 → [はい] トレースを読める → [はい] どれかのステップの evidence.files に path = キー/evidence/file がある → [ある] omitted → [ない] ファイルがある → [ない] 404 pruned: 古い実行のため証跡は削除されました"
+        },
+        "P:A||K>K|キー|F>F|はい|T>T|はい|R>R|ある|O>O|ない|X>X|ある|OK": {
+          "id": "DD-EVTRACE-EVAPI-P007",
+          "status": "active",
+          "title": "要求 → runId・testId・platform を TRPATH で検査しキーを得る → [キー] file が区切り文字（スラッシュ・バックスラッシュ）と .. を含まず 200 文字以下 → [はい] トレースを読める → [はい] どれかのステップの evidence.files に path = キー/evidence/file がある → [ある] omitted → [ない] ファイルがある → [ある] 200 本体"
+        },
+        "T:A||K": {
+          "id": "DD-EVTRACE-EVAPI-T001",
+          "status": "active",
+          "title": "要求 --> runId・testId・platform を TRPATH で検査しキーを得る"
+        },
+        "T:K|400|E0": {
+          "id": "DD-EVTRACE-EVAPI-T002",
+          "status": "active",
+          "title": "runId・testId・platform を TRPATH で検査しキーを得る --[400]--> 400（TRPATH の文言）"
+        },
+        "T:K|キー|F": {
+          "id": "DD-EVTRACE-EVAPI-T003",
+          "status": "active",
+          "title": "runId・testId・platform を TRPATH で検査しキーを得る --[キー]--> file が区切り文字（スラッシュ・バックスラッシュ）と .. を含まず 200 文字以下"
+        },
+        "T:F|いいえ|E1": {
+          "id": "DD-EVTRACE-EVAPI-T004",
+          "status": "active",
+          "title": "file が区切り文字（スラッシュ・バックスラッシュ）と .. を含まず 200 文字以下 --[いいえ]--> 400 bad-path: 証跡のパスが不正です"
+        },
+        "T:F|はい|T": {
+          "id": "DD-EVTRACE-EVAPI-T005",
+          "status": "active",
+          "title": "file が区切り文字（スラッシュ・バックスラッシュ）と .. を含まず 200 文字以下 --[はい]--> トレースを読める"
+        },
+        "T:T|いいえ|E2": {
+          "id": "DD-EVTRACE-EVAPI-T006",
+          "status": "active",
+          "title": "トレースを読める --[いいえ]--> 404（トレースの読み込みと同じ code）"
+        },
+        "T:T|はい|R": {
+          "id": "DD-EVTRACE-EVAPI-T007",
+          "status": "active",
+          "title": "トレースを読める --[はい]--> どれかのステップの evidence.files に path = キー/evidence/file がある"
+        },
+        "T:R|ない|E3": {
+          "id": "DD-EVTRACE-EVAPI-T008",
+          "status": "active",
+          "title": "どれかのステップの evidence.files に path = キー/evidence/file がある --[ない]--> 404 not-found: 証跡がありません"
+        },
+        "T:R|ある|O": {
+          "id": "DD-EVTRACE-EVAPI-T009",
+          "status": "active",
+          "title": "どれかのステップの evidence.files に path = キー/evidence/file がある --[ある]--> omitted"
+        },
+        "T:O|ある|E4": {
+          "id": "DD-EVTRACE-EVAPI-T010",
+          "status": "active",
+          "title": "omitted --[ある]--> 404 evidence-omitted: 大きすぎるため保存していません / 結果ブランチに置いていません"
+        },
+        "T:O|ない|X": {
+          "id": "DD-EVTRACE-EVAPI-T011",
+          "status": "active",
+          "title": "omitted --[ない]--> ファイルがある"
+        },
+        "T:X|ない|E5": {
+          "id": "DD-EVTRACE-EVAPI-T012",
+          "status": "active",
+          "title": "ファイルがある --[ない]--> 404 pruned: 古い実行のため証跡は削除されました"
+        },
+        "T:X|ある|OK": {
+          "id": "DD-EVTRACE-EVAPI-T013",
+          "status": "active",
+          "title": "ファイルがある --[ある]--> 200 本体"
+        }
+      }
+    },
+    "DD-EVTRACE-EVBADGE": {
+      "doc": "docs/design/detailed/evidence-trace.md",
+      "diagram": "count-badge",
+      "next": {
+        "P": 4,
+        "T": 6
+      },
+      "cases": {
+        "P:A||B>B|0・無し|N": {
+          "id": "DD-EVTRACE-EVBADGE-P001",
+          "status": "active",
+          "title": "CaseResult → evidence が 1 以上 → [0・無し] 出さない"
+        },
+        "P:A||B>B|1 以上|W>W|はい|WB": {
+          "id": "DD-EVTRACE-EVBADGE-P002",
+          "status": "active",
+          "title": "CaseResult → evidence が 1 以上 → [1 以上] evidenceWarnings が 1 以上 → [はい] 警告の色で「証跡 n・警告 m」"
+        },
+        "P:A||B>B|1 以上|W>W|いいえ|OB": {
+          "id": "DD-EVTRACE-EVBADGE-P003",
+          "status": "active",
+          "title": "CaseResult → evidence が 1 以上 → [1 以上] evidenceWarnings が 1 以上 → [いいえ] 通常の色で「証跡 n」"
+        },
+        "T:A||B": {
+          "id": "DD-EVTRACE-EVBADGE-T001",
+          "status": "active",
+          "title": "CaseResult --> evidence が 1 以上"
+        },
+        "T:B|0・無し|N": {
+          "id": "DD-EVTRACE-EVBADGE-T002",
+          "status": "active",
+          "title": "evidence が 1 以上 --[0・無し]--> 出さない"
+        },
+        "T:B|1 以上|W": {
+          "id": "DD-EVTRACE-EVBADGE-T003",
+          "status": "active",
+          "title": "evidence が 1 以上 --[1 以上]--> evidenceWarnings が 1 以上"
+        },
+        "T:W|はい|WB": {
+          "id": "DD-EVTRACE-EVBADGE-T004",
+          "status": "active",
+          "title": "evidenceWarnings が 1 以上 --[はい]--> 警告の色で「証跡 n・警告 m」"
+        },
+        "T:W|いいえ|OB": {
+          "id": "DD-EVTRACE-EVBADGE-T005",
+          "status": "active",
+          "title": "evidenceWarnings が 1 以上 --[いいえ]--> 通常の色で「証跡 n」"
+        }
+      }
+    },
+    "DD-EVTRACE-EVDLG": {
+      "doc": "docs/design/detailed/evidence-trace.md",
+      "diagram": "dialog",
+      "next": {
+        "P": 14,
+        "T": 10,
+        "X": 11
+      },
+      "cases": {
+        "P:[*]start|開く|Loading>Loading|取得できた|Shown>Shown|次の証跡・前の証跡・ファイルの切り替え|Loading>Loading|取得できた|Shown>Shown|閉じる|[*]end": {
+          "id": "DD-EVTRACE-EVDLG-P001",
+          "status": "active",
+          "title": "開始 → [開く] 読み込み中 → [取得できた] 表示中 → [次の証跡・前の証跡・ファイルの切り替え] 読み込み中 → [取得できた] 表示中 → [閉じる] 終了"
+        },
+        "P:[*]start|開く|Loading>Loading|取得できた|Shown>Shown|次の証跡・前の証跡・ファイルの切り替え|Loading>Loading|ApiError・通信の失敗|Failed>Failed|閉じる|[*]end": {
+          "id": "DD-EVTRACE-EVDLG-P002",
+          "status": "active",
+          "title": "開始 → [開く] 読み込み中 → [取得できた] 表示中 → [次の証跡・前の証跡・ファイルの切り替え] 読み込み中 → [ApiError・通信の失敗] 読み込み失敗 → [閉じる] 終了"
+        },
+        "P:[*]start|開く|Loading>Loading|取得できた|Shown>Shown|次の証跡・前の証跡・ファイルの切り替え|Loading>Loading|閉じる|[*]end": {
+          "id": "DD-EVTRACE-EVDLG-P003",
+          "status": "active",
+          "title": "開始 → [開く] 読み込み中 → [取得できた] 表示中 → [次の証跡・前の証跡・ファイルの切り替え] 読み込み中 → [閉じる] 終了"
+        },
+        "P:[*]start|開く|Loading>Loading|取得できた|Shown>Shown|保存|Shown>Shown|次の証跡・前の証跡・ファイルの切り替え|Loading>Loading|ApiError・通信の失敗|Failed>Failed|閉じる|[*]end": {
+          "id": "DD-EVTRACE-EVDLG-P004",
+          "status": "active",
+          "title": "開始 → [開く] 読み込み中 → [取得できた] 表示中 → [保存] 表示中 → [次の証跡・前の証跡・ファイルの切り替え] 読み込み中 → [ApiError・通信の失敗] 読み込み失敗 → [閉じる] 終了"
+        },
+        "P:[*]start|開く|Loading>Loading|取得できた|Shown>Shown|保存|Shown>Shown|次の証跡・前の証跡・ファイルの切り替え|Loading>Loading|閉じる|[*]end": {
+          "id": "DD-EVTRACE-EVDLG-P005",
+          "status": "active",
+          "title": "開始 → [開く] 読み込み中 → [取得できた] 表示中 → [保存] 表示中 → [次の証跡・前の証跡・ファイルの切り替え] 読み込み中 → [閉じる] 終了"
+        },
+        "P:[*]start|開く|Loading>Loading|取得できた|Shown>Shown|保存|Shown>Shown|閉じる|[*]end": {
+          "id": "DD-EVTRACE-EVDLG-P006",
+          "status": "active",
+          "title": "開始 → [開く] 読み込み中 → [取得できた] 表示中 → [保存] 表示中 → [閉じる] 終了"
+        },
+        "P:[*]start|開く|Loading>Loading|取得できた|Shown>Shown|閉じる|[*]end": {
+          "id": "DD-EVTRACE-EVDLG-P007",
+          "status": "active",
+          "title": "開始 → [開く] 読み込み中 → [取得できた] 表示中 → [閉じる] 終了"
+        },
+        "P:[*]start|開く|Loading>Loading|ApiError・通信の失敗|Failed>Failed|次の証跡・前の証跡|Loading>Loading|取得できた|Shown>Shown|保存|Shown>Shown|閉じる|[*]end": {
+          "id": "DD-EVTRACE-EVDLG-P008",
+          "status": "active",
+          "title": "開始 → [開く] 読み込み中 → [ApiError・通信の失敗] 読み込み失敗 → [次の証跡・前の証跡] 読み込み中 → [取得できた] 表示中 → [保存] 表示中 → [閉じる] 終了"
+        },
+        "P:[*]start|開く|Loading>Loading|ApiError・通信の失敗|Failed>Failed|次の証跡・前の証跡|Loading>Loading|取得できた|Shown>Shown|閉じる|[*]end": {
+          "id": "DD-EVTRACE-EVDLG-P009",
+          "status": "active",
+          "title": "開始 → [開く] 読み込み中 → [ApiError・通信の失敗] 読み込み失敗 → [次の証跡・前の証跡] 読み込み中 → [取得できた] 表示中 → [閉じる] 終了"
+        },
+        "P:[*]start|開く|Loading>Loading|ApiError・通信の失敗|Failed>Failed|次の証跡・前の証跡|Loading>Loading|ApiError・通信の失敗|Failed>Failed|閉じる|[*]end": {
+          "id": "DD-EVTRACE-EVDLG-P010",
+          "status": "active",
+          "title": "開始 → [開く] 読み込み中 → [ApiError・通信の失敗] 読み込み失敗 → [次の証跡・前の証跡] 読み込み中 → [ApiError・通信の失敗] 読み込み失敗 → [閉じる] 終了"
+        },
+        "P:[*]start|開く|Loading>Loading|ApiError・通信の失敗|Failed>Failed|次の証跡・前の証跡|Loading>Loading|閉じる|[*]end": {
+          "id": "DD-EVTRACE-EVDLG-P011",
+          "status": "active",
+          "title": "開始 → [開く] 読み込み中 → [ApiError・通信の失敗] 読み込み失敗 → [次の証跡・前の証跡] 読み込み中 → [閉じる] 終了"
+        },
+        "P:[*]start|開く|Loading>Loading|ApiError・通信の失敗|Failed>Failed|閉じる|[*]end": {
+          "id": "DD-EVTRACE-EVDLG-P012",
+          "status": "active",
+          "title": "開始 → [開く] 読み込み中 → [ApiError・通信の失敗] 読み込み失敗 → [閉じる] 終了"
+        },
+        "P:[*]start|開く|Loading>Loading|閉じる|[*]end": {
+          "id": "DD-EVTRACE-EVDLG-P013",
+          "status": "active",
+          "title": "開始 → [開く] 読み込み中 → [閉じる] 終了"
+        },
+        "T:[*]start|開く|Loading": {
+          "id": "DD-EVTRACE-EVDLG-T001",
+          "status": "active",
+          "title": "開始 --[開く]--> 読み込み中"
+        },
+        "T:Loading|取得できた|Shown": {
+          "id": "DD-EVTRACE-EVDLG-T002",
+          "status": "active",
+          "title": "読み込み中 --[取得できた]--> 表示中"
+        },
+        "T:Loading|ApiError・通信の失敗|Failed": {
+          "id": "DD-EVTRACE-EVDLG-T003",
+          "status": "active",
+          "title": "読み込み中 --[ApiError・通信の失敗]--> 読み込み失敗"
+        },
+        "T:Shown|次の証跡・前の証跡・ファイルの切り替え|Loading": {
+          "id": "DD-EVTRACE-EVDLG-T004",
+          "status": "active",
+          "title": "表示中 --[次の証跡・前の証跡・ファイルの切り替え]--> 読み込み中"
+        },
+        "T:Failed|次の証跡・前の証跡|Loading": {
+          "id": "DD-EVTRACE-EVDLG-T005",
+          "status": "active",
+          "title": "読み込み失敗 --[次の証跡・前の証跡]--> 読み込み中"
+        },
+        "T:Shown|保存|Shown": {
+          "id": "DD-EVTRACE-EVDLG-T006",
+          "status": "active",
+          "title": "表示中 --[保存]--> 表示中"
+        },
+        "T:Shown|閉じる|[*]end": {
+          "id": "DD-EVTRACE-EVDLG-T007",
+          "status": "active",
+          "title": "表示中 --[閉じる]--> 終了"
+        },
+        "T:Failed|閉じる|[*]end": {
+          "id": "DD-EVTRACE-EVDLG-T008",
+          "status": "active",
+          "title": "読み込み失敗 --[閉じる]--> 終了"
+        },
+        "T:Loading|閉じる|[*]end": {
+          "id": "DD-EVTRACE-EVDLG-T009",
+          "status": "active",
+          "title": "読み込み中 --[閉じる]--> 終了"
+        },
+        "X:Loading|次の証跡・前の証跡・ファイルの切り替え": {
+          "id": "DD-EVTRACE-EVDLG-X001",
+          "status": "active",
+          "title": "読み込み中 で [次の証跡・前の証跡・ファイルの切り替え]"
+        },
+        "X:Loading|次の証跡・前の証跡": {
+          "id": "DD-EVTRACE-EVDLG-X002",
+          "status": "active",
+          "title": "読み込み中 で [次の証跡・前の証跡]"
+        },
+        "X:Loading|保存": {
+          "id": "DD-EVTRACE-EVDLG-X003",
+          "status": "active",
+          "title": "読み込み中 で [保存]"
+        },
+        "X:Shown|取得できた": {
+          "id": "DD-EVTRACE-EVDLG-X004",
+          "status": "active",
+          "title": "表示中 で [取得できた]"
+        },
+        "X:Shown|ApiError・通信の失敗": {
+          "id": "DD-EVTRACE-EVDLG-X005",
+          "status": "active",
+          "title": "表示中 で [ApiError・通信の失敗]"
+        },
+        "X:Shown|次の証跡・前の証跡": {
+          "id": "DD-EVTRACE-EVDLG-X006",
+          "status": "active",
+          "title": "表示中 で [次の証跡・前の証跡]"
+        },
+        "X:Failed|取得できた": {
+          "id": "DD-EVTRACE-EVDLG-X007",
+          "status": "active",
+          "title": "読み込み失敗 で [取得できた]"
+        },
+        "X:Failed|ApiError・通信の失敗": {
+          "id": "DD-EVTRACE-EVDLG-X008",
+          "status": "active",
+          "title": "読み込み失敗 で [ApiError・通信の失敗]"
+        },
+        "X:Failed|次の証跡・前の証跡・ファイルの切り替え": {
+          "id": "DD-EVTRACE-EVDLG-X009",
+          "status": "active",
+          "title": "読み込み失敗 で [次の証跡・前の証跡・ファイルの切り替え]"
+        },
+        "X:Failed|保存": {
+          "id": "DD-EVTRACE-EVDLG-X010",
+          "status": "active",
+          "title": "読み込み失敗 で [保存]"
+        }
+      }
+    },
+    "DD-EVTRACE-EVROW": {
+      "doc": "docs/design/detailed/evidence-trace.md",
+      "diagram": "panel-row",
+      "next": {
+        "P": 5,
+        "T": 7
+      },
+      "cases": {
+        "P:A||S>S|skipped|N": {
+          "id": "DD-EVTRACE-EVROW-P001",
+          "status": "active",
+          "title": "行 → status → [skipped] 開く・保存を出さない（「対象外（only の指定）」）"
+        },
+        "P:A||S>S|warn・failed|R": {
+          "id": "DD-EVTRACE-EVROW-P002",
+          "status": "active",
+          "title": "行 → status → [warn・failed] 開くで reason を行の下に広げる（もう一度で閉じる）・保存は出さない"
+        },
+        "P:A||S>S|ok|O>O|はい|R2": {
+          "id": "DD-EVTRACE-EVROW-P003",
+          "status": "active",
+          "title": "行 → status → [ok] files のすべてが omitted → [はい] 開くで「大きすぎるため保存していません」などを広げる・保存は出さない"
+        },
+        "P:A||S>S|ok|O>O|いいえ|D": {
+          "id": "DD-EVTRACE-EVROW-P004",
+          "status": "active",
+          "title": "行 → status → [ok] files のすべてが omitted → [いいえ] 開くでダイアログを開く・保存で保存"
+        },
+        "T:A||S": {
+          "id": "DD-EVTRACE-EVROW-T001",
+          "status": "active",
+          "title": "行 --> status"
+        },
+        "T:S|skipped|N": {
+          "id": "DD-EVTRACE-EVROW-T002",
+          "status": "active",
+          "title": "status --[skipped]--> 開く・保存を出さない（「対象外（only の指定）」）"
+        },
+        "T:S|warn・failed|R": {
+          "id": "DD-EVTRACE-EVROW-T003",
+          "status": "active",
+          "title": "status --[warn・failed]--> 開くで reason を行の下に広げる（もう一度で閉じる）・保存は出さない"
+        },
+        "T:S|ok|O": {
+          "id": "DD-EVTRACE-EVROW-T004",
+          "status": "active",
+          "title": "status --[ok]--> files のすべてが omitted"
+        },
+        "T:O|はい|R2": {
+          "id": "DD-EVTRACE-EVROW-T005",
+          "status": "active",
+          "title": "files のすべてが omitted --[はい]--> 開くで「大きすぎるため保存していません」などを広げる・保存は出さない"
+        },
+        "T:O|いいえ|D": {
+          "id": "DD-EVTRACE-EVROW-T006",
+          "status": "active",
+          "title": "files のすべてが omitted --[いいえ]--> 開くでダイアログを開く・保存で保存"
+        }
+      }
+    },
+    "DD-EVTRACE-EVSAVE": {
+      "doc": "docs/design/detailed/evidence-trace.md",
+      "diagram": "save",
+      "next": {
+        "P": 3,
+        "T": 6
+      },
+      "cases": {
+        "P:A||K>K|table|C>C||D": {
+          "id": "DD-EVTRACE-EVSAVE-P001",
+          "status": "active",
+          "title": "保存 → kind → [table] toCsv で CSV にし ファイル名は .table.json を .csv に → a 要素の download で保存（blob: URL は保存の後に破棄）"
+        },
+        "P:A||K>K|image・json・text・file|B>B||D": {
+          "id": "DD-EVTRACE-EVSAVE-P002",
+          "status": "active",
+          "title": "保存 → kind → [image・json・text・file] 取得した Blob のまま ファイル名は path の最後 → a 要素の download で保存（blob: URL は保存の後に破棄）"
+        },
+        "T:A||K": {
+          "id": "DD-EVTRACE-EVSAVE-T001",
+          "status": "active",
+          "title": "保存 --> kind"
+        },
+        "T:K|table|C": {
+          "id": "DD-EVTRACE-EVSAVE-T002",
+          "status": "active",
+          "title": "kind --[table]--> toCsv で CSV にし ファイル名は .table.json を .csv に"
+        },
+        "T:K|image・json・text・file|B": {
+          "id": "DD-EVTRACE-EVSAVE-T003",
+          "status": "active",
+          "title": "kind --[image・json・text・file]--> 取得した Blob のまま ファイル名は path の最後"
+        },
+        "T:C||D": {
+          "id": "DD-EVTRACE-EVSAVE-T004",
+          "status": "active",
+          "title": "toCsv で CSV にし ファイル名は .table.json を .csv に --> a 要素の download で保存（blob: URL は保存の後に破棄）"
+        },
+        "T:B||D": {
+          "id": "DD-EVTRACE-EVSAVE-T005",
+          "status": "active",
+          "title": "取得した Blob のまま ファイル名は path の最後 --> a 要素の download で保存（blob: URL は保存の後に破棄）"
+        }
+      }
+    },
+    "DD-EVTRACE-FNAME": {
+      "doc": "docs/design/detailed/evidence-trace.md",
+      "diagram": "file-name",
+      "next": {
+        "P": 5,
+        "T": 10
+      },
+      "cases": {
+        "P:A||B>B||C>C||D>D|空|U>U||L>L||M>M|1 つ|N1": {
+          "id": "DD-EVTRACE-FNAME-P001",
+          "status": "active",
+          "title": "label → ファイル名に使えない文字（区切り・コロン・ワイルドカード・引用符・山かっこ・縦線・制御文字）を _ に → 前後の空白と末尾のピリオドを除く → 空 → [空] use を同じ規則で使う → 先頭から 40 文字（コードポイント） → 出力が 2 つ以上 → [1 つ] step-seq-名前.拡張子"
+        },
+        "P:A||B>B||C>C||D>D|空|U>U||L>L||M>M|2 つ以上|N2": {
+          "id": "DD-EVTRACE-FNAME-P002",
+          "status": "active",
+          "title": "label → ファイル名に使えない文字（区切り・コロン・ワイルドカード・引用符・山かっこ・縦線・制御文字）を _ に → 前後の空白と末尾のピリオドを除く → 空 → [空] use を同じ規則で使う → 先頭から 40 文字（コードポイント） → 出力が 2 つ以上 → [2 つ以上] step-seq-名前-k.拡張子（k は 1 から）"
+        },
+        "P:A||B>B||C>C||D>D|空でない|L>L||M>M|1 つ|N1": {
+          "id": "DD-EVTRACE-FNAME-P003",
+          "status": "active",
+          "title": "label → ファイル名に使えない文字（区切り・コロン・ワイルドカード・引用符・山かっこ・縦線・制御文字）を _ に → 前後の空白と末尾のピリオドを除く → 空 → [空でない] 先頭から 40 文字（コードポイント） → 出力が 2 つ以上 → [1 つ] step-seq-名前.拡張子"
+        },
+        "P:A||B>B||C>C||D>D|空でない|L>L||M>M|2 つ以上|N2": {
+          "id": "DD-EVTRACE-FNAME-P004",
+          "status": "active",
+          "title": "label → ファイル名に使えない文字（区切り・コロン・ワイルドカード・引用符・山かっこ・縦線・制御文字）を _ に → 前後の空白と末尾のピリオドを除く → 空 → [空でない] 先頭から 40 文字（コードポイント） → 出力が 2 つ以上 → [2 つ以上] step-seq-名前-k.拡張子（k は 1 から）"
+        },
+        "T:A||B": {
+          "id": "DD-EVTRACE-FNAME-T001",
+          "status": "active",
+          "title": "label --> ファイル名に使えない文字（区切り・コロン・ワイルドカード・引用符・山かっこ・縦線・制御文字）を _ に"
+        },
+        "T:B||C": {
+          "id": "DD-EVTRACE-FNAME-T002",
+          "status": "active",
+          "title": "ファイル名に使えない文字（区切り・コロン・ワイルドカード・引用符・山かっこ・縦線・制御文字）を _ に --> 前後の空白と末尾のピリオドを除く"
+        },
+        "T:C||D": {
+          "id": "DD-EVTRACE-FNAME-T003",
+          "status": "active",
+          "title": "前後の空白と末尾のピリオドを除く --> 空"
+        },
+        "T:D|空|U": {
+          "id": "DD-EVTRACE-FNAME-T004",
+          "status": "active",
+          "title": "空 --[空]--> use を同じ規則で使う"
+        },
+        "T:D|空でない|L": {
+          "id": "DD-EVTRACE-FNAME-T005",
+          "status": "active",
+          "title": "空 --[空でない]--> 先頭から 40 文字（コードポイント）"
+        },
+        "T:U||L": {
+          "id": "DD-EVTRACE-FNAME-T006",
+          "status": "active",
+          "title": "use を同じ規則で使う --> 先頭から 40 文字（コードポイント）"
+        },
+        "T:L||M": {
+          "id": "DD-EVTRACE-FNAME-T007",
+          "status": "active",
+          "title": "先頭から 40 文字（コードポイント） --> 出力が 2 つ以上"
+        },
+        "T:M|1 つ|N1": {
+          "id": "DD-EVTRACE-FNAME-T008",
+          "status": "active",
+          "title": "出力が 2 つ以上 --[1 つ]--> step-seq-名前.拡張子"
+        },
+        "T:M|2 つ以上|N2": {
+          "id": "DD-EVTRACE-FNAME-T009",
+          "status": "active",
+          "title": "出力が 2 つ以上 --[2 つ以上]--> step-seq-名前-k.拡張子（k は 1 から）"
+        }
+      }
+    },
+    "DD-EVTRACE-SAVESIZE": {
+      "doc": "docs/design/detailed/evidence-trace.md",
+      "diagram": "save-size",
+      "next": {
+        "P": 9,
+        "T": 14
+      },
+      "cases": {
+        "P:A||K>K|table|T>T|以下|W": {
+          "id": "DD-EVTRACE-SAVESIZE-P001",
+          "status": "active",
+          "title": "出力 → kind → [table] 本体が maxBytes 以下 → [以下] そのまま書く"
+        },
+        "P:A||K>K|table|T>T|超える|T2": {
+          "id": "DD-EVTRACE-SAVESIZE-P002",
+          "status": "active",
+          "title": "出力 → kind → [table] 本体が maxBytes 以下 → [超える] 後ろの行から除いて maxBytes 以下に・truncated=true"
+        },
+        "P:A||K>K|text|X>X|以下|W": {
+          "id": "DD-EVTRACE-SAVESIZE-P003",
+          "status": "active",
+          "title": "出力 → kind → [text] UTF-8 で maxBytes 以下 → [以下] そのまま書く"
+        },
+        "P:A||K>K|text|X>X|超える|X2": {
+          "id": "DD-EVTRACE-SAVESIZE-P004",
+          "status": "active",
+          "title": "出力 → kind → [text] UTF-8 で maxBytes 以下 → [超える] maxBytes までで切る（文字の途中で切らない）・truncated=true"
+        },
+        "P:A||K>K|json|J>J|以下|W": {
+          "id": "DD-EVTRACE-SAVESIZE-P005",
+          "status": "active",
+          "title": "出力 → kind → [json] 整形した JSON が maxBytes 以下 → [以下] そのまま書く"
+        },
+        "P:A||K>K|json|J>J|超える|J2": {
+          "id": "DD-EVTRACE-SAVESIZE-P006",
+          "status": "active",
+          "title": "出力 → kind → [json] 整形した JSON が maxBytes 以下 → [超える] kind=text として maxBytes までで切る・truncated=true"
+        },
+        "P:A||K>K|image・file|F>F|以下|W": {
+          "id": "DD-EVTRACE-SAVESIZE-P007",
+          "status": "active",
+          "title": "出力 → kind → [image・file] maxFileBytes 以下 → [以下] そのまま書く"
+        },
+        "P:A||K>K|image・file|F>F|超える|F2": {
+          "id": "DD-EVTRACE-SAVESIZE-P008",
+          "status": "active",
+          "title": "出力 → kind → [image・file] maxFileBytes 以下 → [超える] 本体を書かない・omitted=too-large（bytes は元の大きさ）"
+        },
+        "T:A||K": {
+          "id": "DD-EVTRACE-SAVESIZE-T001",
+          "status": "active",
+          "title": "出力 --> kind"
+        },
+        "T:K|table|T": {
+          "id": "DD-EVTRACE-SAVESIZE-T002",
+          "status": "active",
+          "title": "kind --[table]--> 本体が maxBytes 以下"
+        },
+        "T:T|以下|W": {
+          "id": "DD-EVTRACE-SAVESIZE-T003",
+          "status": "active",
+          "title": "本体が maxBytes 以下 --[以下]--> そのまま書く"
+        },
+        "T:T|超える|T2": {
+          "id": "DD-EVTRACE-SAVESIZE-T004",
+          "status": "active",
+          "title": "本体が maxBytes 以下 --[超える]--> 後ろの行から除いて maxBytes 以下に・truncated=true"
+        },
+        "T:K|text|X": {
+          "id": "DD-EVTRACE-SAVESIZE-T005",
+          "status": "active",
+          "title": "kind --[text]--> UTF-8 で maxBytes 以下"
+        },
+        "T:X|以下|W": {
+          "id": "DD-EVTRACE-SAVESIZE-T006",
+          "status": "active",
+          "title": "UTF-8 で maxBytes 以下 --[以下]--> そのまま書く"
+        },
+        "T:X|超える|X2": {
+          "id": "DD-EVTRACE-SAVESIZE-T007",
+          "status": "active",
+          "title": "UTF-8 で maxBytes 以下 --[超える]--> maxBytes までで切る（文字の途中で切らない）・truncated=true"
+        },
+        "T:K|json|J": {
+          "id": "DD-EVTRACE-SAVESIZE-T008",
+          "status": "active",
+          "title": "kind --[json]--> 整形した JSON が maxBytes 以下"
+        },
+        "T:J|以下|W": {
+          "id": "DD-EVTRACE-SAVESIZE-T009",
+          "status": "active",
+          "title": "整形した JSON が maxBytes 以下 --[以下]--> そのまま書く"
+        },
+        "T:J|超える|J2": {
+          "id": "DD-EVTRACE-SAVESIZE-T010",
+          "status": "active",
+          "title": "整形した JSON が maxBytes 以下 --[超える]--> kind=text として maxBytes までで切る・truncated=true"
+        },
+        "T:K|image・file|F": {
+          "id": "DD-EVTRACE-SAVESIZE-T011",
+          "status": "active",
+          "title": "kind --[image・file]--> maxFileBytes 以下"
+        },
+        "T:F|以下|W": {
+          "id": "DD-EVTRACE-SAVESIZE-T012",
+          "status": "active",
+          "title": "maxFileBytes 以下 --[以下]--> そのまま書く"
+        },
+        "T:F|超える|F2": {
+          "id": "DD-EVTRACE-SAVESIZE-T013",
+          "status": "active",
+          "title": "maxFileBytes 以下 --[超える]--> 本体を書かない・omitted=too-large（bytes は元の大きさ）"
+        }
+      }
+    },
     "DD-FLAUI-DBUILD": {
       "doc": "docs/design/detailed/flaui-driver.md",
       "diagram": "driver-build",

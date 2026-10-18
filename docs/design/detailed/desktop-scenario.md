@@ -33,6 +33,7 @@ classDiagram
     +do?: string
     +wait?: number
     +expect?: Expect
+    +evidence?: EvidenceSpec[]
   }
   class Expect {
     +screen?: string
@@ -77,7 +78,10 @@ classDiagram
     +target: TraceTarget
     +open(scenario) Promise~void~
     +capture() Promise~Capture or null~
-    +screenshot(path) Promise~void~
+    +screenshot(path, opts?) Promise~void~
+    +screenshotElement(key, path) Promise~void~
+    +mockTables() Promise~TableDump[] or null~
+    +hookContext() HookHostContext
     +close() Promise~void~
   }
   class PlaywrightSession {
@@ -129,6 +133,9 @@ classDiagram
 | `ScenarioSession` | 対象を開く・記録・スクリーンショット・閉じるの、ドライバ以外の差分を包む。Web は `PlaywrightSession`、デスクトップは `FlaUiSession`（:ref[flaui-driver.md#構造]） |
 | `runScenarioWith(session, scenario, opts)` | ドライバに依存しない実行器。既存の `runScenario(page, scenario, target, opts)` は `runScenarioWith(new PlaywrightSession(page, target), scenario, opts)` を呼ぶだけの互換の関数として残す（既存の spec・`defineScenarioTests` は変えない） |
 | `ScreenMap` | 読み込み時にプラットフォームの節へ正規化した形（[対応表の読み込み](#対応表の読み込み)） |
+| `Step.evidence` | 証跡の指定。形と検査は :ref[evidence-spec.md#構造]。補助ステップにも書ける |
+| `ScenarioSession` の証跡の口 | `EvidenceHost`（:ref[evidence-runner.md#構造]）を実装する。`screenshot(path, opts?)` は `opts.fullPage`（Web だけ）を受け取る。`screenshotElement`・`mockTables`・`hookContext` の各実装は :ref[evidence-runner.md#screenshot]・:ref[evidence-runner.md#db]・:ref[evidence-runner.md#hooks-の関数]。`FlaUiSession` は :ref[flaui-driver.md#構造] |
+| `runScenarioWith` の `opts.evidence` | `createEvidenceRunner` で作った `EvidenceRunner`（無ければ証跡を取らない）。[実行器](#実行器) |
 
 ## シナリオの形式の検査
 
@@ -149,6 +156,7 @@ flowchart TD
   X -->|ある| OK
 ```
 
+- `validateScenario` は各ステップの `evidence` を `validateEvidence`（:ref[evidence-spec.md#形式の検査]）で検査し、その結果も同じ場所の形式で返す
 - エラーの場所は「シナリオ <ID> のステップ <番号>」（番号は補助ステップを含めたファイル上の 1 始まり）
 - `only: []`（空の配列）は E1 と同じ扱い（「only が空です」）
 
@@ -183,7 +191,8 @@ sequenceDiagram
   participant S as ScenarioSession
   participant D as Driver
   participant T as TraceRecorder
-  C->>R: session, scenario, { timeout, trace, hasOp }
+  participant E as EvidenceRunner
+  C->>R: session, scenario, { timeout, trace, hasOp, evidence }
   R->>R: validateScenario・planSteps(scenario, session.platform)
   R->>S: open(scenario)
   alt 開けない
@@ -192,13 +201,23 @@ sequenceDiagram
   end
   loop 計画したステップごと
     alt run=false
-      R->>T: skipStep(番号, step)
+      opt 証跡の指定がある
+        R->>E: skip(plan)
+      end
+      R->>T: skipStep(番号, step, 証跡の記録)
     else
       R->>T: beginStep(番号, step, 今の画面)
       R->>S: capture()
+      opt 証跡の指定がある
+        R->>E: runAt(before, plan, session, scope)
+      end
       R->>D: executeStep（step の expect を plan.expect にしたもの）
       R->>S: screenshot(トレースのパス)
-      R->>T: endStep(結果)
+      opt 証跡の指定がある
+        R->>E: runAt(after, plan, session, scope)（判定が失敗していても）
+      end
+      R->>R: ステップの結果（判定と証跡の failures）
+      R->>T: endStep(結果・evidence・evidenceWarnings)
       opt 失敗
         R->>S: close()
         R-->>C: throw StepError（ステップ番号・event または「補助ステップ」）
@@ -212,6 +231,8 @@ sequenceDiagram
 - `PlaywrightSession.open` は既存の `openTarget`（mock は `window.__ddv.reset`、app は hooks の `seed`）、`capture` は既存の `captureMock` / `captureApp`、`close` は何もしない（ページの後始末は Playwright が行う）。Web の実行の順序・タイムアウト・メッセージは変えない
 - 失敗のメッセージは、遷移のステップは従来どおり「ステップ <n>（<event>）: …」、補助ステップは「ステップ <n>（補助・<click / do の名前>）: …」
 - トレースの `TraceStep` に `skipped?: true`・`only?: Platform[]` を加える。補助ステップの `event` は空文字。飛ばしたステップは `expects: []`・`ok: true`・`durationMs: 0` で記録し、成功の判定に含めない
+- 証跡：`executeStep` が失敗しても `after` の取得は行い、ステップの成否は判定と証跡の `failures` から決める（:ref[evidence-runner.md#ステップの結果]）。`before` の `fail` の失敗でも操作・判定は止めない。`scope` は `InputScope`（:ref[evidence-spec.md#入力値の範囲]）。飛ばしたステップの指定は `status: skipped` で記録する
+- `opts.evidence` は記録が有効なとき（`opts.trace` がある）だけ渡す。証跡の本体はトレースのディレクトリに置くため（:ref[evidence-trace.md#構造]）
 
 ## 対応表の読み込み
 
@@ -294,13 +315,14 @@ flowchart TD
   M -->|対応しない| D[消して 件数を「補助ステップを削除」として表示]
 ```
 
-- 補助ステップの中身（`only`・`click`・`input`・`expect` など）は書き換えない
+- 補助ステップの中身（`only`・`click`・`input`・`expect`・`evidence` など）は書き換えない。対応した遷移のステップの `evidence` も既存を保持する（骨組みは `evidence` を生成しない）
 - 表示の例：「BD-ORDER-SCREEN-P001: 更新（補助ステップを 1 件削除）」
 
 ## プレイヤー・スナップショット
 
 - プレイヤー（`apps/web/src/player.ts`）とスナップショット（`apps/server/src/snapshots.ts`）は、`planSteps(scenario, 'web')` の結果に従う。飛ばしたステップはプレイヤーの一覧に「（wpf だけ）」のように薄く表示し、再生では止まらずに次へ進む
 - プレイヤーで補助ステップを再生するときの `expect` は `plan.expect`（screen を補ったもの）
+- プレイヤーの一覧は、`evidence` のあるステップに指定の件数（「証跡 2」）を表示する。プレイヤー・スナップショットでは証跡を取らない（記録の実行だけで取る）
 
 ## 名前の検査（lint）
 

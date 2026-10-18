@@ -1,7 +1,7 @@
 ---
 id: RUNREC
 kind: detailed
-status: approved
+status: review
 title: 実行記録の拡張・失敗の再実行・保持件数 詳細設計
 traces: [BD-TMON, BD-TRACE]
 ---
@@ -94,7 +94,8 @@ classDiagram
 | `rerunOf` / `attempt` / `times` | 再実行のときだけ。`rerunOf` は元の実行（再実行の起点。2 回目以降も同じ値）、`attempt` は 1 始まり、`times` は指定回数 |
 | `traces` | この実行でトレースを書いたテストIDの一覧（`.ddv/traces/<実行ID>/*.json` のファイル名）。剪定でトレースを消しても残す（「削除済み」と「記録なし」を区別するため。:ref[trace.md#トレースの読み込み]） |
 
-- `RunStatus` は既存の `'running' | 'passed' | 'failed' | 'error'` のまま。`CaseResult` も変えない
+- `RunStatus` は既存の `'running' | 'passed' | 'failed' | 'error'` のまま
+- `CaseResult` に任意の `evidence?: number`（証跡の件数）・`evidenceWarnings?: number`（警告・失敗の件数）を加える。トレースに証跡があるテストだけ書き、0 件は書かない（:ref[evidence-trace.md#記録への追加]）。結果ブランチの `CaseResultSchema`（`results-branch.ts`）にも同じ任意の項目を加える
 - 既存の項目は変えない。古い記録（`commit` などが無い）もそのまま読める（[読み込み](#読み込み)）
 
 ## コミットの状態
@@ -184,6 +185,8 @@ sequenceDiagram
   participant P as Pruner
   M->>T: *.json の一覧（あれば）
   M->>M: run.traces = テストIDの一覧
+  M->>T: 各 *.json を読み evidenceCounts（証跡のあるものだけ）
+  M->>M: results の各結果に evidence・evidenceWarnings
   M->>F: 実行記録を保存
   M->>P: plan(list(), トレースのディレクトリ一覧, history)
   P-->>M: PrunePlan
@@ -193,6 +196,7 @@ sequenceDiagram
 ```
 
 - 剪定の失敗（ファイルのロック等）はログに `! 古い実行記録を削除できませんでした: …` を出して続ける。次の剪定でもう一度試す
+- `evidenceCounts`（:ref[evidence-trace.md#構造]）は、トレースのファイル名（結果のキー）と同じキーの結果に書く。読めないトレースは飛ばす（実行記録の保存は止めない）。証跡の本体はトレースのディレクトリの中にあるので、剪定でトレースと一緒に消える
 - 剪定はサーバの起動時（`load` の後）にも 1 回行う
 
 ## 剪定

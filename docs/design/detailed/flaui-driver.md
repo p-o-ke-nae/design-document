@@ -71,7 +71,10 @@ classDiagram
     +target: app
     +open(scenario) Promise~void~
     +capture() Promise~null~
-    +screenshot(path) Promise~void~
+    +screenshot(path, opts?) Promise~void~
+    +screenshotElement(key, path) Promise~void~
+    +mockTables() Promise~null~
+    +hookContext() HookHostContext
     +close() Promise~void~
   }
   class DesktopHooks {
@@ -180,9 +183,10 @@ flowchart TD
 | `toggle` | `name`・`on` | `{}` | `notFound`・`no-pattern` |
 | `invoke` | `name` | `{}` | `notFound`・`disabled` |
 | `query` | `what`（`window` / `text` / `count` / `visible`）・`name` | `window`：`{ title, automationId }`、`text`：文字列か null、`count`：数、`visible`：真偽 | `notFound`（`text`・`count`） |
-| `screenshot` | `path` | `{ width, height }` | `no-window` |
+| `screenshot` | `path`・`by?`・`name?` | `{ width, height }` | `no-window`・`notFound`・`offscreen` |
 | `close` | `timeoutMs` | `{ exitCode, killed }` | — |
 
+- `screenshot` の `by`・`name` が無ければ前面のウィンドウを撮る。あれば [要素の探し方](#要素の探し方) で探した要素の `BoundingRectangle` の範囲を撮る（証跡の要素のスクリーンショット。:ref[evidence-runner.md#screenshot]）。見つからなければ `notFound`、`IsOffscreen` か範囲が空なら `offscreen`
 - `DriverClient.request` は要求ごとに期限を持つ（`launch` は 30 秒、ほかは 10 秒）。期限を過ぎたらドライバを強制終了し、`error`「FlaUI のドライバが応答しません（<コマンド>）」で、そのシナリオを失敗にする。次のシナリオの前にドライバを起動し直す
 - ドライバが予期せず終了したら、待っているすべての要求を同じく失敗にする
 - 応答の `id` が待っている要求に無いときは捨てる（標準エラーに記録）
@@ -252,12 +256,13 @@ sequenceDiagram
     R-->>C: すべて error（理由）の JUnit を書いて終了コード 1
   end
   R->>B: ensure()
-  R->>R: シナリオを読む（ids で絞る）・hooks を読む
+  R->>R: シナリオを読む（ids で絞る）・hooks を読む・設定の evidence を読む
   R->>K: dotnet FlaUiDriver.dll を起動し ready を待つ
   loop シナリオごと
     R->>R: fixtures を JSON に書く
     R->>S: new FlaUiSession(client, runner, map, hooks)
-    R->>X: runScenarioWith（session・scenario・timeout・trace）
+    R->>R: createEvidenceRunner（記録が有効なときだけ）
+    R->>X: runScenarioWith（session・scenario・timeout・trace・evidence）
     X->>S: open → launch（DDV_SCENARIO・DDV_FIXTURES）
     X->>S: close
     R->>R: 結果（passed / failed と時間・メッセージ）を集める
@@ -267,9 +272,10 @@ sequenceDiagram
   R-->>C: 終了コード（失敗があれば 1）
 ```
 
-- hooks は `e2e/ddv-hooks.ts` があれば CLI と同じ仕組み（`tsx`）で `import` し、`desktopSeed`・`desktopSteps` を使う。無ければ使わない
+- hooks は `e2e/ddv-hooks.ts` があれば CLI と同じ仕組み（`tsx`）で `import` し、`desktopSeed`・`desktopSteps`・`evidence`（:ref[evidence-runner.md#hooks-の関数]）を使う。無ければ使わない
 - `FlaUiSession.open(scenario)` の順：`desktopSeed(fixtures, { platform, fixturesFile, scenario })`（あれば）→ `launch`（`env` に `DDV_SCENARIO=<ID>`・`DDV_FIXTURES=<JSON のパス>`・`DDV_PLATFORM=<platform>`）→ `start` の画面になるまで `screen()` を `timeout` まで繰り返す（ならなければ「開始の画面 <start> になりません（今：<画面>）」）
-- `FlaUiSession.capture()` は常に `null`（通信・DB の記録は無い）。`screenshot(path)` は前面のウィンドウの PNG
+- `FlaUiSession.capture()` は常に `null`（通信・DB の記録は無い）。`screenshot(path)` は前面のウィンドウの PNG（`opts.fullPage` は受け取らない。証跡の検査で先に失敗にする）
+- 証跡の口：`screenshotElement(key, path)` は `resolveDesktopName('field', key, …)` の名前で `screenshot`（`by`・`name`）を要求する。`notFound`・`offscreen` は E3（:ref[evidence-runner.md#screenshot]）の例外にする。`mockTables()` は常に `null`（`db: mock` は使えない）。`hookContext()` は `{ app: DesktopApp }`。`DesktopApp`（:ref[evidence-runner.md#構造]）の `find(key)` はドライバの `find`、`screenshot(path, key?)` は `screenshot`・`screenshotElement` に委ねる
 - `FlaUiSession.close()` は `close`（5 秒待って終了しなければ強制終了）。失敗・例外のときも必ず呼ぶ
 - JUnit：テスト名は `[<ID>] <title>`、`classname` はランナー名。既存の JUnit の読み取り（`runner.ts`）で `[ID]` から結果に戻る
 - トレース：`--trace` か環境変数 `DDV_TRACE_DIR` があれば `TraceRecorder` に `platform` を渡して記録する（:ref[platform-results.md#トレース]）

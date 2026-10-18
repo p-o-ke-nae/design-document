@@ -1,7 +1,7 @@
 ---
 id: PLATRES
 kind: detailed
-status: review
+status: approved
 title: プラットフォーム別の結果・接続先の選択・トレース 詳細設計
 traces: [BD-DESKRUN]
 ---

@@ -1,7 +1,7 @@
 ---
 id: ACTWF
 kind: detailed
-status: approved
+status: review
 title: ddv ワークフロー雛形・ddv ci コマンド・結果ブランチ 詳細設計
 traces: [BD-ACTRUN]
 ---
@@ -246,6 +246,8 @@ env:
   DDV_MAX_RUNS: '200'        # 保持する実行の数（0 で無制限）
   DDV_MAX_DAYS: '90'         # 保持する日数（0 で無制限）
   DDV_MAX_TRACE_RUNS: '20'   # トレース・スナップショットを残す実行の数（0 で無制限）
+  DDV_EVIDENCE_MAX_BYTES: '5242880'    # 結果ブランチに置く証跡 1 つの上限（バイト）
+  DDV_EVIDENCE_MAX_TOTAL: '52428800'   # 結果ブランチに置く証跡の 1 回の実行の合計の上限（バイト）
   NODE_VERSION: '20'
 
 jobs:
@@ -258,6 +260,8 @@ jobs:
       DDV_IDS: ${{ inputs.ids }}
       DDV_RUNNER: ${{ inputs.runner }}
       DDV_SHA: ${{ inputs.sha }}
+      # 証跡で実アプリの DB を読むときは、接続文字列を secrets から渡す（ddv.config.yaml の evidence.databases の env と同じ名前）
+      # DDV_DB_APP: ${{ secrets.DDV_DB_APP }}
     steps:
       - name: 対象のコミットを取得
         uses: actions/checkout@v5
@@ -294,6 +298,7 @@ jobs:
           npm --prefix ddv run --silent ddv -- ci run
           --repo "$GITHUB_WORKSPACE/repo" --out "$RUNNER_TEMP/ddv-out"
           --request "$DDV_REQUEST" --sha "$DDV_SHA" --ids "$DDV_IDS" --runner "$DDV_RUNNER"
+          --evidence-max-bytes "$DDV_EVIDENCE_MAX_BYTES" --evidence-max-total "$DDV_EVIDENCE_MAX_TOTAL"
       - name: 結果ブランチへ保存（ddv ci publish）
         if: ${{ !cancelled() && steps.run.outcome != 'skipped' }}
         env:
@@ -405,6 +410,7 @@ ddv ci run [--repo <path>] [--ids <id,...>] [--runner <name>] [--out <dir>] [--r
 | `--out` | `<repo>/.ddv/ci-out` | 出力先。既にあれば中身を消してから書く |
 | `--request` | なし | 依頼ID。`run.json` の `actionsRequest` に入れる |
 | `--sha` | なし | ビューアが指定したコミット（inputs.sha）。[コミットの確認](#コミットの確認) に使う |
+| `--evidence-max-bytes` / `--evidence-max-total` | 5242880 / 52428800 | 結果ブランチに置く証跡の 1 つ・合計の上限（バイト）。1 以上の整数でなければ「--evidence-max-bytes は 1 以上の整数です」で終了コード 2。空文字は既定値（雛形の env が無い古いワークフローのため） |
 
 ```mermaid id=ci-run-seq
 sequenceDiagram
@@ -446,6 +452,7 @@ sequenceDiagram
 ```
 
 - 構成は `.ddv/snapshots/` と同じにし、ビューアと `ci approve` が `SnapshotStore` と同じパスの規則で読めるようにする。すべて一致したシナリオは `meta.json`（`results` を含む）だけ残す（画像を結果ブランチに溜めないため）
+- `traces/` のコピーには証跡の本体（`traces/<キー>/evidence/`）も含む。コピーの後に `limitEvidenceForBranch`（:ref[evidence-trace.md#結果ブランチの大きさの上限]）で上限を超えた証跡を除く
 
 ### 実行記録（run.json）
 
@@ -816,7 +823,7 @@ flowchart TD
 ```text
   ddv actions init [--repo <path>] [--force]
       ddv ワークフロー（.github/workflows/ddv-tests.yml）を配置します（既存と違えば差分を表示して終了コード 1、--force で上書き）
-  ddv ci run [--repo <path>] [--ids <id,...>] [--runner <name>] [--out <dir>] [--request <依頼ID>] [--sha <sha>]
+  ddv ci run [--repo <path>] [--ids <id,...>] [--runner <name>] [--out <dir>] [--request <依頼ID>] [--sha <sha>] [--evidence-max-bytes <n>] [--evidence-max-total <n>]
       ddv ワークフローの中で、ランナー・スナップショットを実行し、実行記録・トレース・スナップショットを --out に出力します
   ddv ci publish --out <dir> [--repo <path>] [--branch ddv-results] [--max-runs 200] [--max-days 90] [--max-trace-runs 20]
       --out の結果を結果ブランチに保存し、古い結果を削除します

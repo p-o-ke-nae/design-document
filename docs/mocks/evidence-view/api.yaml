@@ -1,13 +1,14 @@
-# 疑似 API（証跡の表示のモック用。基本設計 evidence-view.md）
+# 疑似 API（証跡の表示のモック用。基本設計 evidence-view.md、詳細設計 evidence-trace.md）
+# evidence：トレースのステップ 3 の証跡の記録（TraceEvidence。evidence-trace.md の「構造」）
 tables:
-  - evidence
+  - { name: evidence, key: seq }
 routes:
+  - { method: GET, path: /evidence, op: list, table: evidence }
   - method: POST
     path: /evidence-open
     when:                       # 取得に失敗した証跡は表示を開かず 理由を出す
       - if: "body['evidence-state'] == 'failed'"
         status: 422
         body: { error: 取得に失敗しました, code: evidence-failed, message: "取得に失敗しました：app-log（判定後）— 終了コード 1：ログのファイルが見つかりません" }
-    status: 200
-    body: { file: evidence/3-2-確定した注文.table.json }
-evidence: []
+    status: 200                 # 開いた証跡の記録（本体は GET /api/traces/{runId}/{testId}/evidence/{file}）
+    body: { seq: 2, label: 確定した注文, use: db, at: after, provider: db, status: ok, durationMs: 42, db: { name: app, type: sqlite }, totalRows: 1, masked: [card_no], files: [{ path: BD-ORDER-SCREEN-P004/evidence/3-2-確定した注文.table.json, kind: table, mime: application/json, bytes: 186 }] }
