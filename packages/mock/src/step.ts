@@ -29,7 +29,7 @@ export interface ExpectFailure {
   actual: Value | null;
 }
 
-export type StepErrorKind = 'notFound' | 'unknownOp' | 'expect';
+export type StepErrorKind = 'notFound' | 'unknownOp' | 'expect' | 'evidence';
 
 export class StepError extends Error {
   readonly kind: StepErrorKind;

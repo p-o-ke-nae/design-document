@@ -4,7 +4,9 @@
 // `@ddv/mock` re-export them.
 import type { Page } from '@playwright/test';
 import type { Platform } from './platform.ts';
-import type { Row, TraceTarget } from './trace-format.ts';
+import type { StepPlan } from './platform.ts';
+import type { Row, TraceEvidence, TraceTarget } from './trace-format.ts';
+import type { Step } from './types.ts';
 
 /** One table of the mock's pseudo DB (`window.__ddv.dump()`). */
 export interface TableDump {
@@ -40,4 +42,26 @@ export interface EvidenceHost {
   /** Pseudo DB tables of the mock, or null when the target is not a mock. */
   mockTables(): Promise<TableDump[] | null>;
   hookContext(): HookHostContext;
+}
+
+/** Result of the specs of one step at one time (evidence-runner.md#時点ごとの取得). */
+export interface AtResult {
+  records: TraceEvidence[];
+  /** Reasons of `onError: fail` failures (redacted). */
+  failures: string[];
+  warnings: number;
+}
+
+/** Values `{ input: <key> }` can refer to (`InputScope` of `@ddv/evidence/with`). */
+export interface EvidenceInputScope {
+  at(at: 'before' | 'after', stepIndex: number): Map<string, string | number | boolean>;
+}
+
+/** What `runScenarioWith` needs from the evidence runner (`EvidenceRunner` of `@ddv/evidence/runner`). */
+export interface StepEvidenceRunner {
+  /** Input scope of the scenario for the planned steps (`InputScope.of`). */
+  scopeOf(scenario: { steps: readonly Step[] }, plans: readonly StepPlan<Step>[]): EvidenceInputScope;
+  runAt(at: 'before' | 'after', plan: StepPlan<Step>, host: EvidenceHost, scope: EvidenceInputScope): Promise<AtResult>;
+  /** Records `status: skipped` for every spec of a step that does not run (`only:`). */
+  skip(plan: StepPlan<Step>): TraceEvidence[];
 }

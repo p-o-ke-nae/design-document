@@ -235,6 +235,11 @@ export class MockRuntime implements BridgeEngine {
     return observeExpect(this.driver, step.expect);
   }
 
+  /** Copies of the pseudo DB's tables (evidence-runner.md#接続と読み取り専用). */
+  dump(): Array<{ name: string; key: string; rows: Row[] }> {
+    return this.db.dump();
+  }
+
   screen(): string | null {
     return this.screens.current;
   }

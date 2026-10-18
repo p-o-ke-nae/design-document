@@ -1,11 +1,11 @@
 // Driver-independent scenario runner (detailed design: desktop-scenario.md#実行器) and the Playwright compat entry.
 import type { Page } from '@playwright/test';
-import type { EvidenceHost } from './evidence-host.ts';
+import type { AtResult, EvidenceHost, EvidenceInputScope, StepEvidenceRunner } from './evidence-host.ts';
 import { planSteps, type Platform, type StepPlan } from './platform.ts';
 import { PlaywrightSession, type ScenarioTarget } from './playwright-driver.ts';
 import { validateScenario } from './scenario.ts';
 import { DEFAULT_STEP_TIMEOUT_MS, executeStep, observeExpect, StepError, type Driver } from './step.ts';
-import type { ApiCall, DbChange, TraceTarget } from './trace-format.ts';
+import type { ApiCall, DbChange, TraceEvidence, TraceTarget } from './trace-format.ts';
 import type { TraceRecorder } from './trace.ts';
 import type { Scenario, Step } from './types.ts';
 
@@ -38,6 +38,8 @@ export interface RunScenarioOptions {
   trace?: TraceRecorder;
   /** Whether a custom `do` operation is registered. */
   hasOp?: (name: string) => boolean;
+  /** Captures the steps' evidence (evidence-runner.md#時点ごとの取得). */
+  evidence?: StepEvidenceRunner;
 }
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -74,13 +76,15 @@ export async function runScenarioWith(session: ScenarioSession, scenario: Scenar
   }
   const driver = session.driver;
   const hasOp = opts.hasOp ?? (() => false);
+  const ev = opts.evidence;
+  const scope = ev ? ev.scopeOf(scenario, plans) : null;
   let startWarned = false;
   for (const plan of plans) {
     const { step, index: i } = plan;
     if (!plan.run) {
       if (rec) {
         try {
-          rec.skipStep(i + 1, step, await screenOf(driver));
+          rec.skipStep(i + 1, step, await screenOf(driver), ev && step.evidence?.length ? ev.skip(plan) : undefined);
         } catch (e) {
           warnTrace('ステップ', e);
         }
@@ -99,6 +103,8 @@ export async function runScenarioWith(session: ScenarioSession, scenario: Scenar
       }
     }
     const t0 = Date.now();
+    const withEvidence = ev && scope && step.evidence?.length ? { ev, scope } : null;
+    const before = withEvidence ? await runAtSafe(withEvidence.ev, 'before', plan, session, withEvidence.scope) : null;
     let failure: Error | null = null;
     try {
       await executeStep(driver, planned, { timeoutMs: timeout, hasOp });
@@ -106,7 +112,10 @@ export async function runScenarioWith(session: ScenarioSession, scenario: Scenar
       const msg = `${stepLabel(step, i)}: ${errText(e)}`;
       failure = e instanceof StepError ? new StepError(e.kind, msg, { key: e.key, failures: e.failures, screen: e.screen }) : new Error(msg, { cause: e });
     }
-    if (rec) await recordStep(rec, session, plan, i + 1, Date.now() - t0, failure, capture);
+    const after = withEvidence ? await runAtSafe(withEvidence.ev, 'after', plan, session, withEvidence.scope) : null;
+    const records = [...(before?.records ?? []), ...(after?.records ?? [])];
+    failure = stepResult(step, i, failure, [...(before?.failures ?? []), ...(after?.failures ?? [])]);
+    if (rec) await recordStep(rec, session, plan, i + 1, Date.now() - t0, failure, capture, records);
     if (failure) {
       await session.close().catch(() => undefined);
       throw failure;
@@ -117,7 +126,27 @@ export async function runScenarioWith(session: ScenarioSession, scenario: Scenar
   if (rec) await rec.write().catch((w) => warnTrace('書き込み', w));
 }
 
-async function recordStep(rec: TraceRecorder, session: ScenarioSession, plan: StepPlan<Step>, index: number, durationMs: number, failure: Error | null, capture: Capture | null) {
+/** `runAt` never fails the run by throwing: an unexpected error becomes one failure without records. */
+async function runAtSafe(ev: StepEvidenceRunner, at: 'before' | 'after', plan: StepPlan<Step>, host: EvidenceHost, scope: EvidenceInputScope): Promise<AtResult> {
+  try {
+    return await ev.runAt(at, plan, host, scope);
+  } catch (e) {
+    return { records: [], failures: [errText(e)], warnings: 0 };
+  }
+}
+
+/** Step result from the operation / expectation and the evidence failures (evidence-runner.md#ステップの結果). */
+export function stepResult(step: Step, index: number, failure: Error | null, evidenceFailures: string[]): Error | null {
+  if (!evidenceFailures.length) return failure;
+  const list = evidenceFailures.join('、');
+  if (failure) {
+    const msg = `${failure.message}\n証跡も失敗：${list}`;
+    return failure instanceof StepError ? new StepError(failure.kind, msg, { key: failure.key, failures: failure.failures, screen: failure.screen }) : new Error(msg, { cause: failure.cause });
+  }
+  return new StepError('evidence', `${stepLabel(step, index)}: 証跡の取得に失敗しました：${list}`);
+}
+
+async function recordStep(rec: TraceRecorder, session: ScenarioSession, plan: StepPlan<Step>, index: number, durationMs: number, failure: Error | null, capture: Capture | null, evidence: TraceEvidence[] = []) {
   const driver = session.driver;
   try {
     const expects = await observeExpect(driver, plan.expect);
@@ -138,7 +167,7 @@ async function recordStep(rec: TraceRecorder, session: ScenarioSession, plan: St
     } catch (e) {
       warnTrace('スクリーンショット', e);
     }
-    await rec.endStep({ screenAfter, expects, ok: !failure, ...(failure ? { error: failure.message } : {}), durationMs, calls: taken.calls, db: taken.db, ...(screenshot ? { screenshot } : {}) });
+    await rec.endStep({ screenAfter, expects, ok: !failure, ...(failure ? { error: failure.message } : {}), durationMs, calls: taken.calls, db: taken.db, ...(screenshot ? { screenshot } : {}), ...(evidence.length ? { evidence } : {}) });
   } catch (e) {
     warnTrace('ステップ', e);
   }

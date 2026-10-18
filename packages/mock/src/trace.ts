@@ -3,7 +3,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { expandOnly, type Platform } from './platform.ts';
 import type { Step } from './types.ts';
-import { TRACE_DIR_ENV, TRACE_VERSION, traceKey, type ApiCall, type DbChange, type ExpectObservation, type TraceFile, type TraceStep, type TraceTarget } from './trace-format.ts';
+import { TRACE_DIR_ENV, TRACE_VERSION, traceKey, type ApiCall, type DbChange, type ExpectObservation, type TraceEvidence, type TraceFile, type TraceStep, type TraceTarget } from './trace-format.ts';
 
 export * from './trace-format.ts';
 
@@ -27,6 +27,15 @@ export interface StepTrace {
   calls: ApiCall[];
   db: DbChange[] | null;
   screenshot?: string;
+  /** Evidence records of the step (empty / absent = not written). */
+  evidence?: TraceEvidence[];
+  evidenceWarnings?: number;
+}
+
+/** `evidence` / `evidenceWarnings` of a step: written only when there are records (REQ-810). */
+function evidenceFields(evidence: TraceEvidence[] | undefined): Pick<TraceStep, 'evidence' | 'evidenceWarnings'> {
+  if (!evidence?.length) return {};
+  return { evidence, evidenceWarnings: evidence.filter((e) => e.status === 'warn').length };
 }
 
 export const ORDER_ERROR = 'トレースの記録の順序が不正です';
@@ -82,9 +91,9 @@ export class TraceRecorder {
   }
 
   /** Step not run on this platform (`only:`): recorded as passed without expects; the trace status is unaffected. */
-  skipStep(index: number, step: Step, screen: string | null): void {
+  skipStep(index: number, step: Step, screen: string | null, evidence?: TraceEvidence[]): void {
     if (this.state !== 'idle') throw new Error(ORDER_ERROR);
-    this.file.steps.push({ ...this.head(index, step, screen), skipped: true, screenAfter: screen, expects: [], ok: true, durationMs: 0, calls: [], db: null });
+    this.file.steps.push({ ...this.head(index, step, screen), skipped: true, screenAfter: screen, expects: [], ok: true, durationMs: 0, calls: [], db: null, ...evidenceFields(evidence) });
   }
 
   beginStep(index: number, step: Step, screenBefore: string | null): void {
@@ -96,7 +105,8 @@ export class TraceRecorder {
   /** Ends the step; a failed step finishes the trace (written immediately). */
   async endStep(result: StepTrace): Promise<void> {
     if (this.state !== 'inStep' || !this.current) throw new Error(ORDER_ERROR);
-    const s: TraceStep = { ...this.current, ...result };
+    const { evidence, evidenceWarnings: _w, ...rest } = result;
+    const s: TraceStep = { ...this.current, ...rest, ...evidenceFields(evidence) };
     if (s.error === undefined) delete s.error;
     if (s.screenshot === undefined) delete s.screenshot;
     this.file.steps.push(s);

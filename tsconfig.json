@@ -48,6 +48,10 @@
       "@ddv/evidence/hooks-scan": ["./packages/evidence/src/hooks-scan.ts"],
       "@ddv/evidence/check": ["./packages/evidence/src/check.ts"],
       "@ddv/evidence/cli": ["./packages/evidence/src/cli.ts"],
+      "@ddv/evidence/store": ["./packages/evidence/src/store.ts"],
+      "@ddv/evidence/redact": ["./packages/evidence/src/redact.ts"],
+      "@ddv/evidence/runner": ["./packages/evidence/src/runner.ts"],
+      "@ddv/evidence/run": ["./packages/evidence/src/run.ts"],
       "@ddv/evidence": ["./packages/evidence/src/index.ts"],
       "#backend-impl": ["./apps/web/src/backend/http.ts"],
       "#app-impl": ["./apps/web/src/App.tsx"]

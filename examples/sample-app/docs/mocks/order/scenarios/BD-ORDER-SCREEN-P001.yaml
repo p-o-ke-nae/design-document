@@ -22,3 +22,5 @@ steps:
   - event: 確定
     click: submit
     expect: { screen: Done, text: { done-message: 注文を受け付けました } }
+    evidence:
+      - { use: screenshot, label: 完了画面 }

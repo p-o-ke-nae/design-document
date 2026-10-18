@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@ddv/core": "*",
+    "@ddv/evidence": "*",
     "@ddv/mock": "*",
     "fast-xml-parser": "^5.11.2",
     "yaml": "^2.9.1"

@@ -237,6 +237,16 @@ describe('MockRuntime + DomDriver', () => {
     expect(r.driver.count('orders')).toBe(0);
   });
 
+  it('dump は全テーブルの写しを定義の順に返す（証跡の db: mock）', async () => {
+    const r = await boot({ 'api.yaml': API, 'fixtures/default.yaml': FIXTURE });
+    const d = r.dump();
+    expect(d.map((t) => [t.name, t.key])).toEqual(r.db.all().map((t) => [t.name, t.key]));
+    const orders = d.find((t) => t.name === 'orders')!;
+    expect(orders.rows).toEqual(r.db.list('orders'));
+    orders.rows[0].customer = '書き換え';
+    expect(r.db.list('orders')[0].customer).not.toBe('書き換え');
+  });
+
   it('api.yaml がなければルートなし（404）、fixtures/default.yaml がなければ空の DB で起動する', async () => {
     const r = await boot({});
     expect(r.state).toBe('Ready');

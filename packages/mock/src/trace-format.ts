@@ -69,6 +69,45 @@ export interface TraceStep {
   db: DbChange[] | null;
   /** `<testId>/<index>.png`, relative to the run's trace directory. */
   screenshot?: string;
+  /** Evidence captured on this step (before → after, in written order). Absent when the step has none. */
+  evidence?: TraceEvidence[];
+  /** Number of `warn` records in `evidence`. Absent with `evidence`. */
+  evidenceWarnings?: number;
+}
+
+export type EvidenceStatus = 'ok' | 'warn' | 'failed' | 'skipped';
+export type EvidenceKind = 'image' | 'table' | 'json' | 'text' | 'file';
+export type EvidenceProviderKind = 'builtin' | 'hooks' | 'command';
+export type OmittedReason = 'too-large' | 'branch-limit';
+
+/** One saved file of an evidence record (evidence-trace.md#構造). */
+export interface EvidenceFile {
+  /** Relative to the run's trace directory: `<key>/evidence/<name>` (`/`-separated). */
+  path: string;
+  kind: EvidenceKind;
+  mime: string;
+  bytes: number;
+  /** The body was not written. */
+  omitted?: OmittedReason;
+}
+
+/** Result of one evidence spec of a step. */
+export interface TraceEvidence {
+  /** 1-based within the step (before → after). */
+  seq: number;
+  label: string;
+  use: string;
+  at: 'before' | 'after';
+  provider: EvidenceProviderKind;
+  status: EvidenceStatus;
+  /** Redacted reason (warn / failed). */
+  reason?: string;
+  durationMs: number;
+  db?: { name: string; type: string };
+  truncated?: boolean;
+  totalRows?: number;
+  masked?: string[];
+  files: EvidenceFile[];
 }
 
 export interface TraceFile {

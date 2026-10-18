@@ -13,11 +13,16 @@
     "./registry": "./src/registry.ts",
     "./hooks-scan": "./src/hooks-scan.ts",
     "./check": "./src/check.ts",
-    "./cli": "./src/cli.ts"
+    "./cli": "./src/cli.ts",
+    "./store": "./src/store.ts",
+    "./redact": "./src/redact.ts",
+    "./runner": "./src/runner.ts",
+    "./run": "./src/run.ts"
   },
   "dependencies": {
     "@ddv/core": "*",
     "@ddv/mock": "*",
+    "sql.js": "^1.15.0",
     "typescript": "^5.9.3",
     "zod": "^4.6.5"
   }

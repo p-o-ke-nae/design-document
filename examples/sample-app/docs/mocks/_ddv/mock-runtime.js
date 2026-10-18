@@ -5757,10 +5757,10 @@ function fillValue(kind, value) {
 	if (kind === "checkbox") return typeof value === "boolean" ? value : /^(true|1|on|yes)$/i.test(String(value).trim());
 	return String(value);
 }
-async function checkExpect(driver, expect) {
+async function checkExpect(driver, expect = {}) {
 	const failures = [];
 	const screen = await driver.screen();
-	if (screen !== expect.screen) failures.push({
+	if (expect.screen !== void 0 && screen !== expect.screen) failures.push({
 		key: "screen",
 		expected: expect.screen,
 		actual: screen
@@ -5797,7 +5797,7 @@ async function checkExpect(driver, expect) {
 	};
 }
 /** Evaluates every `expect` item once (no retry) for the trace. Items whose element cannot be resolved get `actual: null`. */
-async function observeExpect(driver, expect) {
+async function observeExpect(driver, expect = {}) {
 	const out = [];
 	const safe = async (f) => {
 		try {
@@ -5807,7 +5807,7 @@ async function observeExpect(driver, expect) {
 		}
 	};
 	const screen = await safe(() => driver.screen());
-	out.push({
+	if (expect.screen !== void 0) out.push({
 		kind: "screen",
 		key: "",
 		expected: expect.screen,
@@ -5872,7 +5872,7 @@ async function executeStep(driver, step, opts = {}) {
 		if (!opts.hasOp?.(step.do)) throw new StepError("unknownOp", `未登録の操作です: ${step.do}`, { key: step.do });
 		await driver.invoke(step.do);
 	}
-	if (step.click !== void 0) await driver.click(step.click, eventOf(step.event));
+	if (step.click !== void 0) await driver.click(step.click, step.event !== void 0 ? eventOf(step.event) : void 0);
 	if (step.wait) await sleep(step.wait);
 	const deadline = Date.now() + timeoutMs;
 	for (;;) {
@@ -6610,6 +6610,14 @@ var MemoryDb = class {
 	/** All tables (live objects; callers must copy rows they keep). */
 	all() {
 		return [...this.tables.values()];
+	}
+	/** Copies of all tables in definition order (`window.__ddv.dump()`; evidence `db: mock`). */
+	dump() {
+		return this.all().map((t) => ({
+			name: t.name,
+			key: t.key,
+			rows: structuredClone(t.rows)
+		}));
 	}
 	/** Creates the table (key `id`) when it does not exist. */
 	ensure(name, key = "id") {
@@ -8051,6 +8059,8 @@ var RUNTIME_VERSION = {
 	exports: {
 		".": "./src/index.ts",
 		"./step": "./src/step.ts",
+		"./platform": "./src/platform.ts",
+		"./browser": "./src/browser-safe.ts",
 		"./frame-protocol": "./src/frame-protocol.ts",
 		"./playwright": "./src/playwright.ts",
 		"./tune": "./src/tune.ts",
@@ -8061,6 +8071,7 @@ var RUNTIME_VERSION = {
 	},
 	dependencies: {
 		"@ddv/core": "*",
+		"@ddv/evidence": "*",
 		"@ddv/graph": "*",
 		"@ddv/testid": "*",
 		"node-html-parser": "^9.0.4",
@@ -8263,6 +8274,10 @@ var MockRuntime = class {
 	}
 	observe(step) {
 		return observeExpect(this.driver, step.expect);
+	}
+	/** Copies of the pseudo DB's tables (evidence-runner.md#接続と読み取り専用). */
+	dump() {
+		return this.db.dump();
 	}
 	screen() {
 		return this.screens.current;

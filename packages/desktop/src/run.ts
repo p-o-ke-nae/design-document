@@ -6,6 +6,8 @@ import { pathToFileURL } from 'node:url';
 import { FLAUI_DEFAULT_AUTOMATION, FLAUI_DEFAULT_TIMEOUT, type DdvConfig, type RunnerConfig } from '@ddv/core';
 import { createScreenMap, findScenarioFiles, mocksRootOf, parseScenarioFile, parseScreenMap, runScenarioWith, scenarioIdOf, SCREEN_MAP_FILE, type PlatformMap, type Scenario, type ScreenMap } from '@ddv/mock';
 import { TraceRecorder, traceDirOf } from '@ddv/mock/trace';
+import { traceKey } from '@ddv/mock/trace-format';
+import { evidenceRunnerForRun } from '@ddv/evidence/run';
 import { DriverClient } from './client.ts';
 import { DriverBuilder } from './driver-build.ts';
 import { FixturesWriter } from './fixtures.ts';
@@ -135,7 +137,8 @@ export async function desktopRun(opts: DesktopRunOptions): Promise<DesktopRunRep
   const mocksRoot = mocksRootOf(opts.config);
   const appPath = path.resolve(opts.repoRoot, runner.app!.path);
   const app = { path: appPath, args: runner.app!.args ?? [], ...(runner.app!.cwd ? { cwd: path.resolve(opts.repoRoot, runner.app!.cwd) } : {}) };
-  const hooks = await loadDesktopHooks(path.resolve(opts.repoRoot, opts.hooksFile ?? DEFAULT_HOOKS));
+  const hooksAbs = path.resolve(opts.repoRoot, opts.hooksFile ?? DEFAULT_HOOKS);
+  const hooks = await loadDesktopHooks(hooksAbs);
   const traceDir = opts.trace ?? traceDirOf(process.env);
   const runId = traceDir ? path.basename(traceDir) : `${Date.now()}`;
   const fixtures = new FixturesWriter(path.join(os.tmpdir(), `ddv-fixtures-${runId}-${process.pid}`));
@@ -177,7 +180,16 @@ export async function desktopRun(opts: DesktopRunOptions): Promise<DesktopRunRep
       const session = new FlaUiSession(client, sessionOpts);
       try {
         await client.ensureStarted();
-        await runScenarioWith(session, p.scenario, { timeout, trace: rec, hasOp: (n) => session.hasOp(n) });
+        const evidence = await evidenceRunnerForRun({
+          repoRoot: opts.repoRoot,
+          config: opts.config,
+          hooks: path.relative(opts.repoRoot, hooksAbs),
+          traceDir: traceDir || path.join(os.tmpdir(), `ddv-evidence-untraced-${process.pid}`),
+          key: rec?.key ?? traceKey(p.id, platform),
+          testId: p.id,
+          scenario: p.scenario,
+        });
+        await runScenarioWith(session, p.scenario, { timeout, trace: rec, hasOp: (n) => session.hasOp(n), evidence });
         cases.push({ id: p.id, title: p.title, status: 'passed', durationMs: Date.now() - t0 });
         log(`  ✓ [${p.id}] ${p.title}`);
       } catch (e) {
