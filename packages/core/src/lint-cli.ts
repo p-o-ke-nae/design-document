@@ -11,9 +11,10 @@ const json = args.includes('--json');
 const strict = args.includes('--strict');
 
 const config = await loadConfig(repo);
-// @ddv/mock depends on core, so it is loaded dynamically to avoid a static import cycle.
+// @ddv/mock and @ddv/tokens depend on core, so they are loaded dynamically to avoid a static import cycle.
 const { checkMocks } = await import('@ddv/mock');
-const issues = await lintRepo(repo, config, { extraChecks: [checkMocks] });
+const { checkTokens } = await import('@ddv/tokens/node');
+const issues = await lintRepo(repo, config, { extraChecks: [checkMocks, checkTokens] });
 if (json) {
   console.log(JSON.stringify(issues, null, 2));
 } else {

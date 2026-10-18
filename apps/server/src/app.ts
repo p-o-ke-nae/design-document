@@ -7,6 +7,7 @@ import { normalizePath, type DdvConfig } from '@ddv/core';
 import { loadConfig, toPosix, CONFIG_FILES } from '@ddv/core/node';
 import { generateAll, LOCK_PATH } from '@ddv/testid';
 import { checkMocks, scaffoldMock } from '@ddv/mock';
+import { checkTokens } from '@ddv/tokens/node';
 import {
   createServices,
   HistoryError,
@@ -374,7 +375,7 @@ export function createApp(ctx: ServerContext): Hono {
 
   app.get('/api/lint', async (c) => {
     const docs = await svc().docs.loadDocs();
-    return c.json([...(await svc().docs.lint(docs)), ...(await checkMocks(root, ctx.config, docs))]);
+    return c.json([...(await svc().docs.lint(docs)), ...(await checkMocks(root, ctx.config, docs)), ...(await checkTokens(root, ctx.config))]);
   });
   app.post('/api/mocks/scaffold', async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as { mock?: unknown };
