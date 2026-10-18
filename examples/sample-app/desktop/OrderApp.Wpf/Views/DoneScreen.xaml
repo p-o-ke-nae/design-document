@@ -1,0 +1,13 @@
+<UserControl x:Class="OrderApp.Wpf.Views.DoneScreen"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Done">
+  <!-- 画面 Done（完了） -->
+  <StackPanel>
+    <TextBlock Text="完了" Style="{StaticResource Heading}" />
+    <TextBlock AutomationProperties.AutomationId="done-message" Text="{Binding DoneMessage}" Margin="0,0,0,16" />
+    <StackPanel Orientation="Horizontal">
+      <Button AutomationProperties.AutomationId="to-list" Content="一覧へ" Command="{Binding ToListCommand}" IsDefault="True" />
+    </StackPanel>
+  </StackPanel>
+</UserControl>

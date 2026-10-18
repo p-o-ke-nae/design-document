@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/Domain/">
+    <Project Path="../dotnet/OrderDomain/OrderDomain.csproj" />
+  </Folder>
+  <Project Path="OrderApp.Core/OrderApp.Core.csproj" />
+  <Project Path="OrderApp.Desktop.Tests/OrderApp.Desktop.Tests.csproj" />
+  <Project Path="OrderApp.WinForms/OrderApp.WinForms.csproj" />
+  <Project Path="OrderApp.Wpf/OrderApp.Wpf.csproj" />
+</Solution>
