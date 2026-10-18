@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-ACTRUN-SCREEN-P006",
+  "title": "開始 → Actions の実行一覧 → [Actionsで実行 [実行できる]] 起動中 → [起動失敗] Actions の実行一覧 → 終了",
+  "mock": "actions-run",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:22.448Z",
+  "durationMs": 355,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "Actionsで実行 [実行できる]",
+      "input": {
+        "runner": "unit",
+        "ids": "BD-ORDER-SCREEN-P004",
+        "allowed": "yes"
+      },
+      "click": "dispatch",
+      "screenBefore": "List",
+      "screenAfter": "Dispatching",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Dispatching",
+          "actual": "Dispatching",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 111,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/actions/runs",
+          "status": 202,
+          "durationMs": 1,
+          "requestBody": "{\"runner\":\"unit\",\"ids\":\"BD-ORDER-SCREEN-P004\",\"allowed\":\"yes\"}",
+          "responseBody": "{\"runner\":\"unit\",\"ids\":\"BD-ORDER-SCREEN-P004\",\"allowed\":\"yes\",\"id\":1}"
+        }
+      ],
+      "db": [
+        {
+          "table": "actions_runs",
+          "kind": "added",
+          "key": "1",
+          "after": {
+            "runner": "unit",
+            "ids": "BD-ORDER-SCREEN-P004",
+            "allowed": "yes",
+            "id": 1
+          }
+        }
+      ],
+      "screenshot": "BD-ACTRUN-SCREEN-P006/1.png"
+    },
+    {
+      "index": 2,
+      "event": "起動失敗",
+      "click": "dispatch-fail",
+      "screenBefore": "Dispatching",
+      "screenAfter": "List",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "List",
+          "actual": "List",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 38,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-ACTRUN-SCREEN-P006/2.png"
+    }
+  ]
+}

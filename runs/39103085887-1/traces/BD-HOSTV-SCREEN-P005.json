@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-HOSTV-SCREEN-P005",
+  "title": "開始 → 対象の指定 → [開く [入力OK]] 取得中 → [取得完了] 文書 → 終了",
+  "mock": "hosted-viewer",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:58.117Z",
+  "durationMs": 356,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "開く [入力OK]",
+      "input": {
+        "repo": "acme/order-app",
+        "kind": "pr",
+        "target": "12"
+      },
+      "click": "open-submit",
+      "screenBefore": "Open",
+      "screenAfter": "Loading",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Loading",
+          "actual": "Loading",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 108,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-HOSTV-SCREEN-P005/1.png"
+    },
+    {
+      "index": 2,
+      "event": "取得完了",
+      "click": "loading-done",
+      "screenBefore": "Loading",
+      "screenAfter": "Doc",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Doc",
+          "actual": "Doc",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 42,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-HOSTV-SCREEN-P005/2.png"
+    }
+  ]
+}

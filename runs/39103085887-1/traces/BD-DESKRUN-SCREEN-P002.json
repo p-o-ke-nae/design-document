@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-DESKRUN-SCREEN-P002",
+  "title": "開始 → テスト一覧 → [実行] 接続先の選択 → [開始 [接続先なし]] 接続先の選択 → [キャンセル] テスト一覧 → 終了",
+  "mock": "desktop-run",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:25.497Z",
+  "durationMs": 522,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "実行",
+      "click": "run",
+      "screenBefore": "List",
+      "screenAfter": "Target",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Target",
+          "actual": "Target",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 29,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-DESKRUN-SCREEN-P002/1.png"
+    },
+    {
+      "index": 2,
+      "event": "開始 [接続先なし]",
+      "input": {
+        "target-e2e": false,
+        "target-wpf": false
+      },
+      "click": "target-start",
+      "screenBefore": "Target",
+      "screenAfter": "Target",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Target",
+          "actual": "Target",
+          "ok": true
+        },
+        {
+          "kind": "visible",
+          "key": "target-error",
+          "expected": true,
+          "actual": true,
+          "ok": true
+        },
+        {
+          "kind": "text",
+          "key": "target-error",
+          "expected": "接続先を選んでください",
+          "actual": "接続先を選んでください",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 223,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/tests/run",
+          "status": 422,
+          "durationMs": 1,
+          "requestBody": "{\"target-e2e\":false,\"target-wpf\":false}",
+          "responseBody": "{\"error\":\"接続先を選んでください\",\"code\":\"no-target\",\"message\":\"接続先を選んでください\"}"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-DESKRUN-SCREEN-P002/2.png"
+    },
+    {
+      "index": 3,
+      "event": "キャンセル",
+      "click": "target-cancel",
+      "screenBefore": "Target",
+      "screenAfter": "List",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "List",
+          "actual": "List",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 19,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-DESKRUN-SCREEN-P002/3.png"
+    }
+  ]
+}

@@ -1,0 +1,299 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-GHREV-SCREEN-P005",
+  "title": "開始 → 手元の文書 → [GitHubを開く] GitHub を開く → [キャンセル] 手元の文書 → [GitHubを開く] GitHub を開く → [開く [入力OK]] 取得中 → [取得完了] PR の文書 → [最新化] 取得中 → [取得完了] PR の文書 → [レビュー] 保留中レビュー → [送信 [失敗]] 保留中レビュー → [送信 [成功]] 送信済 → [PRに戻る] 終了",
+  "mock": "github-review",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:36.126Z",
+  "durationMs": 1324,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "GitHubを開く",
+      "click": "open-github",
+      "screenBefore": "Local",
+      "screenAfter": "Open",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Open",
+          "actual": "Open",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 40,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/api/pulls",
+          "status": 200,
+          "durationMs": 0,
+          "responseBody": "[{\"id\":1,\"number\":12,\"title\":\"注文確認画面に戻るボタンを追加\",\"head\":\"feature/confirm-back\",\"base\":\"main\"},{\"id\":2,\"number\":15,\"title\":\"在庫照会 API の詳細設計\",\"head\":\"feature/stock-api\",\"base\":\"main\"}]"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-GHREV-SCREEN-P005/1.png"
+    },
+    {
+      "index": 2,
+      "event": "キャンセル",
+      "click": "open-cancel",
+      "screenBefore": "Open",
+      "screenAfter": "Local",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Local",
+          "actual": "Local",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 33,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-GHREV-SCREEN-P005/2.png"
+    },
+    {
+      "index": 3,
+      "event": "GitHubを開く",
+      "click": "open-github",
+      "screenBefore": "Local",
+      "screenAfter": "Open",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Open",
+          "actual": "Open",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 47,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/api/pulls",
+          "status": 200,
+          "durationMs": 0,
+          "responseBody": "[{\"id\":1,\"number\":12,\"title\":\"注文確認画面に戻るボタンを追加\",\"head\":\"feature/confirm-back\",\"base\":\"main\"},{\"id\":2,\"number\":15,\"title\":\"在庫照会 API の詳細設計\",\"head\":\"feature/stock-api\",\"base\":\"main\"}]"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-GHREV-SCREEN-P005/3.png"
+    },
+    {
+      "index": 4,
+      "event": "開く [入力OK]",
+      "input": {
+        "repo": "acme/order-app",
+        "kind": "pr",
+        "target": "12"
+      },
+      "click": "open-submit",
+      "screenBefore": "Open",
+      "screenAfter": "Loading",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Loading",
+          "actual": "Loading",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 105,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-GHREV-SCREEN-P005/4.png"
+    },
+    {
+      "index": 5,
+      "event": "取得完了",
+      "click": "loading-done",
+      "screenBefore": "Loading",
+      "screenAfter": "Pr",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Pr",
+          "actual": "Pr",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 46,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-GHREV-SCREEN-P005/5.png"
+    },
+    {
+      "index": 6,
+      "event": "最新化",
+      "click": "refresh",
+      "screenBefore": "Pr",
+      "screenAfter": "Loading",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Loading",
+          "actual": "Loading",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 48,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-GHREV-SCREEN-P005/6.png"
+    },
+    {
+      "index": 7,
+      "event": "取得完了",
+      "click": "loading-done",
+      "screenBefore": "Loading",
+      "screenAfter": "Pr",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Pr",
+          "actual": "Pr",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 22,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-GHREV-SCREEN-P005/7.png"
+    },
+    {
+      "index": 8,
+      "event": "レビュー",
+      "click": "to-review",
+      "screenBefore": "Pr",
+      "screenAfter": "Review",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Review",
+          "actual": "Review",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 53,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/api/comments",
+          "status": 200,
+          "durationMs": 0,
+          "responseBody": "[{\"id\":1,\"kind\":\"file\",\"kindLabel\":\"ファイル（差分外）\",\"path\":\"requirements/order.md\",\"anchor\":\"L18\",\"comment\":\"REQ-012 の受入基準に件数の上限を追記してください\"}]"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-GHREV-SCREEN-P005/8.png"
+    },
+    {
+      "index": 9,
+      "event": "送信 [失敗]",
+      "input": {
+        "event": "REQUEST_CHANGES",
+        "body": "",
+        "approve-status": false
+      },
+      "click": "review-submit",
+      "screenBefore": "Review",
+      "screenAfter": "Review",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Review",
+          "actual": "Review",
+          "ok": true
+        },
+        {
+          "kind": "visible",
+          "key": "submit-error",
+          "expected": true,
+          "actual": true,
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 193,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/reviews",
+          "status": 422,
+          "durationMs": 1,
+          "requestBody": "{\"event\":\"REQUEST_CHANGES\",\"body\":\"\",\"approve-status\":false}",
+          "responseBody": "{\"message\":\"Comment / Request changes には本文が必要です\"}"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-GHREV-SCREEN-P005/9.png"
+    },
+    {
+      "index": 10,
+      "event": "送信 [成功]",
+      "input": {
+        "event": "COMMENT",
+        "body": "指摘を確認してください",
+        "approve-status": false
+      },
+      "click": "review-submit",
+      "screenBefore": "Review",
+      "screenAfter": "Done",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Done",
+          "actual": "Done",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 86,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/reviews",
+          "status": 201,
+          "durationMs": 0,
+          "requestBody": "{\"event\":\"COMMENT\",\"body\":\"指摘を確認してください\",\"approve-status\":false}",
+          "responseBody": "{\"event\":\"COMMENT\",\"body\":\"指摘を確認してください\",\"approve-status\":false,\"id\":1}"
+        }
+      ],
+      "db": [
+        {
+          "table": "reviews",
+          "kind": "added",
+          "key": "1",
+          "after": {
+            "event": "COMMENT",
+            "body": "指摘を確認してください",
+            "approve-status": false,
+            "id": 1
+          }
+        }
+      ],
+      "screenshot": "BD-GHREV-SCREEN-P005/10.png"
+    }
+  ]
+}

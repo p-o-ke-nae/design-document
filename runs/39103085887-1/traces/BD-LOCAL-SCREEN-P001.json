@@ -1,0 +1,136 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-LOCAL-SCREEN-P001",
+  "title": "開始 → フォルダの選択 → [開く [開けない]] フォルダの選択 → [開く [開ける]] 文書 → [フォルダを選び直す [実行中]] 文書 → 終了",
+  "mock": "local-folder",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:13:02.216Z",
+  "durationMs": 623,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "開く [開けない]",
+      "input": {
+        "path": ""
+      },
+      "click": "open",
+      "screenBefore": "Picker",
+      "screenAfter": "Picker",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Picker",
+          "actual": "Picker",
+          "ok": true
+        },
+        {
+          "kind": "visible",
+          "key": "open-error",
+          "expected": true,
+          "actual": true,
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 161,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/local/open",
+          "status": 422,
+          "durationMs": 1,
+          "requestBody": "{\"path\":\"\"}",
+          "responseBody": "{\"error\":\"パスを入力してください\",\"code\":\"path-empty\",\"message\":\"パスを入力してください\"}"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-LOCAL-SCREEN-P001/1.png"
+    },
+    {
+      "index": 2,
+      "event": "開く [開ける]",
+      "input": {
+        "path": "C:\\Users\\taro\\source\\order-app"
+      },
+      "click": "open",
+      "screenBefore": "Picker",
+      "screenAfter": "Doc",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Doc",
+          "actual": "Doc",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 55,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/local/open",
+          "status": 200,
+          "durationMs": 0,
+          "requestBody": "{\"path\":\"C:\\\\Users\\\\taro\\\\source\\\\order-app\"}",
+          "responseBody": "{\"path\":\"C:\\\\Users\\\\taro\\\\source\\\\order-app\",\"id\":1}"
+        }
+      ],
+      "db": [
+        {
+          "table": "opens",
+          "kind": "added",
+          "key": "1",
+          "after": {
+            "path": "C:\\Users\\taro\\source\\order-app",
+            "id": 1
+          }
+        }
+      ],
+      "screenshot": "BD-LOCAL-SCREEN-P001/2.png"
+    },
+    {
+      "index": 3,
+      "event": "フォルダを選び直す [実行中]",
+      "input": {
+        "busy": "running"
+      },
+      "click": "reselect",
+      "screenBefore": "Doc",
+      "screenAfter": "Doc",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Doc",
+          "actual": "Doc",
+          "ok": true
+        },
+        {
+          "kind": "visible",
+          "key": "reselect-error",
+          "expected": true,
+          "actual": true,
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 160,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/local/close",
+          "status": 409,
+          "durationMs": 0,
+          "requestBody": "{\"busy\":\"running\"}",
+          "responseBody": "{\"error\":\"テストの実行中は選び直せません。完了してから選び直してください\",\"code\":\"busy\",\"message\":\"テストの実行中は選び直せません。完了してから選び直してください\"}"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-LOCAL-SCREEN-P001/3.png"
+    }
+  ]
+}

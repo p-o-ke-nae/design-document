@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-TMON-SCREEN-P006",
+  "title": "開始 → テスト一覧 → 終了",
+  "mock": "test-monitoring",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:13:10.481Z",
+  "durationMs": 67,
+  "status": "passed",
+  "steps": []
+}

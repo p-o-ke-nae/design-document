@@ -1,0 +1,168 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-HOSTV-SCREEN-P007",
+  "title": "開始 → 対象の指定 → [開く [入力OK]] 取得中 → [PATが必要] PAT が必要 → [設定 [入力NG]] PAT が必要 → [対象を変更] 対象の指定 → [開く [入力OK]] 取得中 → [取得完了] 文書 → 終了",
+  "mock": "hosted-viewer",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:59.285Z",
+  "durationMs": 870,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "開く [入力OK]",
+      "input": {
+        "repo": "acme/order-app",
+        "kind": "pr",
+        "target": "12"
+      },
+      "click": "open-submit",
+      "screenBefore": "Open",
+      "screenAfter": "Loading",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Loading",
+          "actual": "Loading",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 107,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-HOSTV-SCREEN-P007/1.png"
+    },
+    {
+      "index": 2,
+      "event": "PATが必要",
+      "click": "loading-need-pat",
+      "screenBefore": "Loading",
+      "screenAfter": "Token",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Token",
+          "actual": "Token",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 40,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-HOSTV-SCREEN-P007/2.png"
+    },
+    {
+      "index": 3,
+      "event": "設定 [入力NG]",
+      "input": {
+        "pat": "",
+        "pat-store": false
+      },
+      "click": "pat-submit",
+      "screenBefore": "Token",
+      "screenAfter": "Token",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Token",
+          "actual": "Token",
+          "ok": true
+        },
+        {
+          "kind": "visible",
+          "key": "pat-error",
+          "expected": true,
+          "actual": true,
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 83,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-HOSTV-SCREEN-P007/3.png"
+    },
+    {
+      "index": 4,
+      "event": "対象を変更",
+      "click": "token-change",
+      "screenBefore": "Token",
+      "screenAfter": "Open",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Open",
+          "actual": "Open",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 48,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/api/recent",
+          "status": 200,
+          "durationMs": 0,
+          "responseBody": "[{\"id\":1,\"repo\":\"acme/order-app\",\"kind\":\"pr\",\"pr\":12,\"label\":\"#12 注文確認画面に戻るボタンを追加\",\"openedAt\":\"2026-10-12T09:30:00Z\"},{\"id\":2,\"repo\":\"acme/design-docs\",\"kind\":\"ref\",\"ref\":\"main\",\"label\":\"main\",\"openedAt\":\"2026-10-11T02:00:00Z\"}]"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-HOSTV-SCREEN-P007/4.png"
+    },
+    {
+      "index": 5,
+      "event": "開く [入力OK]",
+      "input": {
+        "repo": "acme/order-app",
+        "kind": "pr",
+        "target": "12"
+      },
+      "click": "open-submit",
+      "screenBefore": "Open",
+      "screenAfter": "Loading",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Loading",
+          "actual": "Loading",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 120,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-HOSTV-SCREEN-P007/5.png"
+    },
+    {
+      "index": 6,
+      "event": "取得完了",
+      "click": "loading-done",
+      "screenBefore": "Loading",
+      "screenAfter": "Doc",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Doc",
+          "actual": "Doc",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 23,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-HOSTV-SCREEN-P007/6.png"
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-EVIVIEW-SCREEN-P005",
+  "title": "開始 → テスト結果 → [トレースを開く] トレース → [証跡を開く [取得失敗]] トレース → [戻る] テスト結果 → 終了",
+  "mock": "evidence-view",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:30.776Z",
+  "durationMs": 507,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "トレースを開く",
+      "click": "trace-open",
+      "screenBefore": "Result",
+      "screenAfter": "Trace",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Trace",
+          "actual": "Trace",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 37,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-EVIVIEW-SCREEN-P005/1.png"
+    },
+    {
+      "index": 2,
+      "event": "証跡を開く [取得失敗]",
+      "input": {
+        "evidence-state": "failed"
+      },
+      "click": "evidence-open",
+      "screenBefore": "Trace",
+      "screenAfter": "Trace",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Trace",
+          "actual": "Trace",
+          "ok": true
+        },
+        {
+          "kind": "visible",
+          "key": "evidence-error",
+          "expected": true,
+          "actual": true,
+          "ok": true
+        },
+        {
+          "kind": "text",
+          "key": "evidence-error",
+          "expected": "取得に失敗しました：app-log（判定後）— 終了コード 1：ログのファイルが見つかりません",
+          "actual": "取得に失敗しました：app-log（判定後）— 終了コード 1：ログのファイルが見つかりません",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 173,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/evidence-open",
+          "status": 422,
+          "durationMs": 1,
+          "requestBody": "{\"evidence-state\":\"failed\"}",
+          "responseBody": "{\"error\":\"取得に失敗しました\",\"code\":\"evidence-failed\",\"message\":\"取得に失敗しました：app-log（判定後）— 終了コード 1：ログのファイルが見つかりません\"}"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-EVIVIEW-SCREEN-P005/2.png"
+    },
+    {
+      "index": 3,
+      "event": "戻る",
+      "click": "trace-back",
+      "screenBefore": "Trace",
+      "screenAfter": "Result",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Result",
+          "actual": "Result",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 31,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-EVIVIEW-SCREEN-P005/3.png"
+    }
+  ]
+}

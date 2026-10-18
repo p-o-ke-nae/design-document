@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-ACTRUN-SCREEN-P009",
+  "title": "開始 → Actions の実行一覧 → [実行を選ぶ] 実行の結果 → [基準画像を承認] 基準画像の更新中 → [更新完了] 実行の結果 → [一覧へ] Actions の実行一覧 → 終了",
+  "mock": "actions-run",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:23.545Z",
+  "durationMs": 459,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "実行を選ぶ",
+      "click": "run-open",
+      "screenBefore": "List",
+      "screenAfter": "Detail",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Detail",
+          "actual": "Detail",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 31,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-ACTRUN-SCREEN-P009/1.png"
+    },
+    {
+      "index": 2,
+      "event": "基準画像を承認",
+      "click": "approve",
+      "screenBefore": "Detail",
+      "screenAfter": "Approving",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Approving",
+          "actual": "Approving",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 35,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-ACTRUN-SCREEN-P009/2.png"
+    },
+    {
+      "index": 3,
+      "event": "更新完了",
+      "click": "approve-done",
+      "screenBefore": "Approving",
+      "screenAfter": "Detail",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Detail",
+          "actual": "Detail",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 36,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-ACTRUN-SCREEN-P009/3.png"
+    },
+    {
+      "index": 4,
+      "event": "一覧へ",
+      "click": "detail-back",
+      "screenBefore": "Detail",
+      "screenAfter": "List",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "List",
+          "actual": "List",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 22,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-ACTRUN-SCREEN-P009/4.png"
+    }
+  ]
+}

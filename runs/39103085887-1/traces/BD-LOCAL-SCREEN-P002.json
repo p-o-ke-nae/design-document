@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-LOCAL-SCREEN-P002",
+  "title": "開始 → フォルダの選択 → [開く [開けない]] フォルダの選択 → [開く [開ける]] 文書 → 終了",
+  "mock": "local-folder",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:13:02.884Z",
+  "durationMs": 439,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "開く [開けない]",
+      "input": {
+        "path": ""
+      },
+      "click": "open",
+      "screenBefore": "Picker",
+      "screenAfter": "Picker",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Picker",
+          "actual": "Picker",
+          "ok": true
+        },
+        {
+          "kind": "visible",
+          "key": "open-error",
+          "expected": true,
+          "actual": true,
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 172,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/local/open",
+          "status": 422,
+          "durationMs": 1,
+          "requestBody": "{\"path\":\"\"}",
+          "responseBody": "{\"error\":\"パスを入力してください\",\"code\":\"path-empty\",\"message\":\"パスを入力してください\"}"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-LOCAL-SCREEN-P002/1.png"
+    },
+    {
+      "index": 2,
+      "event": "開く [開ける]",
+      "input": {
+        "path": "C:\\Users\\taro\\source\\order-app"
+      },
+      "click": "open",
+      "screenBefore": "Picker",
+      "screenAfter": "Doc",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Doc",
+          "actual": "Doc",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 57,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/local/open",
+          "status": 200,
+          "durationMs": 0,
+          "requestBody": "{\"path\":\"C:\\\\Users\\\\taro\\\\source\\\\order-app\"}",
+          "responseBody": "{\"path\":\"C:\\\\Users\\\\taro\\\\source\\\\order-app\",\"id\":1}"
+        }
+      ],
+      "db": [
+        {
+          "table": "opens",
+          "kind": "added",
+          "key": "1",
+          "after": {
+            "path": "C:\\Users\\taro\\source\\order-app",
+            "id": 1
+          }
+        }
+      ],
+      "screenshot": "BD-LOCAL-SCREEN-P002/2.png"
+    }
+  ]
+}

@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-HOSTV-SCREEN-P008",
+  "title": "開始 → 対象の指定 → [開く [入力OK]] 取得中 → [PATが必要] PAT が必要 → [設定 [入力OK]] 取得中 → [取得完了] 文書 → 終了",
+  "mock": "hosted-viewer",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:13:00.199Z",
+  "durationMs": 590,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "開く [入力OK]",
+      "input": {
+        "repo": "acme/order-app",
+        "kind": "pr",
+        "target": "12"
+      },
+      "click": "open-submit",
+      "screenBefore": "Open",
+      "screenAfter": "Loading",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Loading",
+          "actual": "Loading",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 105,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-HOSTV-SCREEN-P008/1.png"
+    },
+    {
+      "index": 2,
+      "event": "PATが必要",
+      "click": "loading-need-pat",
+      "screenBefore": "Loading",
+      "screenAfter": "Token",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Token",
+          "actual": "Token",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 41,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-HOSTV-SCREEN-P008/2.png"
+    },
+    {
+      "index": 3,
+      "event": "設定 [入力OK]",
+      "input": {
+        "pat": "github_pat_mocktoken123",
+        "pat-store": false
+      },
+      "click": "pat-submit",
+      "screenBefore": "Token",
+      "screenAfter": "Loading",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Loading",
+          "actual": "Loading",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 67,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-HOSTV-SCREEN-P008/3.png"
+    },
+    {
+      "index": 4,
+      "event": "取得完了",
+      "click": "loading-done",
+      "screenBefore": "Loading",
+      "screenAfter": "Doc",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Doc",
+          "actual": "Doc",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 41,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-HOSTV-SCREEN-P008/4.png"
+    }
+  ]
+}

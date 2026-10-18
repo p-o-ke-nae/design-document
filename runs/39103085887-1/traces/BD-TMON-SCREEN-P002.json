@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-TMON-SCREEN-P002",
+  "title": "開始 → テスト一覧 → [フレーキー] フレーキー一覧 → [テストIDを選ぶ] テストIDの履歴 → [一覧へ] テスト一覧 → 終了",
+  "mock": "test-monitoring",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:13:09.113Z",
+  "durationMs": 372,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "フレーキー",
+      "click": "flaky-open",
+      "screenBefore": "List",
+      "screenAfter": "Flaky",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Flaky",
+          "actual": "Flaky",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 28,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-TMON-SCREEN-P002/1.png"
+    },
+    {
+      "index": 2,
+      "event": "テストIDを選ぶ",
+      "click": "flaky-test-open",
+      "screenBefore": "Flaky",
+      "screenAfter": "Detail",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Detail",
+          "actual": "Detail",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 41,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-TMON-SCREEN-P002/2.png"
+    },
+    {
+      "index": 3,
+      "event": "一覧へ",
+      "click": "detail-back",
+      "screenBefore": "Detail",
+      "screenAfter": "List",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "List",
+          "actual": "List",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 37,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-TMON-SCREEN-P002/3.png"
+    }
+  ]
+}

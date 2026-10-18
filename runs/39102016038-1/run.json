@@ -1,0 +1,71 @@
+{
+  "id": "39102016038-1",
+  "kind": "test",
+  "startedAt": "2026-10-18T05:52:50.672Z",
+  "status": "passed",
+  "request": {
+    "ids": [
+      "BD-EVIVIEW-SCREEN-P001"
+    ]
+  },
+  "runners": [
+    {
+      "name": "e2e",
+      "command": "node /home/runner/work/design-document/design-document/repo/node_modules/@playwright/test/cli.js test --reporter=line,junit --grep BD-EVIVIEW-SCREEN-P001",
+      "exitCode": 0
+    }
+  ],
+  "results": {
+    "BD-EVIVIEW-SCREEN-P001": {
+      "status": "passed",
+      "durationMs": 1754,
+      "runner": "e2e",
+      "test": "ddv-scenarios.spec.ts [BD-EVIVIEW-SCREEN-P001] 開始 → テスト結果 → [トレースを開く] トレース → [ステップを選ぶ] トレース → [戻る] テスト結果 → 終了"
+    }
+  },
+  "log": [
+    "── e2e (playwright, integration) ──",
+    "$ node /home/runner/work/design-document/design-document/repo/node_modules/@playwright/test/cli.js test --reporter=line,junit --grep BD-EVIVIEW-SCREEN-P001",
+    "[WebServer] [ddv] 警告: DDV_TOKEN の固定トークンを使います（テスト用）",
+    "Running 3 tests using 1 worker",
+    "[1/3] [setup] › e2e/auth.setup.ts:6:1 › 起動トークンでセッション Cookie を得る",
+    "[2/3] [e2e] › packages/mock/src/playwright.ts:111:5 › [BD-EVIVIEW-SCREEN-P001] 開始 → テスト結果 → [トレースを開く] トレース → [ステップを選ぶ] トレース → [戻る] テスト結果 → 終了",
+    "[3/3] [e2e] › e2e/evidence-view.spec.ts:45:1 › [BD-EVIVIEW-SCREEN-P001][BD-EVIVIEW-SCREEN-P006][BD-EVIVIEW-SCREEN-T002][BD-EVIVIEW-SCREEN-T003][BD-EVIVIEW-SCREEN-T009][BD-EVIVIEW-SCREEN-X007][BD-EVIVIEW-SCREEN-X008][BD-EVIVIEW-SCREEN-X009][BD-EVIVIEW-SCREEN-X010] トレースのタイムラインに証跡の件数と警告の印が出て、ステップを選ぶと一覧が出る。行の保存では画面は変わらない",
+    "[WebServer] ! Actions の結果を読めませんでした: GitHub にログインしてください（gh auth login または GITHUB_TOKEN）",
+    "  3 passed (8.5s)",
+    "ブラウザ: chromium、画面: 1280×800、閾値: 0.001",
+    "── BD-EVIVIEW-SCREEN-P001 開始 → テスト結果 → [トレースを開く] トレース → [ステップを選ぶ] トレース → [戻る] テスト結果 → 終了",
+    "  001 NoBase",
+    "  002 NoBase",
+    "  003 NoBase"
+  ],
+  "source": "actions",
+  "actionsRunId": "39102016038",
+  "actionsRequest": "ddv-evcheck01",
+  "ref": "master",
+  "commit": "fe284130a6d86c8c7a2616d17a50ec94f6ffc006",
+  "dirty": false,
+  "warnings": [],
+  "snapshots": [
+    {
+      "id": "BD-EVIVIEW-SCREEN-P001",
+      "status": "passed",
+      "steps": [
+        {
+          "step": 1,
+          "status": "NoBase"
+        },
+        {
+          "step": 2,
+          "status": "NoBase"
+        },
+        {
+          "step": 3,
+          "status": "NoBase"
+        }
+      ]
+    }
+  ],
+  "finishedAt": "2026-10-18T05:53:00.750Z",
+  "traces": []
+}

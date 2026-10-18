@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-TDATA-EDITOR-P004",
+  "title": "開始 → シナリオ表示 → [編集] 編集中 → [再生] 編集中の再生 → [再生終了] 編集中 → [取消] シナリオ表示 → 終了",
+  "mock": "test-data-editor",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:13:06.232Z",
+  "durationMs": 453,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "編集",
+      "click": "edit",
+      "screenBefore": "View",
+      "screenAfter": "Editing",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Editing",
+          "actual": "Editing",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 23,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-TDATA-EDITOR-P004/1.png"
+    },
+    {
+      "index": 2,
+      "event": "再生",
+      "click": "preview",
+      "screenBefore": "Editing",
+      "screenAfter": "Previewing",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Previewing",
+          "actual": "Previewing",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 35,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-TDATA-EDITOR-P004/2.png"
+    },
+    {
+      "index": 3,
+      "event": "再生終了",
+      "click": "preview-end",
+      "screenBefore": "Previewing",
+      "screenAfter": "Editing",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Editing",
+          "actual": "Editing",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 21,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-TDATA-EDITOR-P004/3.png"
+    },
+    {
+      "index": 4,
+      "event": "取消",
+      "click": "cancel",
+      "screenBefore": "Editing",
+      "screenAfter": "View",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "View",
+          "actual": "View",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 34,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/api/saves",
+          "status": 200,
+          "durationMs": 0,
+          "responseBody": "[]"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-TDATA-EDITOR-P004/4.png"
+    }
+  ]
+}

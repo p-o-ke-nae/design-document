@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-GHREV-TUNE-P004",
+  "title": "開始 → 通常 → [調整] 要素選択 → [要素をクリック [対応する行あり]] 編集中 → [取消] 要素選択 → [調整終了] 通常 → 終了",
+  "mock": "github-review-tune",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:53.510Z",
+  "durationMs": 505,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "調整",
+      "click": "tune-start",
+      "screenBefore": "Off",
+      "screenAfter": "Picking",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Picking",
+          "actual": "Picking",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 44,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/api/suggestions",
+          "status": 200,
+          "durationMs": 0,
+          "responseBody": "[]"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-GHREV-TUNE-P004/1.png"
+    },
+    {
+      "index": 2,
+      "event": "要素をクリック [対応する行あり]",
+      "input": {
+        "picked": "source"
+      },
+      "click": "pick",
+      "screenBefore": "Picking",
+      "screenAfter": "Editing",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Editing",
+          "actual": "Editing",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 75,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/mock-source",
+          "status": 200,
+          "durationMs": 0,
+          "requestBody": "{\"picked\":\"source\"}",
+          "responseBody": "{\"path\":\"order/index.html\",\"line\":23}"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-GHREV-TUNE-P004/2.png"
+    },
+    {
+      "index": 3,
+      "event": "取消",
+      "click": "t-cancel",
+      "screenBefore": "Editing",
+      "screenAfter": "Picking",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Picking",
+          "actual": "Picking",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 35,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/api/suggestions",
+          "status": 200,
+          "durationMs": 0,
+          "responseBody": "[]"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-GHREV-TUNE-P004/3.png"
+    },
+    {
+      "index": 4,
+      "event": "調整終了",
+      "click": "tune-end",
+      "screenBefore": "Picking",
+      "screenAfter": "Off",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Off",
+          "actual": "Off",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 36,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-GHREV-TUNE-P004/4.png"
+    }
+  ]
+}

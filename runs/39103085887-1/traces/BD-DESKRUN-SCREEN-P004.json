@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-DESKRUN-SCREEN-P004",
+  "title": "開始 → テスト一覧 → [実行] 接続先の選択 → [キャンセル] テスト一覧 → 終了",
+  "mock": "desktop-run",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:26.533Z",
+  "durationMs": 269,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "実行",
+      "click": "run",
+      "screenBefore": "List",
+      "screenAfter": "Target",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Target",
+          "actual": "Target",
+          "ok": true
+        },
+        {
+          "kind": "text",
+          "key": "target-winforms-reason",
+          "expected": "アプリの実行ファイルが見つかりません（ビルドしてください）",
+          "actual": "アプリの実行ファイルが見つかりません（ビルドしてください）",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 39,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-DESKRUN-SCREEN-P004/1.png"
+    },
+    {
+      "index": 2,
+      "event": "キャンセル",
+      "click": "target-cancel",
+      "screenBefore": "Target",
+      "screenAfter": "List",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "List",
+          "actual": "List",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 21,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-DESKRUN-SCREEN-P004/2.png"
+    }
+  ]
+}

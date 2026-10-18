@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-TDATA-EDITOR-P006",
+  "title": "開始 → シナリオ表示 → [編集] 編集中 → [保存 [検証NG]] 編集中 → [取消] シナリオ表示 → 終了",
+  "mock": "test-data-editor",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:13:07.315Z",
+  "durationMs": 520,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "編集",
+      "click": "edit",
+      "screenBefore": "View",
+      "screenAfter": "Editing",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Editing",
+          "actual": "Editing",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 28,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-TDATA-EDITOR-P006/1.png"
+    },
+    {
+      "index": 2,
+      "event": "保存 [検証NG]",
+      "input": {
+        "fxkey": "A-1001"
+      },
+      "click": "save",
+      "screenBefore": "Editing",
+      "screenAfter": "Editing",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Editing",
+          "actual": "Editing",
+          "ok": true
+        },
+        {
+          "kind": "text",
+          "key": "save-error",
+          "expected": "fixtures のキー A-1001 が重複しています（orders）",
+          "actual": "fixtures のキー A-1001 が重複しています（orders）",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 184,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/saves",
+          "status": 422,
+          "durationMs": 0,
+          "requestBody": "{\"in-customer\":\"山田 太郎\",\"in-quantity\":3,\"ex-total\":\"合計 3,000 円\",\"fxkey\":\"A-1001\",\"fxcustomer\":\"田中 次郎\",\"fxstatus\":\"Draft\"}",
+          "responseBody": "{\"message\":\"fixtures のキー A-1001 が重複しています（orders）\"}"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-TDATA-EDITOR-P006/2.png"
+    },
+    {
+      "index": 3,
+      "event": "取消",
+      "click": "cancel",
+      "screenBefore": "Editing",
+      "screenAfter": "View",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "View",
+          "actual": "View",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 35,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/api/saves",
+          "status": 200,
+          "durationMs": 0,
+          "responseBody": "[]"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-TDATA-EDITOR-P006/3.png"
+    }
+  ]
+}

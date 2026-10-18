@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-ACTRUN-SCREEN-P007",
+  "title": "開始 → Actions の実行一覧 → [Actionsで実行 [実行できない]] Actions の実行一覧 → 終了",
+  "mock": "actions-run",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:22.849Z",
+  "durationMs": 357,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "Actionsで実行 [実行できない]",
+      "input": {
+        "runner": "",
+        "ids": "BD-ORDER-SCREEN-P004",
+        "allowed": "readonly"
+      },
+      "click": "dispatch",
+      "screenBefore": "List",
+      "screenAfter": "List",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "List",
+          "actual": "List",
+          "ok": true
+        },
+        {
+          "kind": "visible",
+          "key": "dispatch-error",
+          "expected": true,
+          "actual": true,
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 214,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/actions/runs",
+          "status": 403,
+          "durationMs": 1,
+          "requestBody": "{\"runner\":\"\",\"ids\":\"BD-ORDER-SCREEN-P004\",\"allowed\":\"readonly\"}",
+          "responseBody": "{\"code\":\"readonly\",\"message\":\"書き込み権限が無いため実行できません。実行済みの結果だけを表示します\"}"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-ACTRUN-SCREEN-P007/1.png"
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "runId": "39102415102-1",
+  "testId": "BD-EVIVIEW-SCREEN-P001",
+  "title": "開始 → テスト結果 → [トレースを開く] トレース → [ステップを選ぶ] トレース → [戻る] テスト結果 → 終了",
+  "mock": "evidence-view",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:00:19.176Z",
+  "durationMs": 1665,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "トレースを開く",
+      "click": "trace-open",
+      "screenBefore": "Result",
+      "screenAfter": "Trace",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Trace",
+          "actual": "Trace",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 75,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-EVIVIEW-SCREEN-P001/1.png"
+    },
+    {
+      "index": 2,
+      "event": "ステップを選ぶ",
+      "click": "step-select",
+      "screenBefore": "Trace",
+      "screenAfter": "Trace",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Trace",
+          "actual": "Trace",
+          "ok": true
+        },
+        {
+          "kind": "visible",
+          "key": "evidence-list",
+          "expected": true,
+          "actual": true,
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 188,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-EVIVIEW-SCREEN-P001/2.png",
+      "evidence": [
+        {
+          "seq": 1,
+          "label": "証跡の一覧",
+          "use": "screenshot",
+          "at": "after",
+          "provider": "builtin",
+          "status": "ok",
+          "durationMs": 77,
+          "files": [
+            {
+              "path": "BD-EVIVIEW-SCREEN-P001/evidence/2-1-証跡の一覧.png",
+              "kind": "image",
+              "mime": "image/png",
+              "bytes": 23828
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "label": "証跡の記録",
+          "use": "db",
+          "at": "after",
+          "provider": "builtin",
+          "status": "ok",
+          "durationMs": 74,
+          "db": {
+            "name": "mock",
+            "type": "mock"
+          },
+          "totalRows": 3,
+          "files": [
+            {
+              "path": "BD-EVIVIEW-SCREEN-P001/evidence/2-2-証跡の記録.table.json",
+              "kind": "table",
+              "mime": "application/json",
+              "bytes": 143
+            }
+          ]
+        }
+      ],
+      "evidenceWarnings": 0
+    },
+    {
+      "index": 3,
+      "event": "戻る",
+      "click": "trace-back",
+      "screenBefore": "Trace",
+      "screenAfter": "Result",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Result",
+          "actual": "Result",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 39,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-EVIVIEW-SCREEN-P001/3.png"
+    }
+  ]
+}

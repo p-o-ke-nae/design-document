@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-ACTRUN-SCREEN-P011",
+  "title": "開始 → Actions の実行一覧 → 終了",
+  "mock": "actions-run",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:24.549Z",
+  "durationMs": 67,
+  "status": "passed",
+  "steps": []
+}

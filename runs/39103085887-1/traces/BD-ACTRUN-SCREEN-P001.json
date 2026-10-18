@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-ACTRUN-SCREEN-P001",
+  "title": "開始 → Actions の実行一覧 → [導入の案内] 導入の案内 → [一覧へ] Actions の実行一覧 → 終了",
+  "mock": "actions-run",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:19.408Z",
+  "durationMs": 277,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "導入の案内",
+      "click": "setup-open",
+      "screenBefore": "List",
+      "screenAfter": "Setup",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Setup",
+          "actual": "Setup",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 28,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-ACTRUN-SCREEN-P001/1.png"
+    },
+    {
+      "index": 2,
+      "event": "一覧へ",
+      "click": "setup-back",
+      "screenBefore": "Setup",
+      "screenAfter": "List",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "List",
+          "actual": "List",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 34,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-ACTRUN-SCREEN-P001/2.png"
+    }
+  ]
+}

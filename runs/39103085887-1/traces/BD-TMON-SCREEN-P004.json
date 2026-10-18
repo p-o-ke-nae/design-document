@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-TMON-SCREEN-P004",
+  "title": "開始 → テスト一覧 → [失敗を再実行 [失敗あり]] 再実行中 → [実行完了] テスト一覧 → 終了",
+  "mock": "test-monitoring",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:13:09.848Z",
+  "durationMs": 321,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "失敗を再実行 [失敗あり]",
+      "input": {
+        "rerun-times": "2",
+        "lastrun": "failed"
+      },
+      "click": "rerun",
+      "screenBefore": "List",
+      "screenAfter": "Rerunning",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Rerunning",
+          "actual": "Rerunning",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 80,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/reruns",
+          "status": 202,
+          "durationMs": 1,
+          "requestBody": "{\"rerun-times\":\"2\",\"lastrun\":\"failed\"}",
+          "responseBody": "{\"rerun-times\":\"2\",\"lastrun\":\"failed\",\"id\":1}"
+        }
+      ],
+      "db": [
+        {
+          "table": "reruns",
+          "kind": "added",
+          "key": "1",
+          "after": {
+            "rerun-times": "2",
+            "lastrun": "failed",
+            "id": 1
+          }
+        }
+      ],
+      "screenshot": "BD-TMON-SCREEN-P004/1.png"
+    },
+    {
+      "index": 2,
+      "event": "実行完了",
+      "click": "rerun-done",
+      "screenBefore": "Rerunning",
+      "screenAfter": "List",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "List",
+          "actual": "List",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 41,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-TMON-SCREEN-P004/2.png"
+    }
+  ]
+}

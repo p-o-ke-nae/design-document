@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-TMON-SCREEN-P005",
+  "title": "開始 → テスト一覧 → [失敗を再実行 [失敗なし]] テスト一覧 → 終了",
+  "mock": "test-monitoring",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:13:10.212Z",
+  "durationMs": 225,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "失敗を再実行 [失敗なし]",
+      "input": {
+        "lastrun": "none"
+      },
+      "click": "rerun",
+      "screenBefore": "List",
+      "screenAfter": "List",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "List",
+          "actual": "List",
+          "ok": true
+        },
+        {
+          "kind": "text",
+          "key": "rerun-error",
+          "expected": "直近の実行に失敗したテストはありません",
+          "actual": "直近の実行に失敗したテストはありません",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 71,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/reruns",
+          "status": 409,
+          "durationMs": 1,
+          "requestBody": "{\"rerun-times\":\"2\",\"lastrun\":\"none\"}",
+          "responseBody": "{\"message\":\"直近の実行に失敗したテストはありません\"}"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-TMON-SCREEN-P005/1.png"
+    }
+  ]
+}

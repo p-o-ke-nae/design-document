@@ -1,0 +1,137 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-TDATA-EDITOR-P003",
+  "title": "開始 → シナリオ表示 → [編集] 編集中 → [再生] 編集中の再生 → [再生終了] 編集中 → [保存 [検証OK]] シナリオ表示 → 終了",
+  "mock": "test-data-editor",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:13:05.579Z",
+  "durationMs": 608,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "編集",
+      "click": "edit",
+      "screenBefore": "View",
+      "screenAfter": "Editing",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Editing",
+          "actual": "Editing",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 30,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-TDATA-EDITOR-P003/1.png"
+    },
+    {
+      "index": 2,
+      "event": "再生",
+      "click": "preview",
+      "screenBefore": "Editing",
+      "screenAfter": "Previewing",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Previewing",
+          "actual": "Previewing",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 51,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-TDATA-EDITOR-P003/2.png"
+    },
+    {
+      "index": 3,
+      "event": "再生終了",
+      "click": "preview-end",
+      "screenBefore": "Previewing",
+      "screenAfter": "Editing",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Editing",
+          "actual": "Editing",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 37,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-TDATA-EDITOR-P003/3.png"
+    },
+    {
+      "index": 4,
+      "event": "保存 [検証OK]",
+      "input": {
+        "in-customer": "鈴木 一郎",
+        "in-quantity": 5,
+        "ex-total": "合計 5,000 円",
+        "fxkey": "A-1002",
+        "fxcustomer": "田中 次郎",
+        "fxstatus": "Draft"
+      },
+      "click": "save",
+      "screenBefore": "Editing",
+      "screenAfter": "View",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "View",
+          "actual": "View",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 152,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/saves",
+          "status": 201,
+          "durationMs": 1,
+          "requestBody": "{\"in-customer\":\"鈴木 一郎\",\"in-quantity\":5,\"ex-total\":\"合計 5,000 円\",\"fxkey\":\"A-1002\",\"fxcustomer\":\"田中 次郎\",\"fxstatus\":\"Draft\"}",
+          "responseBody": "{\"in-customer\":\"鈴木 一郎\",\"in-quantity\":5,\"ex-total\":\"合計 5,000 円\",\"fxkey\":\"A-1002\",\"fxcustomer\":\"田中 次郎\",\"fxstatus\":\"Draft\",\"message\":\"保存しました（docs/mocks/order/scenarios/BD-ORDER-SCREEN-P004.yaml・fixtures/default.yaml）\",\"id\":1}"
+        },
+        {
+          "method": "GET",
+          "path": "/api/saves",
+          "status": 200,
+          "durationMs": 0,
+          "responseBody": "[{\"in-customer\":\"鈴木 一郎\",\"in-quantity\":5,\"ex-total\":\"合計 5,000 円\",\"fxkey\":\"A-1002\",\"fxcustomer\":\"田中 次郎\",\"fxstatus\":\"Draft\",\"message\":\"保存しました（docs/mocks/order/scenarios/BD-ORDER-SCREEN-P004.yaml・fixtures/default.yaml）\",\"id\":1}]"
+        }
+      ],
+      "db": [
+        {
+          "table": "saves",
+          "kind": "added",
+          "key": "1",
+          "after": {
+            "in-customer": "鈴木 一郎",
+            "in-quantity": 5,
+            "ex-total": "合計 5,000 円",
+            "fxkey": "A-1002",
+            "fxcustomer": "田中 次郎",
+            "fxstatus": "Draft",
+            "message": "保存しました（docs/mocks/order/scenarios/BD-ORDER-SCREEN-P004.yaml・fixtures/default.yaml）",
+            "id": 1
+          }
+        }
+      ],
+      "screenshot": "BD-TDATA-EDITOR-P003/4.png"
+    }
+  ]
+}

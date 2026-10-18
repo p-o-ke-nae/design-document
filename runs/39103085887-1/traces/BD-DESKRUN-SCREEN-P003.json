@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-DESKRUN-SCREEN-P003",
+  "title": "開始 → テスト一覧 → [実行] 接続先の選択 → [開始 [接続先あり]] 実行中 → [実行完了] テスト一覧 → 終了",
+  "mock": "desktop-run",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:26.064Z",
+  "durationMs": 422,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "実行",
+      "click": "run",
+      "screenBefore": "List",
+      "screenAfter": "Target",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Target",
+          "actual": "Target",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 29,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-DESKRUN-SCREEN-P003/1.png"
+    },
+    {
+      "index": 2,
+      "event": "開始 [接続先あり]",
+      "input": {
+        "target-e2e": true,
+        "target-wpf": true
+      },
+      "click": "target-start",
+      "screenBefore": "Target",
+      "screenAfter": "Running",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Running",
+          "actual": "Running",
+          "ok": true
+        },
+        {
+          "kind": "visible",
+          "key": "desktop-warning",
+          "expected": true,
+          "actual": true,
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 92,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/tests/run",
+          "status": 202,
+          "durationMs": 1,
+          "requestBody": "{\"target-e2e\":true,\"target-wpf\":true}",
+          "responseBody": "{\"target-e2e\":true,\"target-wpf\":true,\"id\":1}"
+        }
+      ],
+      "db": [
+        {
+          "table": "runs",
+          "kind": "added",
+          "key": "1",
+          "after": {
+            "target-e2e": true,
+            "target-wpf": true,
+            "id": 1
+          }
+        }
+      ],
+      "screenshot": "BD-DESKRUN-SCREEN-P003/2.png"
+    },
+    {
+      "index": 3,
+      "event": "実行完了",
+      "click": "run-done",
+      "screenBefore": "Running",
+      "screenAfter": "List",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "List",
+          "actual": "List",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 37,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-DESKRUN-SCREEN-P003/3.png"
+    }
+  ]
+}

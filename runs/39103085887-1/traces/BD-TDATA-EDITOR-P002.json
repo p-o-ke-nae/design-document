@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-TDATA-EDITOR-P002",
+  "title": "開始 → シナリオ表示 → [編集] 編集中 → [値を変更] 編集中 → [取消] シナリオ表示 → 終了",
+  "mock": "test-data-editor",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:13:05.145Z",
+  "durationMs": 390,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "編集",
+      "click": "edit",
+      "screenBefore": "View",
+      "screenAfter": "Editing",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Editing",
+          "actual": "Editing",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 32,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-TDATA-EDITOR-P002/1.png"
+    },
+    {
+      "index": 2,
+      "event": "値を変更",
+      "click": "change",
+      "screenBefore": "Editing",
+      "screenAfter": "Editing",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Editing",
+          "actual": "Editing",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 49,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-TDATA-EDITOR-P002/2.png"
+    },
+    {
+      "index": 3,
+      "event": "取消",
+      "click": "cancel",
+      "screenBefore": "Editing",
+      "screenAfter": "View",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "View",
+          "actual": "View",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 35,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/api/saves",
+          "status": 200,
+          "durationMs": 0,
+          "responseBody": "[]"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-TDATA-EDITOR-P002/3.png"
+    }
+  ]
+}

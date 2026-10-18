@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-GHREV-TUNE-P007",
+  "title": "開始 → 通常 → 終了",
+  "mock": "github-review-tune",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:54.927Z",
+  "durationMs": 62,
+  "status": "passed",
+  "steps": []
+}

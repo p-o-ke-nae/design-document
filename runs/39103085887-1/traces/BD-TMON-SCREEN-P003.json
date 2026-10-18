@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-TMON-SCREEN-P003",
+  "title": "開始 → テスト一覧 → [フレーキー] フレーキー一覧 → [一覧へ] テスト一覧 → 終了",
+  "mock": "test-monitoring",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:13:09.528Z",
+  "durationMs": 274,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "フレーキー",
+      "click": "flaky-open",
+      "screenBefore": "List",
+      "screenAfter": "Flaky",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Flaky",
+          "actual": "Flaky",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 32,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-TMON-SCREEN-P003/1.png"
+    },
+    {
+      "index": 2,
+      "event": "一覧へ",
+      "click": "flaky-back",
+      "screenBefore": "Flaky",
+      "screenAfter": "List",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "List",
+          "actual": "List",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 39,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-TMON-SCREEN-P003/2.png"
+    }
+  ]
+}

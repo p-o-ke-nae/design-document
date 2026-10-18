@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-GHREV-TUNE-P005",
+  "title": "開始 → 通常 → [調整] 要素選択 → [要素をクリック [対応する行なし]] 要素選択 → [調整終了] 通常 → 終了",
+  "mock": "github-review-tune",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:54.057Z",
+  "durationMs": 492,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "調整",
+      "click": "tune-start",
+      "screenBefore": "Off",
+      "screenAfter": "Picking",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Picking",
+          "actual": "Picking",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 29,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/api/suggestions",
+          "status": 200,
+          "durationMs": 0,
+          "responseBody": "[]"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-GHREV-TUNE-P005/1.png"
+    },
+    {
+      "index": 2,
+      "event": "要素をクリック [対応する行なし]",
+      "input": {
+        "picked": "generated"
+      },
+      "click": "pick",
+      "screenBefore": "Picking",
+      "screenAfter": "Picking",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Picking",
+          "actual": "Picking",
+          "ok": true
+        },
+        {
+          "kind": "visible",
+          "key": "pick-error",
+          "expected": true,
+          "actual": true,
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 175,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/mock-source",
+          "status": 422,
+          "durationMs": 0,
+          "requestBody": "{\"picked\":\"generated\"}",
+          "responseBody": "{\"message\":\"対応する行なし：data-bind で作られた要素です。別の要素を選んでください\"}"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-GHREV-TUNE-P005/2.png"
+    },
+    {
+      "index": 3,
+      "event": "調整終了",
+      "click": "tune-end",
+      "screenBefore": "Picking",
+      "screenAfter": "Off",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Off",
+          "actual": "Off",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 35,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-GHREV-TUNE-P005/3.png"
+    }
+  ]
+}

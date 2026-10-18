@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-EVIVIEW-SCREEN-P007",
+  "title": "開始 → テスト結果 → 終了",
+  "mock": "evidence-view",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:31.645Z",
+  "durationMs": 72,
+  "status": "passed",
+  "steps": []
+}

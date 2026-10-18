@@ -1,0 +1,165 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-ACTRUN-SCREEN-P003",
+  "title": "開始 → Actions の実行一覧 → [Actionsで実行 [実行できる]] 起動中 → [実行を検出] 実行中 → [実行完了] 実行の結果 → [基準画像を承認] 基準画像の更新中 → [更新完了] 実行の結果 → [一覧へ] Actions の実行一覧 → 終了",
+  "mock": "actions-run",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:20.365Z",
+  "durationMs": 738,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "Actionsで実行 [実行できる]",
+      "input": {
+        "runner": "unit",
+        "ids": "BD-ORDER-SCREEN-P004",
+        "allowed": "yes"
+      },
+      "click": "dispatch",
+      "screenBefore": "List",
+      "screenAfter": "Dispatching",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Dispatching",
+          "actual": "Dispatching",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 106,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/actions/runs",
+          "status": 202,
+          "durationMs": 1,
+          "requestBody": "{\"runner\":\"unit\",\"ids\":\"BD-ORDER-SCREEN-P004\",\"allowed\":\"yes\"}",
+          "responseBody": "{\"runner\":\"unit\",\"ids\":\"BD-ORDER-SCREEN-P004\",\"allowed\":\"yes\",\"id\":1}"
+        }
+      ],
+      "db": [
+        {
+          "table": "actions_runs",
+          "kind": "added",
+          "key": "1",
+          "after": {
+            "runner": "unit",
+            "ids": "BD-ORDER-SCREEN-P004",
+            "allowed": "yes",
+            "id": 1
+          }
+        }
+      ],
+      "screenshot": "BD-ACTRUN-SCREEN-P003/1.png"
+    },
+    {
+      "index": 2,
+      "event": "実行を検出",
+      "click": "detected",
+      "screenBefore": "Dispatching",
+      "screenAfter": "Running",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Running",
+          "actual": "Running",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 39,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-ACTRUN-SCREEN-P003/2.png"
+    },
+    {
+      "index": 3,
+      "event": "実行完了",
+      "click": "run-complete",
+      "screenBefore": "Running",
+      "screenAfter": "Detail",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Detail",
+          "actual": "Detail",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 23,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-ACTRUN-SCREEN-P003/3.png"
+    },
+    {
+      "index": 4,
+      "event": "基準画像を承認",
+      "click": "approve",
+      "screenBefore": "Detail",
+      "screenAfter": "Approving",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Approving",
+          "actual": "Approving",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 20,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-ACTRUN-SCREEN-P003/4.png"
+    },
+    {
+      "index": 5,
+      "event": "更新完了",
+      "click": "approve-done",
+      "screenBefore": "Approving",
+      "screenAfter": "Detail",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Detail",
+          "actual": "Detail",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 38,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-ACTRUN-SCREEN-P003/5.png"
+    },
+    {
+      "index": 6,
+      "event": "一覧へ",
+      "click": "detail-back",
+      "screenBefore": "Detail",
+      "screenAfter": "List",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "List",
+          "actual": "List",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 46,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-ACTRUN-SCREEN-P003/6.png"
+    }
+  ]
+}

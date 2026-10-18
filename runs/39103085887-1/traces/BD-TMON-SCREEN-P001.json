@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-TMON-SCREEN-P001",
+  "title": "開始 → テスト一覧 → [テストIDを選ぶ] テストIDの履歴 → [一覧へ] テスト一覧 → 終了",
+  "mock": "test-monitoring",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:13:08.792Z",
+  "durationMs": 278,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "テストIDを選ぶ",
+      "click": "test-open",
+      "screenBefore": "List",
+      "screenAfter": "Detail",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Detail",
+          "actual": "Detail",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 33,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-TMON-SCREEN-P001/1.png"
+    },
+    {
+      "index": 2,
+      "event": "一覧へ",
+      "click": "detail-back",
+      "screenBefore": "Detail",
+      "screenAfter": "List",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "List",
+          "actual": "List",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 38,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-TMON-SCREEN-P001/2.png"
+    }
+  ]
+}

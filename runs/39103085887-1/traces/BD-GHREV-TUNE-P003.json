@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "runId": "39103085887-1",
+  "testId": "BD-GHREV-TUNE-P003",
+  "title": "開始 → 通常 → [調整] 要素選択 → [要素をクリック [対応する行あり]] 編集中 → [保留に追加] 要素選択 → [調整終了] 通常 → 終了",
+  "mock": "github-review-tune",
+  "target": "mock",
+  "startedAt": "2026-10-18T06:12:52.911Z",
+  "durationMs": 554,
+  "status": "passed",
+  "steps": [
+    {
+      "index": 1,
+      "event": "調整",
+      "click": "tune-start",
+      "screenBefore": "Off",
+      "screenAfter": "Picking",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Picking",
+          "actual": "Picking",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 42,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/api/suggestions",
+          "status": 200,
+          "durationMs": 0,
+          "responseBody": "[]"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-GHREV-TUNE-P003/1.png"
+    },
+    {
+      "index": 2,
+      "event": "要素をクリック [対応する行あり]",
+      "input": {
+        "picked": "source"
+      },
+      "click": "pick",
+      "screenBefore": "Picking",
+      "screenAfter": "Editing",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Editing",
+          "actual": "Editing",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 56,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/mock-source",
+          "status": 200,
+          "durationMs": 1,
+          "requestBody": "{\"picked\":\"source\"}",
+          "responseBody": "{\"path\":\"order/index.html\",\"line\":23}"
+        }
+      ],
+      "db": [],
+      "screenshot": "BD-GHREV-TUNE-P003/2.png"
+    },
+    {
+      "index": 3,
+      "event": "保留に追加",
+      "input": {
+        "t-placeholder": "例：山田 太郎",
+        "t-maxlength": 50,
+        "t-required": true
+      },
+      "click": "t-add",
+      "screenBefore": "Editing",
+      "screenAfter": "Picking",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Picking",
+          "actual": "Picking",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 103,
+      "calls": [
+        {
+          "method": "POST",
+          "path": "/api/suggestions",
+          "status": 201,
+          "durationMs": 0,
+          "requestBody": "{\"t-placeholder\":\"例：山田 太郎\",\"t-maxlength\":50,\"t-required\":true}",
+          "responseBody": "{\"t-placeholder\":\"例：山田 太郎\",\"t-maxlength\":50,\"t-required\":true,\"line\":\"order/index.html L23\",\"summary\":\"顧客名の入力欄の placeholder・required・maxlength\",\"id\":1}"
+        },
+        {
+          "method": "GET",
+          "path": "/api/suggestions",
+          "status": 200,
+          "durationMs": 0,
+          "responseBody": "[{\"t-placeholder\":\"例：山田 太郎\",\"t-maxlength\":50,\"t-required\":true,\"line\":\"order/index.html L23\",\"summary\":\"顧客名の入力欄の placeholder・required・maxlength\",\"id\":1}]"
+        }
+      ],
+      "db": [
+        {
+          "table": "suggestions",
+          "kind": "added",
+          "key": "1",
+          "after": {
+            "t-placeholder": "例：山田 太郎",
+            "t-maxlength": 50,
+            "t-required": true,
+            "line": "order/index.html L23",
+            "summary": "顧客名の入力欄の placeholder・required・maxlength",
+            "id": 1
+          }
+        }
+      ],
+      "screenshot": "BD-GHREV-TUNE-P003/3.png"
+    },
+    {
+      "index": 4,
+      "event": "調整終了",
+      "click": "tune-end",
+      "screenBefore": "Picking",
+      "screenAfter": "Off",
+      "expects": [
+        {
+          "kind": "screen",
+          "key": "",
+          "expected": "Off",
+          "actual": "Off",
+          "ok": true
+        }
+      ],
+      "ok": true,
+      "durationMs": 34,
+      "calls": [],
+      "db": [],
+      "screenshot": "BD-GHREV-TUNE-P003/4.png"
+    }
+  ]
+}
