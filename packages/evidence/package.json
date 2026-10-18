@@ -17,7 +17,9 @@
     "./store": "./src/store.ts",
     "./redact": "./src/redact.ts",
     "./runner": "./src/runner.ts",
-    "./run": "./src/run.ts"
+    "./run": "./src/run.ts",
+    "./counts": "./src/counts.ts",
+    "./branch-limit": "./src/branch-limit.ts"
   },
   "dependencies": {
     "@ddv/core": "*",

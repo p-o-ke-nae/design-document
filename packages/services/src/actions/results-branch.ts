@@ -29,6 +29,8 @@ const CaseResultSchema = z.object({
   runner: z.string(),
   test: z.string(),
   platform: z.enum(['web', 'wpf', 'winforms']).optional(),
+  evidence: z.number().int().min(0).optional(),
+  evidenceWarnings: z.number().int().min(0).optional(),
 });
 
 const StepResultMetaSchema = z.object({

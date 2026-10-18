@@ -29,6 +29,9 @@ export interface CaseResult {
   platform?: 'web' | 'wpf' | 'winforms';
   /** `/api/results/latest`: the trace of that run is still there. */
   trace?: boolean;
+  /** Evidence files of the case and the warnings / failures among them (evidence-trace.md「件数」). */
+  evidence?: number;
+  evidenceWarnings?: number;
 }
 
 import type { Target } from './targets.ts';
@@ -234,6 +237,8 @@ export interface Step {
   do?: string;
   wait?: number;
   expect?: StepExpect;
+  /** Evidence to capture around the step (evidence-spec.md「構造」; the player only lists it). */
+  evidence?: Array<{ use?: string; at?: string; label?: string; with?: Record<string, unknown>; onError?: string; timeout?: number }>;
 }
 
 export type ScenarioStatus = 'Unverified' | 'Passed' | 'Failed' | 'Retired';
@@ -456,6 +461,12 @@ export function createApi(ws: string) {
     flaky: () => get<FlakyEntry[]>('/api/history/flaky'),
     trace: (runId: string, id: string, platform?: string) => get<TraceResponse>(`/api/traces/${encodeURIComponent(runId)}/${encodeURIComponent(id)}${platformQuery(platform)}`),
     traceShot: (runId: string, id: string, n: number, platform?: string) => A(`/api/traces/${encodeURIComponent(runId)}/${encodeURIComponent(id)}/steps/${n}.png${platformQuery(platform)}`),
+    /** Body of an evidence file (evidence-trace.md「本体の取得」). 4xx = `ApiError` with the API's `code`. */
+    evidence: async (runId: string, id: string, platform: string | undefined, file: string, signal?: AbortSignal): Promise<Blob> => {
+      const r = await fetch(A(`/api/traces/${encodeURIComponent(runId)}/${encodeURIComponent(id)}/evidence/${encodeURIComponent(file)}${platformQuery(platform)}`), signal ? { signal } : undefined);
+      if (!r.ok) await json(r);
+      return r.blob();
+    },
     coverage: (path: string) => get<DocCoverage>(`/api/coverage?path=${encodeURIComponent(path)}`),
     deps: () => get<DepsStatus>('/api/deps'),
     installDeps: () => post(A('/api/deps/install')).then((r) => json<{ runId: string; deps: DepsStatus }>(r)),

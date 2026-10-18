@@ -10,7 +10,8 @@ import { useMockHub } from '../mockHub.tsx';
 import { StatusBadge } from './StatusBadge.tsx';
 import { CommentGutter } from './Review.tsx';
 import { GateReason, useGate } from '../gate.tsx';
-import { scenarioCount, shouldOpenTargetSelect } from '../targets.ts';
+import { resultsByPlatform, scenarioCount, shouldOpenTargetSelect } from '../targets.ts';
+import { evidenceBadge, type EvidenceBadge } from '../evidence-view.ts';
 import { PlatformBadges, hasBadges } from './PlatformBadges.tsx';
 import { TargetSelect } from './TargetSelect.tsx';
 
@@ -132,6 +133,7 @@ export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; se
                   onCheck={() => toggle(c.id)}
                   onSelect={() => onSelect(selected === c.id ? null : c.id)}
                   result={latest[c.id]}
+                  evidence={evidenceBadge(resultsByPlatform(latest, c.id))}
                   badges={hasBadges(c.id, platforms, latest) ? <PlatformBadges testId={c.id} platforms={platforms} latest={latest} /> : undefined}
                   coverage={coverage?.cases[c.id]}
                   summary={history?.tests[c.id]}
@@ -185,6 +187,7 @@ function MatrixRow({
   coverage,
   summary,
   badges,
+  evidence,
 }: {
   c: MatrixCase;
   doc: string;
@@ -201,6 +204,7 @@ function MatrixRow({
   coverage?: CoverageClass;
   summary?: TestSummary;
   badges?: ReactNode;
+  evidence?: EvidenceBadge | null;
 }) {
   const runGate = useGate('runLocal');
   const executed = !!result || !!summary?.recent.some((m) => m !== 'none');
@@ -238,6 +242,11 @@ function MatrixRow({
         {coverage && (
           <span className={`cov-chip cov-${coverage}`} data-testid="matrix-coverage" data-class={coverage} title="設計カバレッジの分類">
             {COVERAGE_LABEL[coverage]}
+          </span>
+        )}
+        {evidence && (
+          <span className={`badge evidence-count${evidence.warn ? ' st-warn' : ''}`} data-testid="evidence-count" title={evidence.title}>
+            {evidence.text}
           </span>
         )}
         {result?.source === 'actions' && (

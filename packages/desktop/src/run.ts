@@ -6,7 +6,6 @@ import { pathToFileURL } from 'node:url';
 import { FLAUI_DEFAULT_AUTOMATION, FLAUI_DEFAULT_TIMEOUT, type DdvConfig, type RunnerConfig } from '@ddv/core';
 import { createScreenMap, findScenarioFiles, mocksRootOf, parseScenarioFile, parseScreenMap, runScenarioWith, scenarioIdOf, SCREEN_MAP_FILE, type PlatformMap, type Scenario, type ScreenMap } from '@ddv/mock';
 import { TraceRecorder, traceDirOf } from '@ddv/mock/trace';
-import { traceKey } from '@ddv/mock/trace-format';
 import { evidenceRunnerForRun } from '@ddv/evidence/run';
 import { DriverClient } from './client.ts';
 import { DriverBuilder } from './driver-build.ts';
@@ -180,15 +179,19 @@ export async function desktopRun(opts: DesktopRunOptions): Promise<DesktopRunRep
       const session = new FlaUiSession(client, sessionOpts);
       try {
         await client.ensureStarted();
-        const evidence = await evidenceRunnerForRun({
-          repoRoot: opts.repoRoot,
-          config: opts.config,
-          hooks: path.relative(opts.repoRoot, hooksAbs),
-          traceDir: traceDir || path.join(os.tmpdir(), `ddv-evidence-untraced-${process.pid}`),
-          key: rec?.key ?? traceKey(p.id, platform),
-          testId: p.id,
-          scenario: p.scenario,
-        });
+        // Evidence only while recording (trace-recorder.md「記録の流れ」).
+        const evidence =
+          traceDir && rec
+            ? await evidenceRunnerForRun({
+                repoRoot: opts.repoRoot,
+                config: opts.config,
+                hooks: path.relative(opts.repoRoot, hooksAbs),
+                traceDir,
+                key: rec.key,
+                testId: p.id,
+                scenario: p.scenario,
+              })
+            : undefined;
         await runScenarioWith(session, p.scenario, { timeout, trace: rec, hasOp: (n) => session.hasOp(n), evidence });
         cases.push({ id: p.id, title: p.title, status: 'passed', durationMs: Date.now() - t0 });
         log(`  ✓ [${p.id}] ${p.title}`);

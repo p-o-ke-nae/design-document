@@ -9,6 +9,7 @@ import { executeRunner, type CaseResult } from './runner.ts';
 import { RepoStateReader } from './repo-state.ts';
 import { Pruner, TRACES_DIR, traceDirs, type PrunePlan } from './prune.ts';
 import type { StepResultMeta } from './snapshots.ts';
+import { evidenceResultFields } from '@ddv/evidence/counts';
 
 export interface RunRequest {
   ids?: string[];
@@ -362,6 +363,7 @@ export class RunManager extends EventEmitter {
       if (existsSync(dir)) {
         const ids = (await fs.readdir(dir)).filter((f) => f.endsWith('.json')).map((f) => f.slice(0, -'.json'.length));
         if (ids.length) run.traces = ids.sort();
+        await writeEvidenceCounts(dir, run.traces ?? [], run.results);
       }
     } catch {
       /* no traces */
@@ -407,5 +409,18 @@ export class RunManager extends EventEmitter {
     }
     for (const id of p.runs) if (!existsSync(safeJoin(this.repoRoot, `${RUNS_DIR}/${id}.json`))) this.runs.delete(id);
     return p;
+  }
+}
+
+/** Writes `evidence` / `evidenceWarnings` of each traced result (run-record.md「実行の終了」). Unreadable traces are skipped. */
+export async function writeEvidenceCounts(dir: string, keys: readonly string[], results: Record<string, CaseResult>): Promise<void> {
+  for (const key of keys) {
+    const res = results[key];
+    if (!res) continue;
+    try {
+      Object.assign(res, evidenceResultFields(JSON.parse(await fs.readFile(path.join(dir, `${key}.json`), 'utf8'))));
+    } catch {
+      /* unreadable trace */
+    }
   }
 }

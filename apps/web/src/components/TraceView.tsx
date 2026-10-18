@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useReducer } from 'react';
+import { useCallback, useEffect, useMemo, useReducer } from 'react';
 import type { TraceResponse } from '../api.ts';
 import { api } from '../backend/index.ts';
 import { ApiError } from '../backend/types.ts';
 import { viewHref } from '../state.tsx';
 import { acceptsArrowKeys, goBack, reduceTraceView, shortSha, startTrace } from '../trace-view.ts';
 import { TraceStepDetail, TraceTimeline } from './TraceStepDetail.tsx';
+import { baseName } from '../evidence-view.ts';
+import type { EvidenceLoader } from './EvidencePanel.tsx';
 
 const fmtAt = (iso: string) => {
   const d = new Date(iso);
@@ -18,6 +20,7 @@ export function TraceView({
   platform,
   load,
   shotUrl,
+  evidence,
   backHref,
 }: {
   runId: string;
@@ -26,6 +29,8 @@ export function TraceView({
   platform?: string;
   load?: () => Promise<TraceResponse>;
   shotUrl?: (n: number) => Promise<string>;
+  /** Reads evidence bodies (none = `Backend.evidence`). */
+  evidence?: EvidenceLoader;
   backHref?: string;
 }) {
   const [state, dispatch] = useReducer(reduceTraceView, { runId, testId }, startTrace);
@@ -53,6 +58,8 @@ export function TraceView({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  const defaultEvidence = useCallback<EvidenceLoader>((f, signal) => api.evidence(runId, testId, platform, baseName(f.path), signal), [runId, testId, platform]);
 
   const back = () => goBack(backHref ?? viewHref('tests'));
 
@@ -124,7 +131,7 @@ export function TraceView({
             </button>
           </div>
         </div>
-        <div className="trace-main">{step && <TraceStepDetail step={step} shotUrl={step.screenshot ? shot : null} desktop={shownPlatform !== 'web'} />}</div>
+        <div className="trace-main">{step && <TraceStepDetail step={step} shotUrl={step.screenshot ? shot : null} desktop={shownPlatform !== 'web'} evidence={evidence ?? defaultEvidence} />}</div>
       </div>
     </div>
   );

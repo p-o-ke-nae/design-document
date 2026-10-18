@@ -303,6 +303,23 @@ export function createApp(ctx: ServerContext): Hono {
     }
   });
 
+  app.get('/api/traces/:runId/:testId/evidence/:file', async (c) => {
+    try {
+      const file = c.req.param('file');
+      const r = await ctx.traces.evidence(c.req.param('runId'), c.req.param('testId'), c.req.query('platform'), file);
+      const headers: Record<string, string> = {
+        'content-type': r.contentType,
+        'x-content-type-options': 'nosniff',
+        'content-security-policy': "default-src 'none'; sandbox",
+        'cache-control': 'private, max-age=86400',
+      };
+      if (c.req.query('download') === '1') headers['content-disposition'] = `attachment; filename*=UTF-8''${encodeRfc5987(file)}`;
+      return new Response(new Uint8Array(r.bytes), { headers });
+    } catch (e) {
+      if (e instanceof TraceError) return c.json({ code: e.code, error: e.message }, e.status as 400);
+      throw e;
+    }
+  });
   app.get('/api/traces/:runId/:testId', async (c) => {
     try {
       const r = await ctx.traces.read(c.req.param('runId'), c.req.param('testId'), c.req.query('platform'));
@@ -528,3 +545,6 @@ export function createApp(ctx: ServerContext): Hono {
 
   return app;
 }
+
+/** RFC 5987 `ext-value` of a file name. */
+export const encodeRfc5987 = (s: string) => encodeURIComponent(s).replace(/['()*]/g, (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`);

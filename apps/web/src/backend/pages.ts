@@ -3,7 +3,7 @@
  * Calls the service layer in the browser; nothing here talks to the local server.
  * The target (`TargetLoader`), `PatStore` and `OperationGate` of pages-viewer.md / pat.md plug in through `setPagesContext`.
  */
-import { createServices, EMPTY_RUNS, mimeOf, NO_TRACE_MESSAGE, systemEnv, type ServiceDeps, type PlayRecord, type PlayStore, type PrContext, type RepoReader, type Services, type TestDataWorkspace } from '@ddv/services';
+import { checkEvidenceName, createServices, EMPTY_RUNS, EVIDENCE_PRUNED_MESSAGE, findEvidenceFile, mimeOf, NO_TRACE_MESSAGE, TraceError, systemEnv, type ServiceDeps, type PlayRecord, type PlayStore, type PrContext, type RepoReader, type Services, type TestDataWorkspace } from '@ddv/services';
 import type { PrInfo } from '../api.ts';
 import { PAGES_CAPABILITIES } from './capabilities.ts';
 import { GitHubError } from '@ddv/github';
@@ -198,6 +198,9 @@ const NOT_PR = 'PR ではありません';
 const ACTIONS_HIDDEN = { state: 'hidden', reason: '', workflow: null, canInit: false } as const;
 const NO_ACTIONS = 'Actions を使えません';
 
+/** Memory kept for evidence bodies (evidence-trace.md「本体の取得」). */
+export const EVIDENCE_CACHE_BYTES = 100 * 1024 * 1024;
+
 const fail = (status: number, code: string, message: string): never => {
   throw new ApiError(message, status, code, { error: message, code, message });
 };
@@ -236,6 +239,7 @@ export function createPagesBackend(scope: string, getContext: () => PagesContext
     return u;
   };
   const bytes = (b: Uint8Array) => b as Uint8Array<ArrayBuffer>;
+  const evidenceCache = new Map<string, Blob>();
 
   return {
     edition: 'pages',
@@ -281,6 +285,44 @@ export function createPagesBackend(scope: string, getContext: () => PagesContext
           return png ? new Blob([bytes(png)], { type: 'image/png' }) : fail(404, 'not-found', 'スクリーンショットはありません');
         }),
       ),
+    // Results of Actions runs (the results branch): the same checks as the API (E1・E3・E4), then the file. Kept in memory (100MB, LRU).
+    evidence: (runId, id, platform, file) =>
+      read(async (s) => {
+        const cacheKey = `${runId}/${id}@${platform ?? 'web'}/${file}`;
+        const hit = evidenceCache.get(cacheKey);
+        if (hit) {
+          evidenceCache.delete(cacheKey);
+          evidenceCache.set(cacheKey, hit);
+          return hit;
+        }
+        let blob: Blob;
+        try {
+          const key = s.traces.validate(runId, id, platform);
+          checkEvidenceName(file);
+          const a = actions(s);
+          const trace = JSON.parse(new TextDecoder().decode(await a.file(runId, `traces/${key}.json`)));
+          const found = findEvidenceFile(trace, key, file);
+          let body: Uint8Array;
+          try {
+            body = await a.file(runId, `traces/${found.file.path}`);
+          } catch (e) {
+            if ((e as { status?: number }).status === 404 || (e instanceof GitHubError && e.kind === 'notFound')) return fail(404, 'pruned', EVIDENCE_PRUNED_MESSAGE);
+            throw e;
+          }
+          blob = new Blob([bytes(body)], { type: found.file.mime });
+        } catch (e) {
+          if (e instanceof TraceError) return fail(e.status, e.code, e.message);
+          throw e;
+        }
+        evidenceCache.set(cacheKey, blob);
+        let total = [...evidenceCache.values()].reduce((n, b) => n + b.size, 0);
+        for (const [k, b] of evidenceCache) {
+          if (total <= EVIDENCE_CACHE_BYTES || k === cacheKey) break;
+          evidenceCache.delete(k);
+          total -= b.size;
+        }
+        return blob;
+      }),
     rawUrl: (p) =>
       read(() => {
         const rel = decodeURIComponent(p.replace(/^\/raw\//, ''));

@@ -4,7 +4,8 @@ import type { DdvConfig } from '@ddv/core';
 import { loadConfig, safeJoin } from '@ddv/core/node';
 import { TRACES_DIR } from '../prune.ts';
 import { RepoStateReader } from '../repo-state.ts';
-import { runTests as defaultRunTests, type RunRecord, type RunTestsDeps, type SnapshotOutcome } from '../runs.ts';
+import { runTests as defaultRunTests, writeEvidenceCounts, type RunRecord, type RunTestsDeps, type SnapshotOutcome } from '../runs.ts';
+import { branchLimitWarning, limitEvidenceForBranch, type BranchLimits } from '@ddv/evidence/branch-limit';
 import { SnapshotService, SnapshotStore, type CaptureSummary, type SnapshotEvents } from '../snapshots.ts';
 import type { CiRunRecord } from './results-index.ts';
 
@@ -58,6 +59,8 @@ export interface CiRunOptions {
   runner?: string;
   request?: string;
   sha?: string;
+  /** `--evidence-max-bytes` / `--evidence-max-total` (absent = the defaults). */
+  evidenceLimits?: BranchLimits;
   env: CiEnv;
   repoState?: RepoStateReader;
   runTests?: (repoRoot: string, config: DdvConfig, run: RunRecord, log: (line: string) => void, deps?: RunTestsDeps) => Promise<void>;
@@ -223,6 +226,14 @@ export class CiRun {
         run.traces = files.map((f) => f.slice(0, -'.json'.length)).sort();
         await fs.mkdir(path.join(out, 'traces'), { recursive: true });
         for (const f of files) await fs.copyFile(path.join(traceDir, f), path.join(out, 'traces', f));
+        await writeEvidenceCounts(traceDir, run.traces, run.results);
+        // Evidence bodies (`traces/<key>/evidence/`), then the results-branch limits (evidence-trace.md「結果ブランチの大きさの上限」).
+        for (const key of run.traces) {
+          const ev = path.join(traceDir, key, 'evidence');
+          if (existsSync(ev)) await fs.cp(ev, path.join(out, 'traces', key, 'evidence'), { recursive: true });
+        }
+        const w = branchLimitWarning(await limitEvidenceForBranch(path.join(out, 'traces'), this.opts.evidenceLimits));
+        if (w) run.warnings.push(w);
       }
     }
     for (const s of summary?.scenarios ?? []) {

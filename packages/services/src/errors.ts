@@ -66,7 +66,7 @@ export class HistoryError extends ServiceError {
 
 export class TraceError extends ServiceError {
   constructor(
-    readonly status: 400 | 500,
+    readonly status: 400 | 404 | 500,
     readonly code: string,
     message: string,
   ) {

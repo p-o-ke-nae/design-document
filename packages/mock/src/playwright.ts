@@ -1,6 +1,5 @@
 // E2E runner: `defineScenarioTests` declares one Playwright test per scenario YAML (detailed design: E2E 実行).
 import { existsSync, readFileSync } from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { test } from '@playwright/test';
@@ -117,20 +116,21 @@ export function defineScenarioTests(opts: ScenarioTestOptions): void {
         target = { kind: 'mock', url: new URL(`${entry.mock}/index.html`, server.url).href, mock: entry.mock };
       }
       const trace = traceDir ? recorderFor(traceDir, test.info().title, entry.mock, target.kind) : undefined;
-      const evidence = await evidenceFor(scenario, trace?.key ?? scenario.id, traceDir);
+      // Evidence only while recording (trace-recorder.md「記録の流れ」).
+      const evidence = trace && traceDir ? await evidenceFor(scenario, trace.key, traceDir) : undefined;
       await runScenario(page, scenario, target, { timeout: opts.timeout, trace, evidence });
     });
   }
 
   /** Evidence runner of one scenario (`@ddv/evidence` loaded only when the config or the scenario has evidence). */
-  async function evidenceFor(scenario: Scenario, key: string, dir: string | null | undefined): Promise<StepEvidenceRunner | undefined> {
+  async function evidenceFor(scenario: Scenario, key: string, dir: string): Promise<StepEvidenceRunner | undefined> {
     if (config.evidence === undefined && !scenario.steps.some((s) => s.evidence?.length)) return undefined;
     const { evidenceRunnerForRun } = await import('@ddv/evidence/run');
     return evidenceRunnerForRun({
       repoRoot,
       config,
       hooks: opts.hooks ?? DEFAULT_HOOKS,
-      traceDir: dir || path.join(os.tmpdir(), `ddv-evidence-untraced-${process.pid}`),
+      traceDir: dir,
       key,
       testId: scenario.id,
       scenario,

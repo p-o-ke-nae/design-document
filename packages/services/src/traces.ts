@@ -1,5 +1,5 @@
 import type { DdvConfig } from '@ddv/core';
-import { TRACE_VERSION, type TraceFile } from '@ddv/mock/browser';
+import { TRACE_VERSION, type EvidenceFile, type TraceEvidence, type TraceFile } from '@ddv/mock/browser';
 import { resultKey, type Platform } from './result-key.ts';
 import { idPattern } from '@ddv/testid/core';
 import { TraceError } from './errors.ts';
@@ -22,6 +22,44 @@ export const NO_TRACE_MESSAGE: Record<NoTraceReason, string> = {
 };
 
 export type TraceRead = { ok: true; trace: TraceFile & { commit?: string; dirty?: boolean } } | { ok: false; reason: NoTraceReason };
+
+export const EVIDENCE_OMITTED_MESSAGE: Record<NonNullable<EvidenceFile['omitted']>, string> = {
+  'too-large': '大きすぎるため保存していません',
+  'branch-limit': '結果ブランチに置いていません',
+};
+export const EVIDENCE_PRUNED_MESSAGE = '古い実行のため証跡は削除されました';
+
+/** E1 of DD-EVTRACE-EVAPI: one path segment without `..`, up to 200 characters. */
+export function checkEvidenceName(file: string): void {
+  if (!file || file.length > 200 || /[\\/]/.test(file) || file.includes('..')) throw new TraceError(400, 'bad-path', '証跡のパスが不正です');
+}
+
+/** E3・E4 of DD-EVTRACE-EVAPI: the record and file of `<key>/evidence/<file>` (exact match). */
+export function findEvidenceFile(trace: Pick<TraceFile, 'steps'>, key: string, file: string): { record: TraceEvidence; file: EvidenceFile } {
+  const p = `${key}/evidence/${file}`;
+  for (const s of trace.steps ?? [])
+    for (const record of s.evidence ?? [])
+      for (const f of record.files ?? [])
+        if (f.path === p) {
+          if (f.omitted) throw new TraceError(404, 'evidence-omitted', EVIDENCE_OMITTED_MESSAGE[f.omitted] ?? EVIDENCE_OMITTED_MESSAGE['too-large']);
+          return { record, file: f };
+        }
+  throw new TraceError(404, 'not-found', '証跡がありません');
+}
+
+/** `Content-Type` of an evidence body (evidence-trace.md「API」). */
+export function evidenceContentType(f: Pick<EvidenceFile, 'kind' | 'mime'>): string {
+  if (f.kind === 'image') return f.mime;
+  if (f.kind === 'table' || f.kind === 'json') return 'application/json; charset=utf-8';
+  if (f.kind === 'text') return 'text/plain; charset=utf-8';
+  return 'application/octet-stream';
+}
+
+export interface EvidenceBody {
+  bytes: Uint8Array;
+  contentType: string;
+  file: EvidenceFile;
+}
 
 const RUN_ID = /^[0-9A-Za-z-]{1,64}$/;
 
@@ -71,6 +109,24 @@ export class TraceService {
     }
     if (!trace || trace.version !== TRACE_VERSION) throw new TraceError(500, 'trace-version', 'トレースの形式が古いか新しすぎます');
     return { ok: true, trace: { ...trace, ...(run.commit !== undefined ? { commit: run.commit } : {}), ...(run.dirty !== undefined ? { dirty: run.dirty } : {}) } };
+  }
+
+  /** Body of an evidence file (DD-EVTRACE-EVAPI). Throws `TraceError` (400 / 404). */
+  async evidence(runId: string, testId: string, platform: string | null | undefined, file: string): Promise<EvidenceBody> {
+    const key = this.validate(runId, testId, platform);
+    checkEvidenceName(file);
+    const r = await this.read(runId, testId, platform);
+    if (!r.ok) throw new TraceError(404, r.reason, NO_TRACE_MESSAGE[r.reason]);
+    const found = findEvidenceFile(r.trace, key, file);
+    const p = `${TRACES_DIR}/${runId}/${found.file.path}`;
+    let bytes: Uint8Array;
+    try {
+      if (!(await this.reader.exists(p))) throw new Error('missing');
+      bytes = await this.reader.readBinary(p);
+    } catch {
+      throw new TraceError(404, 'pruned', EVIDENCE_PRUNED_MESSAGE);
+    }
+    return { bytes, contentType: evidenceContentType(found.file), file: found.file };
   }
 
   /** PNG bytes of step `n`'s screenshot, or null when it does not exist. */

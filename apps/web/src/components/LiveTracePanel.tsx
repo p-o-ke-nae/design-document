@@ -33,7 +33,7 @@ export function LiveTracePanel({ live }: { live: LiveTrace }) {
       {snap.steps.length ? (
         <div className="trace-split">
           <TraceTimeline steps={snap.steps} selected={selected} onSelect={setSelected} />
-          <div className="trace-main">{step && <TraceStepDetail step={step} />}</div>
+          <div className="trace-main">{step && <TraceStepDetail step={step} plan={snap.plans[step.index]} />}</div>
         </div>
       ) : (
         <p className="muted">再生するとステップの記録がここに出ます</p>

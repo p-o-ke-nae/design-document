@@ -3,6 +3,7 @@ import type { ElementPatch, PickedElement } from '@ddv/mock/tune-patch';
 import type { LiveStepTrace, TraceStep } from '@ddv/mock/trace-format';
 import { FRAME_PROTOCOL, acceptFrameMessage, parseFromFrame, type FromFrame } from '@ddv/mock/frame-protocol';
 import { expandOnly, planSteps, type StepPlan } from '@ddv/mock/platform';
+import { normalizeSpec, type EvidenceAt, type EvidenceSpecInput } from '@ddv/evidence/spec';
 
 /** BD-MOCK-PLAYER (docs/design/basic/mock-player.md#プレイヤー). */
 export type PlayerState = 'Idle' | 'Playing' | 'Paused' | 'Done' | 'Failed';
@@ -87,11 +88,32 @@ export interface LiveTraceSnapshot {
   supported: boolean;
   /** Playing the data being edited (test data editor). */
   draft: boolean;
+  /** Planned evidence by step number (1-based): the player never captures (evidence-trace.md「ライブ表示」). */
+  plans: Record<number, PlannedEvidence[]>;
+}
+
+export interface PlannedEvidence {
+  label: string;
+  at: EvidenceAt;
+  use: string;
+}
+
+/** The step's `evidence` with defaults filled (`normalizeSpec`); null when it has none. */
+export function plannedEvidence(step: Step): PlannedEvidence[] | null {
+  const list = (step.evidence ?? []).filter((e) => typeof e.use === 'string' && e.use !== '');
+  if (!list.length) return null;
+  return list.map((e) => {
+    const input: EvidenceSpecInput = { use: e.use as string };
+    if (e.at === 'before' || e.at === 'after') input.at = e.at;
+    if (e.label !== undefined) input.label = e.label;
+    const n = normalizeSpec(input);
+    return { label: n.label, at: n.at, use: n.use };
+  });
 }
 
 /** Step records of the player's playback, kept in memory only (DD-TRVIEW ライブ表示). */
 export class LiveTrace {
-  private snap: LiveTraceSnapshot = { steps: [], supported: true, draft: false };
+  private snap: LiveTraceSnapshot = { steps: [], supported: true, draft: false, plans: {} };
   private listeners = new Set<() => void>();
 
   subscribe = (fn: () => void): (() => void) => {
@@ -133,7 +155,7 @@ export class LiveTrace {
       db: t ? t.db : null,
     };
     const steps = [...this.snap.steps.filter((s) => s.index !== rec.index), rec].sort((a, b) => a.index - b.index);
-    this.emit({ steps, supported: this.snap.supported && (!responded || !!t) });
+    this.emit({ steps, plans: this.plansWith(rec.index, step), supported: this.snap.supported && (!responded || !!t) });
   }
 
   /** Records step `index` (0-based) as skipped on the web (`only:`). */
@@ -155,11 +177,17 @@ export class LiveTrace {
       db: null,
     };
     const steps = [...this.snap.steps.filter((s) => s.index !== rec.index), rec].sort((a, b) => a.index - b.index);
-    this.emit({ steps });
+    this.emit({ steps, plans: this.plansWith(rec.index, step) });
   }
 
   clear(draft = false) {
-    this.emit({ steps: [], supported: true, draft });
+    this.emit({ steps: [], supported: true, draft, plans: {} });
+  }
+
+  private plansWith(index: number, step: Step): Record<number, PlannedEvidence[]> {
+    const { [index]: _old, ...rest } = this.snap.plans;
+    const plan = plannedEvidence(step);
+    return plan ? { ...rest, [index]: plan } : rest;
   }
 
   private emit(p: Partial<LiveTraceSnapshot>) {

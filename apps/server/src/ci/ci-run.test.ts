@@ -272,4 +272,40 @@ describe('ci run', () => {
     await new CiRun({ repoRoot: repo, out, env: env(), platform: 'win32', snapshots: noScenarios, log: () => {}, error: () => {}, runTests: async (_r, c, run, _l, deps) => { for (const x of c.runners) if (!deps?.skip?.(x)) seen.push(x.name); run.status = 'passed'; } }).run();
     expect(seen).toEqual(['sh', 'wpf']);
   });
+
+  it('証跡の本体を traces/<キー>/evidence/ にコピーし、件数を結果に書き、上限を超えた証跡は除いて警告にする', async () => {
+    const ev = (seq: number, name: string, bytes: number, status = 'ok') => ({ seq, label: name, use: 'screenshot', at: 'after', provider: 'builtin', status, durationMs: 1, files: [{ path: `T1/evidence/${name}`, kind: 'file', mime: 'application/octet-stream', bytes }] });
+    const tests = async (repoRoot: string, _c: unknown, run: RunRecord) => {
+      const dir = path.join(repoRoot, '.ddv', 'traces', run.id);
+      await fs.mkdir(path.join(dir, 'T1', 'evidence'), { recursive: true });
+      const trace = { version: 1, steps: [{ index: 1, evidence: [ev(1, 'a.bin', 4), ev(2, 'b.bin', 8, 'warn')] }] };
+      await fs.writeFile(path.join(dir, 'T1.json'), JSON.stringify(trace));
+      await fs.writeFile(path.join(dir, 'T1', 'evidence', 'a.bin'), Buffer.alloc(4));
+      await fs.writeFile(path.join(dir, 'T1', 'evidence', 'b.bin'), Buffer.alloc(8));
+      run.results.T1 = { status: 'passed', durationMs: 1, runner: 'e2e', test: 't' };
+      run.status = 'passed';
+    };
+    const out = path.join(root, 'out');
+    const r = await new CiRun({ repoRoot: repo, out, env: env(), runTests: tests, snapshots: noScenarios, evidenceLimits: { maxBytes: 5 }, log: () => {}, error: () => {} }).run();
+    expect(r.run?.results.T1).toMatchObject({ evidence: 2, evidenceWarnings: 1 });
+    expect(r.run?.warnings).toEqual(['大きさの上限のため証跡 1 件（0.0 MB）を結果ブランチに置いていません']);
+    expect(existsSync(path.join(out, 'traces', 'T1', 'evidence', 'a.bin'))).toBe(true);
+    expect(existsSync(path.join(out, 'traces', 'T1', 'evidence', 'b.bin'))).toBe(false);
+    const copied = JSON.parse(await fs.readFile(path.join(out, 'traces', 'T1.json'), 'utf8'));
+    expect(copied.steps[0].evidence.map((e: { files: Array<{ omitted?: string }> }) => e.files[0].omitted)).toEqual([undefined, 'branch-limit']);
+    // The local traces stay as they were.
+    expect(existsSync(path.join(repo, '.ddv', 'traces', '77-2', 'T1', 'evidence', 'b.bin'))).toBe(true);
+  });
+
+  it('ddv ci run の --evidence-max-bytes・--evidence-max-total は 1 以上の整数（空は既定値）', async () => {
+    const errors: string[] = [];
+    const cmd = new CiCommand({ env: env(), log: () => {}, error: (l) => errors.push(l) });
+    expect(await cmd.main(['ci', 'run', '--repo', repo, '--evidence-max-bytes', '0'])).toBe(2);
+    expect(errors.pop()).toBe('--evidence-max-bytes は 1 以上の整数です');
+    expect(await cmd.main(['ci', 'run', '--repo', repo, '--evidence-max-total', '1.5'])).toBe(2);
+    expect(errors.pop()).toBe('--evidence-max-total は 1 以上の整数です');
+    const out = path.join(root, 'out');
+    await fs.writeFile(path.join(repo, 'ddv.config.yaml'), 'runners: []\n');
+    expect(await cmd.main(['ci', 'run', '--repo', repo, '--out', out, '--evidence-max-bytes', '', '--evidence-max-total', '10'])).not.toBe(2);
+  });
 });

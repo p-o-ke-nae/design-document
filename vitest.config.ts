@@ -40,6 +40,8 @@ export default defineConfig({
       '@ddv/evidence/redact': r('./packages/evidence/src/redact.ts'),
       '@ddv/evidence/runner': r('./packages/evidence/src/runner.ts'),
       '@ddv/evidence/run': r('./packages/evidence/src/run.ts'),
+      '@ddv/evidence/counts': r('./packages/evidence/src/counts.ts'),
+      '@ddv/evidence/branch-limit': r('./packages/evidence/src/branch-limit.ts'),
       '@ddv/evidence': r('./packages/evidence/src/index.ts'),
       '#backend-impl': r('./apps/web/src/backend/http.ts'),
       '#app-impl': r('./apps/web/src/App.tsx'),

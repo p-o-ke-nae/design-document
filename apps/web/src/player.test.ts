@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Step } from './api.ts';
-import { NO_RESPONSE, PlayerController, SPEEDS, highlightHoldMs, nextState, type PlayerScenario, type PlayerState, type PlayerTimer, type PlayerTransport, type StepResult } from './player.ts';
+import { LiveTrace, NO_RESPONSE, PlayerController, plannedEvidence, SPEEDS, highlightHoldMs, nextState, type PlayerScenario, type PlayerState, type PlayerTimer, type PlayerTransport, type StepResult } from './player.ts';
 
 interface Deferred<T> {
   promise: Promise<T>;
@@ -506,7 +506,7 @@ describe('ライブ表示（LiveTrace）', () => {
     await flush();
     expect(t.c.liveTrace.steps).toHaveLength(1);
     t.c.load(SCENARIO);
-    expect(t.c.liveTrace.getSnapshot()).toEqual({ steps: [], supported: true, draft: false });
+    expect(t.c.liveTrace.getSnapshot()).toEqual({ steps: [], supported: true, draft: false, plans: {} });
   });
 
   it('リセット後に遅れて届いた結果は記録しない。所要時間はビューアで計る', async () => {
@@ -581,5 +581,23 @@ describe('編集中の再生（playDraft・DD-TDEDIT）', () => {
     await flush();
     expect(transport.resets.at(-1)).toEqual({ fixtures: ['default'], start: 'List' });
     expect(finished).toEqual([true]);
+  });
+});
+
+describe('ライブ表示の証跡の計画（evidence-trace.md「ライブ表示」）', () => {
+  it('ステップの evidence を既定値を補って一覧にし、取得はしない', () => {
+    const step: Step = { event: 'submit', evidence: [{ use: 'screenshot' }, { use: 'db', at: 'before', label: '注文表' }, { use: '' }] };
+    expect(plannedEvidence(step)).toEqual([
+      { label: 'screenshot', at: 'after', use: 'screenshot' },
+      { label: '注文表', at: 'before', use: 'db' },
+    ]);
+    expect(plannedEvidence({ event: 'x' })).toBeNull();
+    const lt = new LiveTrace();
+    lt.add(0, step, { ok: true, screen: 'A', failures: [] }, 10);
+    lt.addSkipped(1, { event: 'y' }, 'A');
+    expect(Object.keys(lt.getSnapshot().plans)).toEqual(['1']);
+    expect(lt.getSnapshot().steps[0].evidence).toBeUndefined();
+    lt.clear();
+    expect(lt.getSnapshot().plans).toEqual({});
   });
 });

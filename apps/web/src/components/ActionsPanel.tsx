@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { TraceResponse } from '../api.ts';
-import { workspace } from '../backend/index.ts';
+import { parseResultKey } from '@ddv/services';
+import { api, workspace } from '../backend/index.ts';
+import { baseName } from '../evidence-view.ts';
 import { ApiError } from '../backend/types.ts';
 import {
   actionsApi,
@@ -19,6 +21,7 @@ import { GateReason, useGate } from '../gate.tsx';
 import { actionsHref, useApp, viewHref } from '../state.tsx';
 import { StatusBadge } from './StatusBadge.tsx';
 import { TraceView } from './TraceView.tsx';
+import type { EvidenceLoader } from './EvidencePanel.tsx';
 
 /** Screen texts (actions-run.md「画面」). */
 export const ACTIONS_TEXT = {
@@ -786,7 +789,24 @@ function ActionsTrace({ id, testId }: { id: string; testId: string }) {
     [id, testId],
   );
   const shotUrl = useCallback((n: number) => actionsApi.file(id, `traces/${testId}/${n}.png`), [id, testId]);
-  return <TraceView runId={id} testId={testId} load={load} shotUrl={shotUrl} backHref={actionsHref(`runs/${encodeURIComponent(id)}`)} />;
+  const evidence = useCallback<EvidenceLoader>(
+    (f, signal) => {
+      // Pages: through the backend (path check, 100MB cache, pruned when the results branch dropped it).
+      if (api.edition === 'pages') {
+        const k = parseResultKey(testId);
+        return api.evidence(id, k.testId, k.platform, baseName(f.path), signal);
+      }
+      return actionsApi
+        .file(id, `traces/${f.path}`)
+        .then((u) => fetch(u, { signal }))
+        .then((r) => {
+          if (!r.ok) throw new ApiError('古い実行のため証跡は削除されました', 404, 'pruned');
+          return r.blob();
+        });
+    },
+    [id, testId],
+  );
+  return <TraceView runId={id} testId={testId} load={load} shotUrl={shotUrl} evidence={evidence} backHref={actionsHref(`runs/${encodeURIComponent(id)}`)} />;
 }
 
 /** An image of the results branch (the URL resolves asynchronously: Pages makes `blob:` URLs). */

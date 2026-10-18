@@ -17,6 +17,10 @@ export interface CaseResult {
   test: string;
   /** Absent for web and for runners without a platform (platform-results.md). */
   platform?: Platform;
+  /** Evidence records other than `skipped` (absent = none; evidence-trace.md「記録への追加」). */
+  evidence?: number;
+  /** `warn` / `failed` evidence records (absent = none). */
+  evidenceWarnings?: number;
 }
 
 export type RunKind = 'test' | 'snapshot' | 'deps';

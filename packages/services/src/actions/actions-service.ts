@@ -162,7 +162,7 @@ export function validateResultId(id: string): void {
   if (!RESULT_ID.test(id)) throw new ActionsError(400, 'run-id-invalid', ACTIONS_MESSAGES.runIdInvalid(id));
 }
 
-const FILE_PATHS = [/^traces\/[^/]+\.json$/, /^traces\/[^/]+\/\d+\.png$/, /^snapshots\/(?:current|diff|baseline)\/[^/]+\/\d+\.png$/];
+const FILE_PATHS = [/^traces\/[^/]+\.json$/, /^traces\/[^/]+\/\d+\.png$/, /^traces\/[^/]+\/evidence\/[^/]+$/, /^snapshots\/(?:current|diff|baseline)\/[^/]+\/\d+\.png$/];
 
 export function validateFilePath(path: string): void {
   if (path.includes('..') || path.includes('\\') || !FILE_PATHS.some((re) => re.test(path))) throw new ActionsError(400, 'path-invalid', ACTIONS_MESSAGES.pathInvalid(path));

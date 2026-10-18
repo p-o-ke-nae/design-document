@@ -134,4 +134,91 @@ describe('トレースの読み込み（DD-TRVIEW-READ）と API', () => {
 
     expect(await get(`/api/traces/r2/${ID2}`)).toMatchObject({ status: 500, body: { error: 'トレースの形式が古いか新しすぎます' } });
   });
+  describe('証跡の API（DD-EVTRACE-EVAPI）', () => {
+    const KEY = `${ID}@wpf`;
+    const ef = (name: string, kind: string, mime: string, omitted?: string) => ({ path: `${KEY}/evidence/${name}`, kind, mime, bytes: 3, ...(omitted ? { omitted } : {}) });
+    const evTrace = () => ({
+      ...trace('r1', ID),
+      platform: 'wpf',
+      steps: [
+        {
+          index: 1,
+          evidence: [
+            { seq: 1, label: 'a', use: 'screenshot', at: 'after', provider: 'builtin', status: 'ok', durationMs: 1, files: [ef('1-1-shot.png', 'image', 'image/png'), ef('1-1-big.png', 'image', 'image/png', 'too-large')] },
+            { seq: 2, label: 'b', use: 'db', at: 'after', provider: 'builtin', status: 'ok', durationMs: 1, files: [ef('1-2-t.table.json', 'table', 'application/json'), ef('1-2-j.json', 'json', 'application/json'), ef('1-2-x.txt', 'text', 'text/plain'), ef('1-2-f.bin', 'file', 'application/zip'), ef('1-2-gone.txt', 'text', 'text/plain'), ef('1-2-br.txt', 'text', 'text/plain', 'branch-limit')] },
+          ],
+        },
+      ],
+    });
+    const files = () => ({
+      [`r1/${KEY}.json`]: JSON.stringify(evTrace()),
+      [`r1/${KEY}/evidence/1-1-shot.png`]: PNG,
+      [`r1/${KEY}/evidence/1-2-t.table.json`]: '{"columns":[],"rows":[]}',
+      [`r1/${KEY}/evidence/1-2-j.json`]: '{"a":1}',
+      [`r1/${KEY}/evidence/1-2-x.txt`]: 'abc',
+      [`r1/${KEY}/evidence/1-2-f.bin`]: Buffer.from([1, 2, 3]),
+      [`r1/${KEY}/evidence/other.txt`]: 'not recorded',
+    });
+    const runs = () => [{ id: 'r1', results: { [KEY]: res('passed') }, traces: [KEY] }];
+    const url = (file: string, q = '?platform=wpf') => `/api/traces/r1/${ID}/evidence/${file}${q}`;
+
+    it('[DD-EVTRACE-EVAPI-P001][DD-EVTRACE-EVAPI-T001][DD-EVTRACE-EVAPI-T002] runId・testId・platform が TRPATH の検査に合わなければ 400', async () => {
+      const { get } = await setup(runs(), files());
+      expect(await get(url('1-1-shot.png', '?platform=mac'))).toMatchObject({ status: 400, body: { code: 'bad-platform' } });
+      expect(await get(`/api/traces/r_1/${ID}/evidence/1-1-shot.png?platform=wpf`)).toMatchObject({ status: 400, body: { code: 'invalid-id' } });
+    });
+
+    it('[DD-EVTRACE-EVAPI-P002][DD-EVTRACE-EVAPI-T003][DD-EVTRACE-EVAPI-T004] file が区切り文字・.. を含むか 200 文字を超えれば 400 bad-path', async () => {
+      const { get } = await setup(runs(), files());
+      // A whole `..` / `%2e%2e` segment is resolved by URL parsing before routing (never reaches the file).
+      for (const dots of ['%2e%2e', '..']) expect((await get(url(dots))).status, dots).toBe(404);
+      const { ctx } = await setup(runs(), files());
+      await expect(ctx.traces.evidence('r1', ID, 'wpf', '..')).rejects.toMatchObject({ status: 400, code: 'bad-path' });
+      for (const bad of ['x%2e%2ey', '%2e%2e%2Fx', 'a%2Fb', 'a%5Cb', '..%2F..%2Fx', 'a..b.png', 'x'.repeat(201)]) expect(await get(url(bad)), bad).toMatchObject({ status: 400, body: { code: 'bad-path', error: '証跡のパスが不正です' } });
+      expect((await get(url('x'.repeat(200)))).body.code).toBe('not-found');
+    });
+
+    it('[DD-EVTRACE-EVAPI-P003][DD-EVTRACE-EVAPI-T005][DD-EVTRACE-EVAPI-T006] トレースを読めなければ 404（トレースの読み込みと同じ code）', async () => {
+      const { get } = await setup(runs(), {});
+      expect(await get(url('1-1-shot.png'))).toMatchObject({ status: 404, body: { code: 'pruned', error: 'トレースは保持件数を超えたため削除されました' } });
+      const { get: get2 } = await setup([], {});
+      expect(await get2(url('1-1-shot.png'))).toMatchObject({ status: 404, body: { code: 'unknownRun' } });
+    });
+
+    it('[DD-EVTRACE-EVAPI-P004][DD-EVTRACE-EVAPI-T007][DD-EVTRACE-EVAPI-T008] 記録に無いファイルは 404 not-found（完全一致・大文字小文字を区別）', async () => {
+      const { get } = await setup(runs(), files());
+      expect(await get(url('other.txt'))).toMatchObject({ status: 404, body: { code: 'not-found', error: '証跡がありません' } });
+      expect((await get(url('1-1-SHOT.png'))).body.code).toBe('not-found');
+      // Another platform's key is a different trace.
+      expect((await get(url('1-1-shot.png', ''))).status).toBe(404);
+    });
+
+    it('[DD-EVTRACE-EVAPI-P005][DD-EVTRACE-EVAPI-T009][DD-EVTRACE-EVAPI-T010] omitted なら 404 evidence-omitted', async () => {
+      const { get } = await setup(runs(), files());
+      expect(await get(url('1-1-big.png'))).toMatchObject({ status: 404, body: { code: 'evidence-omitted', error: '大きすぎるため保存していません' } });
+      expect(await get(url('1-2-br.txt'))).toMatchObject({ status: 404, body: { code: 'evidence-omitted', error: '結果ブランチに置いていません' } });
+    });
+
+    it('[DD-EVTRACE-EVAPI-P006][DD-EVTRACE-EVAPI-T011][DD-EVTRACE-EVAPI-T012] 記録にあるがファイルが無ければ 404 pruned', async () => {
+      const { get } = await setup(runs(), files());
+      expect(await get(url('1-2-gone.txt'))).toMatchObject({ status: 404, body: { code: 'pruned', error: '古い実行のため証跡は削除されました' } });
+    });
+
+    it('[DD-EVTRACE-EVAPI-P007][DD-EVTRACE-EVAPI-T013] 200 で本体。種類ごとの Content-Type・nosniff・CSP・download=1', async () => {
+      const { get } = await setup(runs(), files());
+      const png = await get(url('1-1-shot.png'));
+      expect(png.status).toBe(200);
+      expect(Buffer.compare(png.body as Buffer, PNG)).toBe(0);
+      expect(png.headers.get('content-type')).toBe('image/png');
+      expect(png.headers.get('x-content-type-options')).toBe('nosniff');
+      expect(png.headers.get('content-security-policy')).toBe("default-src 'none'; sandbox");
+      expect(png.headers.get('cache-control')).toBe('private, max-age=86400');
+      expect(png.headers.get('content-disposition')).toBeNull();
+      const types: Record<string, string> = { '1-2-t.table.json': 'application/json; charset=utf-8', '1-2-j.json': 'application/json; charset=utf-8', '1-2-x.txt': 'text/plain; charset=utf-8', '1-2-f.bin': 'application/octet-stream' };
+      for (const [n, t] of Object.entries(types)) expect((await get(url(n))).headers.get('content-type'), n).toBe(t);
+      expect((await get(url('1-2-j.json'))).body).toEqual({ a: 1 });
+      const dl = await get(url('1-2-x.txt', '?platform=wpf&download=1'));
+      expect(dl.headers.get('content-disposition')).toBe("attachment; filename*=UTF-8''1-2-x.txt");
+    });
+  });
 });
