@@ -1,4 +1,5 @@
 export * from './types.ts';
+export * from './platform.ts';
 export * from './scenario.ts';
 export * from './map.ts';
 export * from './paths.ts';
@@ -16,6 +17,7 @@ export * from './browser.ts';
 export * from './image.ts';
 export * from './static-server.ts';
 export * from './run-scenario.ts';
+export type * from './evidence-host.ts';
 export * from './init.ts';
 export { executeStep, runStep, checkExpect, eventOf, StepError, DEFAULT_STEP_TIMEOUT_MS } from './step.ts';
 export type { Driver, ExpectFailure, StepErrorKind, StepOptions, StepResult } from './step.ts';

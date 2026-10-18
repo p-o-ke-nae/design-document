@@ -1,4 +1,5 @@
-import type { ScreenMap } from './map.ts';
+import type { PlatformMap } from './map.ts';
+import type { Platform } from './platform.ts';
 
 export type LocatorTarget = 'mock' | 'app';
 export type LocatorKind = 'screen' | 'event' | 'field';
@@ -27,7 +28,7 @@ const eventName = (label: string) => label.replace(/\[[^\]]*\]/g, '').replace(/\
  * mock: screen = state id, event = the step's `click` value, field = data-testid.
  * app: screen = state id, event = the step's event (guard ignored), field = input/expect key; resolved via `_map.yaml`.
  */
-export function resolveLocator(kind: LocatorKind, key: string, target: LocatorTarget, map?: ScreenMap, opts: { screen?: string } = {}): ResolvedLocator {
+export function resolveLocator(kind: LocatorKind, key: string, target: LocatorTarget, map?: PlatformMap, opts: { screen?: string } = {}): ResolvedLocator {
   if (target === 'mock') {
     if (kind === 'screen') return { ok: true, selector: attrSelector('data-screen', key), visible: true };
     if (kind === 'event') return { ok: true, selector: attrSelector('data-testid', key), ...(opts.screen ? { within: attrSelector('data-screen', opts.screen) } : {}) };
@@ -46,4 +47,58 @@ export function resolveLocator(kind: LocatorKind, key: string, target: LocatorTa
   }
   const sel = map?.fields[key];
   return { ok: true, selector: sel ?? attrSelector('data-testid', key) };
+}
+
+export type DesktopNameKind = 'screen' | 'event' | 'field';
+
+/** Name the desktop driver searches for (detailed design: 名前の解決 / デスクトップ). */
+export interface DesktopName {
+  by: 'automationId' | 'title';
+  name: string;
+  /** true when `_map.yaml` translated the logical name (shown in failure messages). */
+  mapped: boolean;
+}
+
+/**
+ * Desktop name of a logical name. screen: `map.screens` rule (automationId / title), else the state id;
+ * event (transition click, `key` = the `click` value): `map.events[event without guard]`, else `key`;
+ * field (input / expect / auxiliary click): `map.fields[key]`, else `key`.
+ */
+export function resolveDesktopName(kind: DesktopNameKind, key: string, map?: PlatformMap, event?: string): DesktopName {
+  if (kind === 'screen') {
+    const rule = map?.screens[key];
+    if (rule?.automationId !== undefined) return { by: 'automationId', name: rule.automationId, mapped: true };
+    if (rule?.title !== undefined) return { by: 'title', name: rule.title, mapped: true };
+    return { by: 'automationId', name: key, mapped: false };
+  }
+  if (kind === 'event' && event !== undefined) {
+    const to = map?.events[eventName(event)];
+    if (to !== undefined) return { by: 'automationId', name: to, mapped: true };
+    return { by: 'automationId', name: key, mapped: false };
+  }
+  const to = map?.fields[key];
+  return to !== undefined ? { by: 'automationId', name: to, mapped: true } : { by: 'automationId', name: key, mapped: false };
+}
+
+/** 「論理名 customer（対応表で CustomerNameBox）」 */
+export function desktopNameLabel(key: string, r: DesktopName): string {
+  return r.mapped ? `論理名 ${key}（対応表で ${r.name}）` : `論理名 ${key}`;
+}
+
+/** Failure message for a name not found until the deadline: logical name, searched name and platform. */
+export function desktopNotFoundMessage(key: string, r: DesktopName, platform: Platform): string {
+  return `要素が見つかりません: ${desktopNameLabel(key, r)}（探した名前: ${r.by === 'title' ? 'タイトル ' : ''}${r.name}、${platform}）`;
+}
+
+/**
+ * State ids `screen()` tries on the desktop, in order: the previous screen, then the ids appearing in the scenario
+ * (`start`, then each `expect.screen`), then the remaining `map.screens` keys.
+ */
+export function desktopScreenCandidates(scenario: { start: string; steps: ReadonlyArray<{ expect?: { screen?: string } }> }, map: PlatformMap | undefined, previous?: string | null): string[] {
+  const out = new Set<string>();
+  if (previous) out.add(previous);
+  out.add(scenario.start);
+  for (const s of scenario.steps) if (s.expect?.screen) out.add(s.expect.screen);
+  for (const id of Object.keys(map?.screens ?? {})) out.add(id);
+  return [...out];
 }

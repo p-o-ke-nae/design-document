@@ -99,10 +99,12 @@ export type Backend = Omit<ApiMethods, 'traceShot' | 'actionsFile'> & {
   subscribe(listener: BackendListener): Unsubscribe;
   /** Local runs (`GET /api/runs/{id}/events`). Pages has no local runs and never calls it. */
   followRun(id: string, handlers: RunHandlers): Unsubscribe;
-  traceShot(runId: string, id: string, n: number): Promise<string>;
+  traceShot(runId: string, id: string, n: number, platform?: string): Promise<string>;
   rawUrl(p: string): Promise<string>;
   /** A file of an Actions run on the results branch (Pages: a `blob:` URL). */
   actionsFile(id: string, path: string): Promise<string>;
+  /** The same file's contents (Pages: no `fetch` of a `blob:` URL, which the CSP's connect-src does not allow). */
+  actionsBlob(id: string, path: string): Promise<Blob>;
   /** Pages: the target head's reader (MockFrame builds `srcdoc` from it). Local: `null`. */
   repo(): RepoReader | null;
 };

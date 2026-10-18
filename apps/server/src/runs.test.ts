@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { parseConfig, type DdvConfig } from '@ddv/core';
 import { RepoStateReader, type RepoState } from './repo-state.ts';
-import { BUSY_MESSAGE, RerunError, RunManager, RUNS_DIR, type RunRecord } from './runs.ts';
+import { BUSY_MESSAGE, RerunError, RunManager, RUNS_DIR, writeEvidenceCounts, type RunRecord } from './runs.ts';
 import { TRACES_DIR } from './prune.ts';
 
 const ID1 = ['DD', 'A', 'B', 'T001'].join('-');
@@ -337,5 +337,25 @@ describe('基本設計：保持件数（BD-TMON-PRUNE）', () => {
     const r = await saveAfter({ maxRuns: 10, maxTraceRuns: 5 });
     expect(r.records).toEqual(['r0', 'r1', 'r2', r.added.id]);
     expect(r.traces).toEqual(['r0', 'r1', 'r2']);
+  });
+});
+
+describe('実行の終了で証跡の件数を書く（run-record.md「実行の終了」）', () => {
+  it('トレースと同じキーの結果に evidence・evidenceWarnings を書き、0 件・読めないトレースは飛ばす', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ddv-evcount-'));
+    try {
+      const ev = (status: string) => ({ seq: 1, label: 'x', use: 'screenshot', at: 'after', provider: 'builtin', status, durationMs: 1, files: [] });
+      await fs.writeFile(path.join(dir, 'A.json'), JSON.stringify({ steps: [{ evidence: [ev('ok'), ev('warn'), ev('skipped')] }, { evidence: [ev('failed')] }] }));
+      await fs.writeFile(path.join(dir, 'B.json'), JSON.stringify({ steps: [{}] }));
+      await fs.writeFile(path.join(dir, 'C.json'), '{broken');
+      const r = (): RunRecord['results'][string] => ({ status: 'passed', durationMs: 1, runner: 'e2e', test: 't' });
+      const results = { A: r(), B: r(), C: r() };
+      await writeEvidenceCounts(dir, ['A', 'B', 'C', 'D'], results);
+      expect(results.A).toMatchObject({ evidence: 3, evidenceWarnings: 2 });
+      expect('evidence' in results.B).toBe(false);
+      expect('evidence' in results.C).toBe(false);
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
   });
 });

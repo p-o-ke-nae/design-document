@@ -182,7 +182,7 @@ describe('HostBridge', () => {
     await a;
     await flush();
     expect(t.execs).toHaveLength(2);
-    expect(t.execs[1].step.expect.screen).toBe('Confirm');
+    expect(t.execs[1].step.expect?.screen).toBe('Confirm');
     expect(t.bridge.state).toBe('Running');
     t.execs[1].d.resolve(t.ok('Confirm'));
     await b;
@@ -332,7 +332,7 @@ describe('ddv:step の trace（DD-TRREC ライブ表示）', () => {
     };
     engine.observe = async (s) => {
       log.push('observe');
-      return [{ kind: 'screen', key: '', expected: s.expect.screen, actual: 'S', ok: s.expect.screen === 'S' }];
+      return [{ kind: 'screen', key: '', expected: s.expect?.screen ?? null, actual: 'S', ok: s.expect?.screen === 'S' }];
     };
     return { ...t, log };
   }

@@ -79,6 +79,20 @@ describe('記録の有効化（DD-TRREC-ENABLE）', () => {
     expect(rec.trace).toMatchObject({ version: 1, runId: 'run-9', testId: ID, title: '注文する', mock: 'order', target: 'app', status: 'passed', steps: [] });
     expect(recorderFor(dir, 'ID の無いテスト', 'order', 'mock')).toBeUndefined();
   });
+
+  it('recorderFor の platform：ファイル名とスクリーンショットのディレクトリは結果のキー、web は platform を書かない', async () => {
+    const dir = await tmp();
+    const wpf = recorderFor(dir, `[${ID}] 注文する`, 'order', 'app', 'wpf')!;
+    expect(wpf.key).toBe(`${ID}@wpf`);
+    expect(wpf.screenshotOf(1).rel).toBe(`${ID}@wpf/1.png`);
+    expect(wpf.screenshotOf(1).abs).toBe(path.join(dir, `${ID}@wpf`, '1.png'));
+    await wpf.write();
+    const web = recorderFor(dir, `[${ID}] 注文する`, 'order', 'app', 'web')!;
+    await web.write();
+    expect((await fs.readdir(dir)).sort()).toEqual([`${ID}.json`, `${ID}@wpf.json`]);
+    expect(JSON.parse(await fs.readFile(path.join(dir, `${ID}@wpf.json`), 'utf8'))).toMatchObject({ version: 1, testId: ID, platform: 'wpf' });
+    expect(JSON.parse(await fs.readFile(path.join(dir, `${ID}.json`), 'utf8')).platform).toBeUndefined();
+  });
 });
 
 describe('TraceRecorder（DD-TRREC-RECORDER）', () => {

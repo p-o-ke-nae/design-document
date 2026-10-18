@@ -1,0 +1,13 @@
+# ddv mock scaffold が生成。event / click / expect.screen は再生成で更新、それ以外は保持
+
+id: BD-DESKRUN-SCREEN-P004
+title: 開始 → テスト一覧 → [実行] 接続先の選択 → [キャンセル] テスト一覧 → 終了
+fixtures: [ default ]
+start: List
+steps:
+  - event: 実行
+    click: run
+    expect: { screen: Target, text: { target-winforms-reason: アプリの実行ファイルが見つかりません（ビルドしてください） } }
+  - event: キャンセル
+    click: target-cancel
+    expect: { screen: List }

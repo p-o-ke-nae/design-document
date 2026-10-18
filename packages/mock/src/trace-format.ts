@@ -1,10 +1,16 @@
 // Browser-safe trace format shared by the recorder (Node), mock-runtime (iframe) and the viewer. No Node imports.
+import type { Platform } from './platform.ts';
 import type { Value } from './types.ts';
 
 export const TRACE_VERSION = 1;
 /** Request / response bodies are clipped to this many UTF-8 bytes. */
 export const BODY_LIMIT = 64 * 1024;
 export const TRACE_DIR_ENV = 'DDV_TRACE_DIR';
+
+/** File name (without `.json`) of a trace = the result key: `testId` for web, else `<testId>@<platform>` (platform-results.md「トレース」). */
+export function traceKey(testId: string, platform?: Platform | null): string {
+  return !platform || platform === 'web' ? testId : `${testId}@${platform}`;
+}
 
 export type TraceTarget = 'mock' | 'app';
 export type TraceStatus = 'passed' | 'failed';
@@ -41,9 +47,14 @@ export interface DbChange {
 }
 
 export interface TraceStep {
-  /** 1-based. */
+  /** 1-based (auxiliary steps included). */
   index: number;
+  /** '' for auxiliary steps. */
   event: string;
+  /** Platforms of the step's `only:` (`desktop` expanded). */
+  only?: Platform[];
+  /** Not run on this platform (`only:`); not part of the pass / fail result. */
+  skipped?: true;
   input?: Record<string, Value>;
   click?: string;
   do?: string;
@@ -58,6 +69,45 @@ export interface TraceStep {
   db: DbChange[] | null;
   /** `<testId>/<index>.png`, relative to the run's trace directory. */
   screenshot?: string;
+  /** Evidence captured on this step (before → after, in written order). Absent when the step has none. */
+  evidence?: TraceEvidence[];
+  /** Number of `warn` records in `evidence`. Absent with `evidence`. */
+  evidenceWarnings?: number;
+}
+
+export type EvidenceStatus = 'ok' | 'warn' | 'failed' | 'skipped';
+export type EvidenceKind = 'image' | 'table' | 'json' | 'text' | 'file';
+export type EvidenceProviderKind = 'builtin' | 'hooks' | 'command';
+export type OmittedReason = 'too-large' | 'branch-limit';
+
+/** One saved file of an evidence record (evidence-trace.md#構造). */
+export interface EvidenceFile {
+  /** Relative to the run's trace directory: `<key>/evidence/<name>` (`/`-separated). */
+  path: string;
+  kind: EvidenceKind;
+  mime: string;
+  bytes: number;
+  /** The body was not written. */
+  omitted?: OmittedReason;
+}
+
+/** Result of one evidence spec of a step. */
+export interface TraceEvidence {
+  /** 1-based within the step (before → after). */
+  seq: number;
+  label: string;
+  use: string;
+  at: 'before' | 'after';
+  provider: EvidenceProviderKind;
+  status: EvidenceStatus;
+  /** Redacted reason (warn / failed). */
+  reason?: string;
+  durationMs: number;
+  db?: { name: string; type: string };
+  truncated?: boolean;
+  totalRows?: number;
+  masked?: string[];
+  files: EvidenceFile[];
 }
 
 export interface TraceFile {
@@ -67,6 +117,8 @@ export interface TraceFile {
   title: string;
   mock: string;
   target: TraceTarget;
+  /** Platform the scenario ran on (absent = web). */
+  platform?: Platform;
   startedAt: string;
   durationMs: number;
   status: TraceStatus;

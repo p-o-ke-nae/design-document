@@ -7,6 +7,7 @@ import { normalizePath, type DdvConfig } from '@ddv/core';
 import { loadConfig, toPosix, CONFIG_FILES } from '@ddv/core/node';
 import { generateAll, LOCK_PATH } from '@ddv/testid';
 import { checkMocks, scaffoldMock } from '@ddv/mock';
+import { checkTokens } from '@ddv/tokens/node';
 import {
   createServices,
   HistoryError,
@@ -23,7 +24,8 @@ import {
   type TestDataWorkspace,
   type TraceService,
 } from '@ddv/services';
-import { RerunError, RunManager, RUNS_DIR, type RunEvent, type RunRecord } from './runs.ts';
+import { RerunError, RunManager, runnersOf, RUNS_DIR, type ExecuteRunner, type RunEvent, type RunRecord } from './runs.ts';
+import { listTargets, serverGate, validateRunRequest, type RunnerGate } from './targets.ts';
 import { TRACES_DIR } from './prune.ts';
 import { checkDeps, installDeps } from './deps.ts';
 import { FsRepoReader, FsRepoWriter } from './fs-reader.ts';
@@ -66,6 +68,8 @@ eader (the route handlers call these). */
   history: HistoryService;
   traces: TraceService;
   snapshots: SnapshotService;
+  /** Whether each target can run here (`DDV_DESKTOP_GATE` replaces it, e.g. in E2E). */
+  gate: RunnerGate;
   events: EventEmitter;
   /** GitHub workspaces: refuse test runs (409 deps-missing) until the runners' packages are installed. */
   checkDeps?: boolean;
@@ -78,7 +82,10 @@ eader (the route handlers call these). */
 }
 
 /** Creates the context: loads config, run history and starts watching the repository. */
-export async function createContext(repoRoot: string, opts: { watch?: boolean; snapshots?: ConstructorParameters<typeof SnapshotService>[2] } = {}): Promise<ServerContext> {
+export async function createContext(
+  repoRoot: string,
+  opts: { watch?: boolean; snapshots?: ConstructorParameters<typeof SnapshotService>[2]; gate?: RunnerGate; execute?: ExecuteRunner } = {},
+): Promise<ServerContext> {
   const root = path.resolve(repoRoot);
   const ctx: ServerContext = {
     repoRoot: root,
@@ -90,11 +97,12 @@ export async function createContext(repoRoot: string, opts: { watch?: boolean; s
     history: undefined as unknown as HistoryService,
     traces: undefined as unknown as TraceService,
     snapshots: undefined as unknown as SnapshotService,
+    gate: opts.gate ?? serverGate(root),
     events: new EventEmitter(),
     close: () => {},
   };
   ctx.events.setMaxListeners(100);
-  ctx.runs = new RunManager(root, () => ctx.config);
+  ctx.runs = new RunManager(root, () => ctx.config, { execute: opts.execute });
   ctx.runs.setMaxListeners(100);
   ctx.writer = new FsRepoWriter(ctx.reader);
   const runs = ctx.runs;
@@ -117,7 +125,8 @@ export async function createContext(repoRoot: string, opts: { watch?: boolean; s
     let watcher: FSWatcher | null = null;
     const pending = new Set<string>();
     let timer: NodeJS.Timeout | null = null;
-    try {
+    let closed = false;
+    const startWatch = () => {
       watcher = watch(root, { recursive: true }, (_ev, file) => {
         if (!file) return;
         const rel = toPosix(file.toString());
@@ -138,10 +147,32 @@ export async function createContext(repoRoot: string, opts: { watch?: boolean; s
           ctx.events.emit('change', paths);
         }, 150);
       });
+      // On Linux, Node's recursive watch emits ENOENT when a watched folder is removed (e.g. test-results):
+      // unhandled, it would end the server. Start watching again instead.
+      watcher.on('error', (e) => {
+        watcher?.close();
+        watcher = null;
+        if (closed) return;
+        console.warn('[ddv] ファイル監視を再開します:', e.message);
+        setTimeout(() => {
+          if (closed) return;
+          try {
+            startWatch();
+          } catch (err) {
+            console.warn('[ddv] ファイル監視を再開できません:', (err as Error).message);
+          }
+        }, 500).unref();
+      });
+    };
+    try {
+      startWatch();
     } catch (e) {
       console.warn('[ddv] ファイル監視を開始できません:', (e as Error).message);
     }
-    ctx.close = () => watcher?.close();
+    ctx.close = () => {
+      closed = true;
+      watcher?.close();
+    };
   }
   return ctx;
 }
@@ -183,19 +214,24 @@ export function createApp(ctx: ServerContext): Hono {
   });
 
   app.get('/api/tests', async (c) => c.json(await svc().matrix.tests(ctx.history.latest())));
+  app.get('/api/tests/targets', async (c) => c.json({ targets: await listTargets(ctx.config, ctx.gate) }));
   app.post('/api/tests/run', async (c) => {
-    const body = (await c.req.json().catch(() => ({}))) as { ids?: unknown; runner?: unknown };
+    const body = (await c.req.json().catch(() => ({}))) as { ids?: unknown; runner?: unknown; runners?: unknown };
     const ids = Array.isArray(body.ids) ? body.ids.filter((x): x is string => typeof x === 'string') : undefined;
     const runner = typeof body.runner === 'string' ? body.runner : undefined;
+    const runners = body.runners === undefined || body.runners === null ? undefined : Array.isArray(body.runners) ? body.runners.map(String) : [];
+    // platform-results.md「開始の要求」: before the deps checks.
+    const invalid = await validateRunRequest({ ...(body.runner !== undefined ? { runner: String(body.runner) } : {}), ...(runners ? { runners } : {}) }, () => listTargets(ctx.config, ctx.gate));
+    if (invalid) return c.json({ error: invalid.error, code: invalid.code }, invalid.status);
     if (runner && !ctx.config.runners.some((r) => r.name === runner)) return c.json({ error: `unknown runner: ${runner}` }, 400);
     if (ctx.runs.activeTask('deps')) return c.json({ error: '依存の導入が進行中です。終わってから実行してください', code: 'deps-installing' }, 409);
     if (ctx.checkDeps) {
       const all = checkDeps(root, ctx.config);
-      const targets = all.targets.filter((t) => !runner || t.runners.includes(runner));
+      const targets = all.targets.filter((t) => (!runner && !runners) || t.runners.some((n) => (runner ? n === runner : runnersOf(ctx.config, { runners }).some((r) => r.name === n))));
       if (targets.length) return c.json({ error: 'テストの実行に必要な依存が導入されていません', code: 'deps-missing', deps: { ...all, needed: true, targets } }, 409);
     }
     try {
-      const run = ctx.runs.start({ ids, runner });
+      const run = ctx.runs.start({ ids, runner, ...(runners ? { runners } : {}) });
       return c.json({ id: run.id, status: run.status }, 202);
     } catch (e) {
       return c.json({ error: (e as Error).message }, 409);
@@ -229,9 +265,9 @@ export function createApp(ctx: ServerContext): Hono {
 
   app.get('/api/history/tests/:id', async (c) => {
     try {
-      return c.json(await ctx.history.test(c.req.param('id')));
+      return c.json(await ctx.history.test(c.req.param('id'), c.req.query('platform')));
     } catch (e) {
-      if (e instanceof HistoryError) return c.json({ error: e.message, code: e.code }, e.status as 404);
+      if (e instanceof HistoryError) return c.json({ error: e.message, code: e.code }, e.status);
       throw e;
     }
   });
@@ -281,7 +317,7 @@ export function createApp(ctx: ServerContext): Hono {
   app.get('/api/traces/:runId/:testId/steps/:file', async (c) => {
     const m = /^(\d+)\.png$/.exec(c.req.param('file'));
     try {
-      const png = m ? await ctx.traces.screenshot(c.req.param('runId'), c.req.param('testId'), Number(m[1])) : null;
+      const png = m ? await ctx.traces.screenshot(c.req.param('runId'), c.req.param('testId'), Number(m[1]), c.req.query('platform')) : null;
       if (!png) return c.json({ error: 'スクリーンショットはありません' }, 404);
       return new Response(new Uint8Array(png), { headers: { 'content-type': 'image/png', 'cache-control': 'private, max-age=86400' } });
     } catch (e) {
@@ -290,9 +326,26 @@ export function createApp(ctx: ServerContext): Hono {
     }
   });
 
+  app.get('/api/traces/:runId/:testId/evidence/:file', async (c) => {
+    try {
+      const file = c.req.param('file');
+      const r = await ctx.traces.evidence(c.req.param('runId'), c.req.param('testId'), c.req.query('platform'), file);
+      const headers: Record<string, string> = {
+        'content-type': r.contentType,
+        'x-content-type-options': 'nosniff',
+        'content-security-policy': "default-src 'none'; sandbox",
+        'cache-control': 'private, max-age=86400',
+      };
+      if (c.req.query('download') === '1') headers['content-disposition'] = `attachment; filename*=UTF-8''${encodeRfc5987(file)}`;
+      return new Response(new Uint8Array(r.bytes), { headers });
+    } catch (e) {
+      if (e instanceof TraceError) return c.json({ code: e.code, error: e.message }, e.status as 400);
+      throw e;
+    }
+  });
   app.get('/api/traces/:runId/:testId', async (c) => {
     try {
-      const r = await ctx.traces.read(c.req.param('runId'), c.req.param('testId'));
+      const r = await ctx.traces.read(c.req.param('runId'), c.req.param('testId'), c.req.query('platform'));
       return r.ok ? c.json(r.trace) : c.json({ code: r.reason, error: NO_TRACE_MESSAGE[r.reason] }, 404);
     } catch (e) {
       if (e instanceof TraceError) return c.json({ code: e.code, error: e.message }, e.status as 400);
@@ -374,7 +427,7 @@ export function createApp(ctx: ServerContext): Hono {
 
   app.get('/api/lint', async (c) => {
     const docs = await svc().docs.loadDocs();
-    return c.json([...(await svc().docs.lint(docs)), ...(await checkMocks(root, ctx.config, docs))]);
+    return c.json([...(await svc().docs.lint(docs)), ...(await checkMocks(root, ctx.config, docs)), ...(await checkTokens(root, ctx.config)), ...(await (await import('@ddv/evidence/check')).checkEvidence(root, ctx.config, docs)), ...(await (await import('@ddv/desktop/check')).checkDesktopNames(root, ctx.config, docs))]);
   });
   app.post('/api/mocks/scaffold', async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as { mock?: unknown };
@@ -515,3 +568,6 @@ export function createApp(ctx: ServerContext): Hono {
 
   return app;
 }
+
+/** RFC 5987 `ext-value` of a file name. */
+export const encodeRfc5987 = (s: string) => encodeURIComponent(s).replace(/['()*]/g, (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`);

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { TraceResponse } from '../api.ts';
-import { workspace } from '../backend/index.ts';
+import { parseResultKey } from '@ddv/services';
+import { api, workspace } from '../backend/index.ts';
+import { baseName } from '../evidence-view.ts';
 import { ApiError } from '../backend/types.ts';
 import {
   actionsApi,
@@ -19,6 +21,7 @@ import { GateReason, useGate } from '../gate.tsx';
 import { actionsHref, useApp, viewHref } from '../state.tsx';
 import { StatusBadge } from './StatusBadge.tsx';
 import { TraceView } from './TraceView.tsx';
+import type { EvidenceLoader } from './EvidencePanel.tsx';
 
 /** Screen texts (actions-run.md「画面」). */
 export const ACTIONS_TEXT = {
@@ -776,17 +779,29 @@ function DetailView({ id, status }: { id: string; status: ActionsStatus }) {
 function ActionsTrace({ id, testId }: { id: string; testId: string }) {
   const load = useCallback(
     () =>
-      actionsApi
-        .file(id, `traces/${testId}.json`)
-        .then((u) => fetch(u))
-        .then(async (r) => {
-          if (!r.ok) throw new ApiError('トレースがありません', r.status, 'missing');
-          return (await r.json()) as TraceResponse;
-        }),
+      actionsApi.blob(id, `traces/${testId}.json`).then(
+        async (b) => JSON.parse(await b.text()) as TraceResponse,
+        (e: { status?: number }) => {
+          throw new ApiError('トレースがありません', e.status ?? 404, 'missing');
+        },
+      ),
     [id, testId],
   );
   const shotUrl = useCallback((n: number) => actionsApi.file(id, `traces/${testId}/${n}.png`), [id, testId]);
-  return <TraceView runId={id} testId={testId} load={load} shotUrl={shotUrl} backHref={actionsHref(`runs/${encodeURIComponent(id)}`)} />;
+  const evidence = useCallback<EvidenceLoader>(
+    (f, signal) => {
+      // Pages: through the backend (path check, 100MB cache, pruned when the results branch dropped it).
+      if (api.edition === 'pages') {
+        const k = parseResultKey(testId);
+        return api.evidence(id, k.testId, k.platform, baseName(f.path), signal);
+      }
+      return actionsApi.blob(id, `traces/${f.path}`).catch(() => {
+        throw new ApiError('古い実行のため証跡は削除されました', 404, 'pruned');
+      });
+    },
+    [id, testId],
+  );
+  return <TraceView runId={id} testId={testId} load={load} shotUrl={shotUrl} evidence={evidence} backHref={actionsHref(`runs/${encodeURIComponent(id)}`)} />;
 }
 
 /** An image of the results branch (the URL resolves asynchronously: Pages makes `blob:` URLs). */

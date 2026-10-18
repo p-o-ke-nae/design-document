@@ -43,6 +43,11 @@ export class MemoryDb {
     return [...this.tables.values()];
   }
 
+  /** Copies of all tables in definition order (`window.__ddv.dump()`; evidence `db: mock`). */
+  dump(): Array<{ name: string; key: string; rows: Row[] }> {
+    return this.all().map((t) => ({ name: t.name, key: t.key, rows: structuredClone(t.rows) }));
+  }
+
   /** Creates the table (key `id`) when it does not exist. */
   ensure(name: string, key = 'id'): Table {
     let t = this.tables.get(name);

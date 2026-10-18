@@ -12,6 +12,7 @@ const browserEntries: Record<string, string> = {
   '@ddv/core': 'core/src/index.ts',
   '@ddv/github': 'github/src/browser.ts',
   '@ddv/graph': 'graph/src/index.ts',
+  '@ddv/evidence/spec': 'evidence/src/spec.ts',
   '@ddv/mock/browser': 'mock/src/browser-safe.ts',
   '@ddv/mock/yaml-patch': 'mock/src/yaml-patch.ts',
   '@ddv/testid/core': 'testid/src/core.ts',

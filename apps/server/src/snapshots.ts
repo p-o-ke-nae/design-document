@@ -10,6 +10,7 @@ import {
   mocksRootOf,
   parseScenarioFile,
   runScenario,
+  stepApplies,
   startStaticServer,
   type CompareStatus,
   type Scenario,
@@ -46,6 +47,8 @@ export interface SnapshotMeta {
 export interface StepSnapshot {
   step: number;
   status: SnapStatus;
+  /** Not run on the web (`only:`), so never captured. */
+  skipped?: true;
   diffRatio?: number;
   warnings: string[];
   images: { baseline?: string; current?: string; diff?: string };
@@ -269,7 +272,8 @@ export class SnapshotService {
       }
       const r = results.get(step);
       const status: SnapStatus = images.current && r ? r.status : 'None';
-      steps.push({ step, status, ...(status !== 'None' && r?.diffRatio !== undefined ? { diffRatio: r.diffRatio } : {}), warnings: status !== 'None' ? warnings : [], images });
+      const skipped = scenario?.steps[step - 1] !== undefined && !stepApplies(scenario.steps[step - 1], 'web');
+      steps.push({ step, status, ...(skipped ? { skipped: true as const } : {}), ...(status !== 'None' && r?.diffRatio !== undefined ? { diffRatio: r.diffRatio } : {}), warnings: status !== 'None' ? warnings : [], images });
     }
     return { id, ...(cur?.browser ?? base?.browser ? { browser: cur?.browser ?? base?.browser } : {}), ...(cur?.takenAt ? { takenAt: cur.takenAt } : {}), steps };
   }

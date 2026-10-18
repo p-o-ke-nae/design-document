@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useReducer } from 'react';
+import { useCallback, useEffect, useMemo, useReducer } from 'react';
 import type { TraceResponse } from '../api.ts';
 import { api } from '../backend/index.ts';
 import { ApiError } from '../backend/types.ts';
 import { viewHref } from '../state.tsx';
 import { acceptsArrowKeys, goBack, reduceTraceView, shortSha, startTrace } from '../trace-view.ts';
 import { TraceStepDetail, TraceTimeline } from './TraceStepDetail.tsx';
+import { baseName } from '../evidence-view.ts';
+import type { EvidenceLoader } from './EvidencePanel.tsx';
 
 const fmtAt = (iso: string) => {
   const d = new Date(iso);
@@ -15,14 +17,20 @@ const fmtAt = (iso: string) => {
 export function TraceView({
   runId,
   testId,
+  platform,
   load,
   shotUrl,
+  evidence,
   backHref,
 }: {
   runId: string;
   testId: string;
+  /** `?platform=` (none = web). */
+  platform?: string;
   load?: () => Promise<TraceResponse>;
   shotUrl?: (n: number) => Promise<string>;
+  /** Reads evidence bodies (none = `Backend.evidence`). */
+  evidence?: EvidenceLoader;
   backHref?: string;
 }) {
   const [state, dispatch] = useReducer(reduceTraceView, { runId, testId }, startTrace);
@@ -31,13 +39,13 @@ export function TraceView({
     const key = { runId, testId };
     dispatch({ type: 'open', key });
     let alive = true;
-    (load ? load() : api.trace(runId, testId))
+    (load ? load() : api.trace(runId, testId, platform))
       .then((trace) => alive && dispatch({ type: 'fetched', key, trace }))
       .catch((e: Error) => alive && dispatch({ type: 'fetched', key, code: e instanceof ApiError ? (e.code ?? String(e.status)) : 'error', message: e.message }));
     return () => {
       alive = false;
     };
-  }, [runId, testId, load]);
+  }, [runId, testId, platform, load]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -51,11 +59,13 @@ export function TraceView({
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  const defaultEvidence = useCallback<EvidenceLoader>((f, signal) => api.evidence(runId, testId, platform, baseName(f.path), signal), [runId, testId, platform]);
+
   const back = () => goBack(backHref ?? viewHref('tests'));
 
   const current = state.kind !== 'Loading' && state.kind !== 'None' ? state.trace.steps.find((s) => s.index === state.selected) : undefined;
   const shotIndex = current?.screenshot ? current.index : -1;
-  const shot = useMemo(() => (shotIndex >= 0 ? (shotUrl ? shotUrl(shotIndex) : api.traceShot(runId, testId, shotIndex)) : null), [runId, testId, shotIndex, shotUrl]);
+  const shot = useMemo(() => (shotIndex >= 0 ? (shotUrl ? shotUrl(shotIndex) : api.traceShot(runId, testId, shotIndex, platform)) : null), [runId, testId, platform, shotIndex, shotUrl]);
 
   if (state.kind === 'Loading')
     return (
@@ -80,6 +90,7 @@ export function TraceView({
   const steps = trace.steps;
   const at = steps.findIndex((s) => s.index === selected);
   const step = at >= 0 ? steps[at] : null;
+  const shownPlatform = trace.platform ?? 'web';
   return (
     <div className="tests-page trace-view" data-testid="trace-view">
       <div className="trace-head">
@@ -94,6 +105,9 @@ export function TraceView({
             {fmtAt(trace.startedAt)}
             {trace.commit ? `・${shortSha(trace.commit)}${trace.dirty ? '（未コミットの変更あり）' : ''}` : ''}・{trace.target === 'app' ? '実アプリ' : 'モック'}・{(trace.durationMs / 1000).toFixed(1)}s
           </span>
+        </span>
+        <span data-testid="trace-platform" className="badge" data-platform={shownPlatform}>
+          {shownPlatform}
         </span>
         <span data-testid="trace-status" data-status={trace.status} className={`badge st-${trace.status}`}>
           {trace.status === 'failed' ? (trace.failedStep && trace.failedStep >= 1 ? `失敗：ステップ ${trace.failedStep}` : '失敗：開始前') : '成功'}
@@ -117,7 +131,7 @@ export function TraceView({
             </button>
           </div>
         </div>
-        <div className="trace-main">{step && <TraceStepDetail step={step} shotUrl={step.screenshot ? shot : null} />}</div>
+        <div className="trace-main">{step && <TraceStepDetail step={step} shotUrl={step.screenshot ? shot : null} desktop={shownPlatform !== 'web'} evidence={evidence ?? defaultEvidence} />}</div>
       </div>
     </div>
   );

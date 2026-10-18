@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { RunnerConfig } from '@ddv/core';
 import { safeJoin } from '@ddv/core/node';
+import type { Platform } from '@ddv/mock/platform';
 import { TRACE_DIR_ENV } from '@ddv/mock/trace-format';
 import type { TestLink } from '@ddv/testid';
 import { TRACES_DIR } from './prune.ts';
@@ -17,6 +18,12 @@ export interface CaseResult {
   message?: string;
   runner: string;
   test: string;
+  /** Absent for web and for runners without a platform (platform-results.md). */
+  platform?: Platform;
+  /** Evidence records other than `skipped` (absent = none; evidence-trace.md「記録への追加」). */
+  evidence?: number;
+  /** `warn` / `failed` evidence records (absent = none). */
+  evidenceWarnings?: number;
 }
 
 export interface RawResult {
@@ -139,6 +146,16 @@ export function buildInvocation(repoRoot: string, runner: RunnerConfig, ids: str
         .replaceAll('{ids}', (ids ?? []).join(' '))
         .replaceAll('{junit}', JSON.stringify(reportPath));
       return { command: cmd, args: [], shell: true, reportPath, reportType: 'junit' };
+    }
+    case 'flaui': {
+      // The server's own CLI runs the desktop scenarios (flaui-driver.md「サーバ・CI からの起動」).
+      const reportPath = path.join(reportDir, `${runner.name}.xml`);
+      const cli = path.join(import.meta.dirname, 'cli.ts');
+      const args = [...process.execArgv, cli, 'desktop', 'run', '--runner', runner.name, '--junit', reportPath];
+      if (ids?.length) args.push('--ids', ids.join(','));
+      const env: Record<string, string> = {};
+      if (runId) env[TRACE_DIR_ENV] = path.join(repoRoot, TRACES_DIR, runId);
+      return { command: process.execPath, args, shell: false, reportPath, reportType: 'junit', env };
     }
   }
 }

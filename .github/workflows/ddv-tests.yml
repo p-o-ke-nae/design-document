@@ -48,6 +48,8 @@ env:
   DDV_MAX_RUNS: '200'        # 保持する実行の数（0 で無制限）
   DDV_MAX_DAYS: '90'         # 保持する日数（0 で無制限）
   DDV_MAX_TRACE_RUNS: '20'   # トレース・スナップショットを残す実行の数（0 で無制限）
+  DDV_EVIDENCE_MAX_BYTES: '5242880'    # 結果ブランチに置く証跡 1 つの上限（バイト）
+  DDV_EVIDENCE_MAX_TOTAL: '52428800'   # 結果ブランチに置く証跡の 1 回の実行の合計の上限（バイト）
   NODE_VERSION: '20'
 
 jobs:
@@ -60,6 +62,8 @@ jobs:
       DDV_IDS: ${{ inputs.ids }}
       DDV_RUNNER: ${{ inputs.runner }}
       DDV_SHA: ${{ inputs.sha }}
+      # 証跡で実アプリの DB を読むときは、接続文字列を secrets から渡す（ddv.config.yaml の evidence.databases の env と同じ名前）
+      # DDV_DB_APP: ${{ secrets.DDV_DB_APP }}
     steps:
       - name: 対象のコミットを取得
         uses: actions/checkout@v5
@@ -96,6 +100,7 @@ jobs:
           npm --prefix ddv run --silent ddv -- ci run
           --repo "$GITHUB_WORKSPACE/repo" --out "$RUNNER_TEMP/ddv-out"
           --request "$DDV_REQUEST" --sha "$DDV_SHA" --ids "$DDV_IDS" --runner "$DDV_RUNNER"
+          --evidence-max-bytes "$DDV_EVIDENCE_MAX_BYTES" --evidence-max-total "$DDV_EVIDENCE_MAX_TOTAL"
       - name: 結果ブランチへ保存（ddv ci publish）
         if: ${{ !cancelled() && steps.run.outcome != 'skipped' }}
         env:

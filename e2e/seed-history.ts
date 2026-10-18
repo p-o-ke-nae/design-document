@@ -109,3 +109,117 @@ const traceRun = (id: string, minutesAgo: number, testId: string, traces?: strin
   };
 };
 for (const r of [traceRun('e2e-trace-0', 2, OLD_ID), traceRun(TRACE_RUN, 1, TRACE_ID, [TRACE_ID])]) writeFileSync(path.join(dir, `${r.id}.json`), JSON.stringify(r, null, 2), 'utf8');
+
+// Desktop run e2e: e2e-desk-1 has the wpf result (with its trace) of P005 (desktop-run.md「結果の表示」).
+const DESK_ID = 'BD-ORDER-SCREEN-P005';
+const DESK_RUN = 'e2e-desk-1';
+const DESK_KEY = `${DESK_ID}@wpf`;
+rmSync(path.join(tracesDir, DESK_RUN), { recursive: true, force: true });
+mkdirSync(path.join(tracesDir, DESK_RUN, DESK_KEY), { recursive: true });
+writeFileSync(path.join(tracesDir, DESK_RUN, DESK_KEY, '1.png'), PNG);
+const deskStep = (index: number, event: string, before: string, after: string, extra: Record<string, unknown> = {}) => ({
+  index,
+  event,
+  screenBefore: before,
+  screenAfter: after,
+  expects: [{ kind: 'screen', key: '', expected: after, actual: after, ok: true }],
+  ok: true,
+  durationMs: 500,
+  calls: [],
+  db: null,
+  ...extra,
+});
+const deskTrace = {
+  version: 1,
+  runId: DESK_RUN,
+  testId: DESK_ID,
+  title: `[${DESK_ID}] 注文の流れ（WPF）`,
+  mock: 'order',
+  target: 'app',
+  platform: 'wpf',
+  startedAt: traceAt,
+  durationMs: 2100,
+  status: 'passed',
+  steps: [deskStep(1, '新規', 'List', 'Input', { click: 'new', screenshot: `${DESK_KEY}/1.png` }), deskStep(2, '', 'Input', 'Input', { only: ['web'], skipped: true, expects: [], durationMs: 0 })],
+};
+writeFileSync(path.join(tracesDir, DESK_RUN, `${DESK_KEY}.json`), JSON.stringify(deskTrace, null, 2), 'utf8');
+const deskAt = new Date(now - 30_000).toISOString();
+const deskRun = {
+  id: DESK_RUN,
+  kind: 'test',
+  startedAt: deskAt,
+  finishedAt: deskAt,
+  status: 'passed',
+  request: { ids: [DESK_ID], runners: ['wpf'] },
+  runners: [{ name: 'wpf', command: 'seed', exitCode: 0 }],
+  results: { [DESK_KEY]: { status: 'passed', durationMs: 2100, runner: 'wpf', test: `[${DESK_ID}] seeded`, platform: 'wpf' } },
+  log: [],
+  commit: COMMIT,
+  dirty: false,
+  traces: [DESK_KEY],
+};
+writeFileSync(path.join(dir, `${DESK_RUN}.json`), JSON.stringify(deskRun, null, 2), 'utf8');
+
+// Evidence view e2e: e2e-evidence-1 is a passed P004 whose steps have evidence (evidence-trace.md「画面」).
+const EV_ID = 'BD-ORDER-SCREEN-P004';
+const EV_RUN = 'e2e-evidence-1';
+const evDir = path.join(tracesDir, EV_RUN, EV_ID, 'evidence');
+rmSync(path.join(tracesDir, EV_RUN), { recursive: true, force: true });
+mkdirSync(evDir, { recursive: true });
+const ORDERS = JSON.stringify({ columns: ['id', 'customer', 'card_no', 'note'], rows: [[1, '山田 太郎', '****', 'a,"b"']] });
+writeFileSync(path.join(evDir, '1-after-1-screen.png'), PNG);
+writeFileSync(path.join(evDir, '1-after-2-orders.table.json'), ORDERS, 'utf8');
+const evFile = (name: string, kind: string, mime: string, bytes: number) => ({ path: `${EV_ID}/evidence/${name}`, kind, mime, bytes });
+const evidenceTrace = {
+  version: 1,
+  runId: EV_RUN,
+  testId: EV_ID,
+  title: `[${EV_ID}] 注文の確定（証跡）`,
+  mock: 'order',
+  target: 'mock',
+  startedAt: traceAt,
+  durationMs: 3000,
+  status: 'passed',
+  steps: [
+    {
+      ...deskStep(1, '新規', 'List', 'Input', { click: 'new', calls: [], db: [] }),
+      evidence: [
+        { seq: 1, label: '入力画面', use: 'screenshot', at: 'after', provider: 'builtin', status: 'ok', durationMs: 40, files: [evFile('1-after-1-screen.png', 'image', 'image/png', PNG.length)] },
+        {
+          seq: 2,
+          label: '注文表',
+          use: 'db',
+          at: 'after',
+          provider: 'builtin',
+          status: 'ok',
+          durationMs: 25,
+          db: { name: 'main', type: 'sqlite' },
+          totalRows: 1,
+          masked: ['card_no'],
+          files: [evFile('1-after-2-orders.table.json', 'table', 'application/json', Buffer.byteLength(ORDERS))],
+        },
+      ],
+    },
+    {
+      ...deskStep(2, '次へ [入力OK]', 'Input', 'Confirm', { click: 'next', calls: [], db: [] }),
+      evidence: [{ seq: 1, label: '監査ログ', use: 'audit', at: 'after', provider: 'hooks', status: 'failed', reason: 'connect ECONNREFUSED', durationMs: 5, files: [] }],
+    },
+  ],
+};
+writeFileSync(path.join(tracesDir, EV_RUN, `${EV_ID}.json`), JSON.stringify(evidenceTrace, null, 2), 'utf8');
+const evAt = new Date(now - 20_000).toISOString();
+const evRun = {
+  id: EV_RUN,
+  kind: 'test',
+  startedAt: evAt,
+  finishedAt: evAt,
+  status: 'passed',
+  request: { ids: [EV_ID] },
+  runners: [{ name: 'e2e', command: 'seed', exitCode: 0 }],
+  results: { [EV_ID]: { status: 'passed', durationMs: 3000, runner: 'e2e', test: `[${EV_ID}] seeded`, evidence: 3, evidenceWarnings: 1 } },
+  log: [],
+  commit: COMMIT,
+  dirty: false,
+  traces: [EV_ID],
+};
+writeFileSync(path.join(dir, `${EV_RUN}.json`), JSON.stringify(evRun, null, 2), 'utf8');

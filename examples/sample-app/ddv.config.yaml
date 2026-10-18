@@ -29,3 +29,16 @@ runners:
     level: integration
     include: ['e2e/**/*.spec.ts']
     scenarios: true
+  # デスクトップ（Windows だけ。desktop/ を dotnet build してから。desktop/README.md）
+  - name: wpf
+    type: flaui
+    platform: wpf
+    level: integration
+    app: { path: desktop/OrderApp.Wpf/bin/Debug/net8.0-windows/OrderApp.Wpf.exe }
+    source: desktop/OrderApp.Wpf
+  - name: winforms
+    type: flaui
+    platform: winforms
+    level: integration
+    app: { path: desktop/OrderApp.WinForms/bin/Debug/net8.0-windows/OrderApp.WinForms.exe }
+    source: desktop/OrderApp.WinForms

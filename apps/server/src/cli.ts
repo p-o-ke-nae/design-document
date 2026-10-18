@@ -18,6 +18,8 @@ import { RecentFolders } from './recent.ts';
 import { formatReviewText, parseReviewArgs, ReviewCliError, reviewComments } from './review-cli.ts';
 import { parseServeArgs, ServeArgsError, type ServeArgs } from './serve-args.ts';
 import { SnapshotService } from './snapshots.ts';
+import { TOKENS_HELP, tokensCommand } from './tokens-cli.ts';
+import { DESKTOP_HELP } from '@ddv/desktop/cli';
 import { cleanWorkspaces, OpenRequestError, WorkspaceManager } from './workspaces.ts';
 
 const HELP = `ddv - Design Doc Viewer
@@ -45,6 +47,12 @@ const HELP = `ddv - Design Doc Viewer
       シナリオを再生して各ステップの画面を撮影し、基準画像と比較します（--id 省略時は全シナリオ）
       --approve: 今回の撮影結果を基準として承認します（.ddv/snapshots/baseline/ へコピー）
       ブラウザは mock.browser.channel（環境変数 DDV_BROWSER_CHANNEL で上書き可）
+  ${TOKENS_HELP}
+  ${DESKTOP_HELP}
+  ddv evidence list [--repo <path>] [--json]
+      使える取得手段（組み込み・hooks・外部コマンド）と引数、接続先（名前・種類・環境変数の有無）を表示します
+  ddv evidence try <名前> [--repo <path>] [--with key=value ...] [--db <接続先>] [--out <dir>] [--timeout <ms>]
+      1 つの取得手段をその場で実行し、結果の種類・ファイル・大きさ・時間を表示します（画面の操作はしません）
       ${CI_HELP}
 環境変数:
   DDV_HOME          キャッシュ・ワークスペースの置き場所（既定: ~/.ddv）
@@ -111,6 +119,7 @@ async function mockCommand(argv: string[]) {
   for (const w of r.warnings) console.warn(`! ${w}`);
   for (const s of r.skipped) console.warn(`! 形式が不正なため更新しませんでした: ${s}`);
   console.log(`対象モック: ${r.mocks.join(', ') || 'なし'}`);
+  for (const n of r.notes) console.log(n);
   console.log(`追加: ${r.added}、更新: ${r.updated}、欠番: ${r.retired}、変更なし: ${r.unchanged}、要確認: ${r.todo}`);
 }
 
@@ -189,6 +198,21 @@ async function main(argv: string[]) {
   }
   if (cmd === 'review') {
     await reviewCommand(argv.slice(1));
+    return;
+  }
+  if (cmd === 'tokens') {
+    process.exitCode = await tokensCommand(argv.slice(1), { out: (l) => console.log(l), err: (l) => console.error(l), cwd: process.cwd(), help: HELP });
+    return;
+  }
+  if (cmd === 'evidence') {
+    // Loaded on demand (the hooks scan reads the TypeScript parser).
+    const { evidenceCommand } = await import('@ddv/evidence/cli');
+    process.exitCode = await evidenceCommand(argv.slice(1), { out: (l) => console.log(l), err: (l) => console.error(l), cwd: process.cwd(), help: HELP });
+    return;
+  }
+  if (cmd === 'desktop') {
+    const { desktopCommand } = await import('@ddv/desktop/cli');
+    process.exitCode = await desktopCommand(argv.slice(1), { out: (l) => console.log(l), err: (l) => console.error(l), cwd: process.cwd(), help: HELP, loadConfig });
     return;
   }
   if (cmd === 'actions' || cmd === 'ci') {

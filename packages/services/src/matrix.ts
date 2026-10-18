@@ -4,6 +4,7 @@ import {
   docMatrices,
   isScenarioLinkFile,
   linksInText,
+  linksScenarios,
   LOCK_PATH,
   parseLock,
   runnerFileFilter,
@@ -15,6 +16,7 @@ import {
 } from '@ddv/testid/core';
 import type { LatestResult, LatestResults } from './history.ts';
 import type { RepoReader } from './repo-reader.ts';
+import { PlatformResults, type Platform } from './result-key.ts';
 
 /** `scanTestLinks` over a `RepoReader`. */
 export async function scanTestLinksIn(reader: RepoReader, config: DdvConfig): Promise<TestLink[]> {
@@ -22,7 +24,7 @@ export async function scanTestLinksIn(reader: RepoReader, config: DdvConfig): Pr
   const links: TestLink[] = [];
   for (const r of config.runners) {
     for (const file of await reader.listFiles(r.cwd, runnerFileFilter(r))) links.push(...linksInText(await reader.readText(file), file, r, re));
-    if (r.type === 'playwright' && r.scenarios)
+    if (linksScenarios(r))
       for (const file of await reader.listFiles(config.mocksRoot, isScenarioLinkFile)) links.push(...scenarioLinksInText(await reader.readText(file), file, r, re));
   }
   return links;
@@ -45,6 +47,8 @@ export interface TestCaseRow {
   level: 'unit' | 'integration';
   links: TestLink[];
   latest: LatestResult | null;
+  /** Platform → latest result (all platforms with a result, web included). `latest` stays the web one. */
+  latestByPlatform: Partial<Record<Platform, LatestResult>>;
 }
 
 export interface TestsResponse {
@@ -93,7 +97,15 @@ export class MatrixService {
     const byId = linkIndex(links);
     const unitPrefix = `${config.idPrefix.detailed}-`;
     // Design level of the case: detailed-design ids are unit tests, requirement/basic-design ids are integration tests.
-    const cases = [...ids].map(([id, v]) => ({ id, ...v, level: id.startsWith(unitPrefix) ? ('unit' as const) : ('integration' as const), links: byId[id] ?? [], latest: latest[id] ?? null }));
+    const byTest = PlatformResults.byTest(latest);
+    const cases = [...ids].map(([id, v]) => ({
+      id,
+      ...v,
+      level: id.startsWith(unitPrefix) ? ('unit' as const) : ('integration' as const),
+      links: byId[id] ?? [],
+      latest: latest[id] ?? null,
+      latestByPlatform: byTest.get(id) ?? {},
+    }));
     const unknown = links.filter((l) => !ids.has(l.id));
     return { cases, unknown, runners: config.runners.map((r) => ({ name: r.name, type: r.type, level: r.level, cwd: r.cwd })) };
   }

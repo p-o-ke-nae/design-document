@@ -3,6 +3,7 @@ import { HistoryError } from './errors.ts';
 import type { CoverageService } from './coverage.ts';
 import type { TraceService } from './traces.ts';
 import { latestOf, mergeRunRecords, sourceOf } from './actions/merge.ts';
+import { parseResultKey, resultKey, type Platform } from './result-key.ts';
 
 export { HistoryError };
 
@@ -14,6 +15,12 @@ export interface CaseResult {
   message?: string;
   runner: string;
   test: string;
+  /** Absent for web and for runners without a platform (platform-results.md). */
+  platform?: Platform;
+  /** Evidence records other than `skipped` (absent = none; evidence-trace.md「記録への追加」). */
+  evidence?: number;
+  /** `warn` / `failed` evidence records (absent = none). */
+  evidenceWarnings?: number;
 }
 
 export type RunKind = 'test' | 'snapshot' | 'deps';
@@ -41,7 +48,7 @@ export interface RunRecord {
   startedAt: string;
   finishedAt?: string;
   status: 'running' | 'passed' | 'failed' | 'error';
-  request: { ids?: string[]; runner?: string };
+  request: { ids?: string[]; runner?: string; runners?: string[] };
   runners: Array<{ name: string; command: string; exitCode: number | null; error?: string }>;
   results: Record<string, CaseResult>;
   log: string[];
@@ -108,6 +115,9 @@ export interface HistoryEntry {
 }
 
 export interface TestSummary {
+  /** Test id and platform of the result key (the key of `HistorySummary.tests`). */
+  testId: string;
+  platform: Platform;
   recent: RecentMark[];
   /** Newest entries of `recent` (same order) for the dot tooltips. */
   recentAt: Array<{ at: string; commit?: string; dirty?: boolean; source?: RunSource } | null>;
@@ -123,6 +133,8 @@ export interface HistorySummary {
 
 export interface TestHistory {
   id: string;
+  /** Present when not web. */
+  platform?: Platform;
   /** false when the id is not active in the lock (retired or unknown). */
   known: boolean;
   doc?: string;
@@ -352,6 +364,7 @@ export class HistoryService {
       const commits = flakyCommits(entries);
       if (commits.length) flakyCount++;
       tests[id] = {
+        ...parseResultKey(id),
         recent: recentMarks(entries),
         recentAt: Array.from({ length: 10 }, (_, i) => (entries[i] ? { at: entries[i].at, commit: entries[i].commit, dirty: entries[i].dirty, ...(entries[i].source ? { source: entries[i].source } : {}) } : null)),
         flaky: commits.length > 0,
@@ -363,17 +376,20 @@ export class HistoryService {
     return s;
   }
 
-  async test(id: string): Promise<TestHistory> {
+  /** History of one test on one platform (absent = web): the entries of its result key. */
+  async test(testId: string, platform?: string | null): Promise<TestHistory> {
+    if (platform && platform !== 'web' && platform !== 'wpf' && platform !== 'winforms') throw new HistoryError(400, 'bad-platform', '不明なプラットフォームです');
+    const id = resultKey(testId, (platform || undefined) as Platform | undefined);
     const lock = await this.lock();
-    const info = activeIds(lock).get(id);
+    const info = activeIds(lock).get(testId);
     const runs = this.runs();
     const present = new Set<string>();
     // Actions rows: listed in `traces` is enough (a pruned file answers 404 when opened).
     for (const r of runs) if (r.results[id] && r.traces?.includes(id) && (r.source === 'actions' || (await this.traces.exists(r.id, id)))) present.add(r.id);
     const entries = entriesOf(runs, id, (runId) => present.has(runId));
     if (this.actionsRepo) for (const e of entries) if (e.actionsRunId) e.actionsUrl = `https://github.com/${this.actionsRepo}/actions/runs/${e.actionsRunId}`;
-    if (!info && !entries.length) throw new HistoryError(404, 'unknown-id', `テストIDが見つかりません: ${id}`);
-    const h: TestHistory = { id, known: !!info, entries, changed: changedRows(entries), flakyCommits: flakyCommits(entries) };
+    if (!info && !entries.length) throw new HistoryError(404, 'unknown-id', `テストIDが見つかりません: ${testId}`);
+    const h: TestHistory = { id: testId, ...(id !== testId ? { platform: parseResultKey(id).platform } : {}), known: !!info, entries, changed: changedRows(entries), flakyCommits: flakyCommits(entries) };
     if (info) Object.assign(h, { doc: info.doc, diagram: lock.diagrams[info.diagramKey]?.diagram, title: info.title });
     const ff = firstFailure(entries);
     if (ff) h.firstFailure = ff;
@@ -388,7 +404,7 @@ export class HistoryService {
       const commits = flakyCounts(entries);
       if (!commits.length) continue;
       const lastFail = entries.find((e) => isFail(e.status))!;
-      out.push({ id, doc: ids.get(id)?.doc ?? '', commits, lastFailedAt: lastFail.at, lastFailedRun: lastFail.runId });
+      out.push({ id, doc: ids.get(parseResultKey(id).testId)?.doc ?? '', commits, lastFailedAt: lastFail.at, lastFailedRun: lastFail.runId });
     }
     out.sort((a, b) => b.lastFailedAt.localeCompare(a.lastFailedAt) || a.id.localeCompare(b.id));
     this.cache.flaky = out;

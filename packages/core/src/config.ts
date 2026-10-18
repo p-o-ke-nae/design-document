@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const RunnerSchema = z.object({
   name: z.string(),
-  type: z.enum(['vitest', 'playwright', 'dotnet', 'command']),
+  type: z.enum(['vitest', 'playwright', 'dotnet', 'command', 'flaui']),
   /** Working directory relative to the repository root. */
   cwd: z.string().default('.'),
   level: z.enum(['unit', 'integration']).default('unit'),
@@ -12,7 +12,42 @@ export const RunnerSchema = z.object({
   command: z.string().optional(),
   /** Playwright runners: also link scenario YAML files under mocksRoot by their `id`. */
   scenarios: z.boolean().default(false),
+  /** Platform of the results (playwright: web; flaui: wpf / winforms). flaui-driver.md「設定」 */
+  platform: z.enum(['web', 'wpf', 'winforms']).optional(),
+  /** flaui: the application to start (path relative to the repository root). */
+  app: z.object({ path: z.string(), args: z.array(z.string()).default([]), cwd: z.string().optional() }).optional(),
+  /** flaui: where the screen definitions are. */
+  source: z.string().optional(),
+  /** flaui: wait limit in milliseconds. */
+  timeout: z.number().int().min(100).optional(),
+  automation: z.enum(['uia3', 'uia2']).optional(),
+}).superRefine((r, ctx) => {
+  if (r.type === 'flaui') {
+    if (r.platform !== 'wpf' && r.platform !== 'winforms') ctx.addIssue({ code: 'custom', path: ['platform'], message: `ランナー ${r.name}: type: flaui には platform: wpf か winforms が必要です` });
+    if (!r.app?.path) ctx.addIssue({ code: 'custom', path: ['app', 'path'], message: `ランナー ${r.name}: app.path（アプリの実行ファイル）が必要です` });
+    if (!r.source) ctx.addIssue({ code: 'custom', path: ['source'], message: `ランナー ${r.name}: source（画面定義の場所）が必要です` });
+  } else if (r.type === 'playwright' && r.platform !== undefined && r.platform !== 'web') {
+    ctx.addIssue({ code: 'custom', path: ['platform'], message: `ランナー ${r.name}: playwright の platform は web だけです` });
+  }
 });
+
+/** flaui runner defaults (flaui-driver.md「設定」). */
+export const FLAUI_DEFAULT_TIMEOUT = 5000;
+export const FLAUI_DEFAULT_AUTOMATION = 'uia3';
+
+/** Settings written for a runner type that does not use them (warning; they are ignored). */
+export function runnerWarnings(r: RunnerConfig): string[] {
+  const out: string[] = [];
+  const desktopOnly = (['app', 'source', 'timeout', 'automation'] as const).filter((k) => r[k] !== undefined);
+  if (r.type === 'flaui') {
+    for (const k of ['include', 'command'] as const) if (r[k] !== undefined) out.push(`ランナー ${r.name}: type: flaui では ${k} を使いません（無視します）`);
+    if (r.scenarios) out.push(`ランナー ${r.name}: type: flaui では scenarios を使いません（シナリオは常に紐づけます）`);
+  } else {
+    if (r.platform !== undefined && r.type !== 'playwright') out.push(`ランナー ${r.name}: platform は playwright・flaui だけで使います（無視します）`);
+    for (const k of desktopOnly) out.push(`ランナー ${r.name}: ${k} は type: flaui だけで使います（無視します）`);
+  }
+  return out;
+}
 
 export const ConfigSchema = z.object({
   docsRoot: z.string().default('docs'),
@@ -35,7 +70,8 @@ export const ConfigSchema = z.object({
     })
     .prefault({}),
   styles: z.array(z.string()).default([]),
-  tokens: z.array(z.string()).default([]),
+  /** Token sets (design tokens generated from the real app). Each item is validated separately by `parseTokenSets`. */
+  tokens: z.array(z.unknown()).default([]),
   runners: z.array(RunnerSchema).default([]),
   mock: z
     .object({
@@ -61,10 +97,132 @@ export const ConfigSchema = z.object({
       url: z.url({ protocol: /^https$/, error: 'pages.url は https:// で始まる URL を書いてください' }).transform((u) => u.replace(/\/+$/, '')),
     })
     .optional(),
+  /** 証跡の取得（evidence-runner.md#設定）。中身は @ddv/evidence/config の EvidenceConfigSchema で lint・実行時に検査する。 */
+  evidence: z.unknown().optional(),
 });
 
 export type DdvConfig = z.infer<typeof ConfigSchema>;
 export type RunnerConfig = z.infer<typeof RunnerSchema>;
+
+const TOKEN_SET_NAME = /^[a-z0-9][a-z0-9-]*$/;
+const TokenSetCommon = {
+  name: z.string().regex(TOKEN_SET_NAME, { error: (iss) => `tokens の name は小文字の英数字とハイフンで書いてください: ${String(iss.input)}` }),
+  sources: z.array(z.string().min(1)).min(1, { error: 'tokens の sources に 1 件以上のファイルを書いてください' }),
+  overrides: z
+    .record(z.string().regex(/^--/, { error: (iss) => `tokens の overrides のキーは -- で始めてください: ${String(iss.input)}` }), z.string())
+    .default({}),
+  out: z.string().optional(),
+  optional: z.boolean().default(false),
+};
+
+/** One item of `tokens` (discriminated by `kind`). */
+export const TokenSetSchema = z.discriminatedUnion('kind', [
+  z.object({
+    ...TokenSetCommon,
+    kind: z.literal('xaml'),
+    prefix: z.string().regex(/^[a-z][a-z0-9-]*$/, { error: (iss) => `tokens の prefix は小文字で始まる英数字とハイフンで書いてください: ${String(iss.input)}` }).optional(),
+    fontSizeKeys: z.array(z.string()).default([]),
+  }),
+  z.object({
+    ...TokenSetCommon,
+    kind: z.literal('css'),
+    classes: z.array(z.string().regex(/^[^.]/, { error: (iss) => `tokens の classes には先頭の . を付けないでください: ${String(iss.input)}` })).default([]),
+    elements: z.array(z.string()).default([]),
+  }),
+]);
+
+/** A validated token set with every field filled in (`out` resolved against mocksRoot). */
+export interface TokenSetConfig {
+  name: string;
+  kind: 'xaml' | 'css';
+  sources: string[];
+  prefix?: string;
+  fontSizeKeys: string[];
+  classes: string[];
+  elements: string[];
+  overrides: Record<string, string>;
+  out: string;
+  optional: boolean;
+}
+
+export interface TokenConfigIssue {
+  severity: 'error' | 'warning';
+  rule: 'tokens-config';
+  path: string;
+  message: string;
+}
+
+const KIND_ONLY: Record<'xaml' | 'css', string[]> = { xaml: ['prefix', 'fontSizeKeys'], css: ['classes', 'elements'] };
+
+function normalizeRel(p: string): string {
+  const out: string[] = [];
+  for (const seg of p.replace(/\\/g, '/').split('/')) {
+    if (seg === '' || seg === '.') continue;
+    if (seg === '..' && out.length && out[out.length - 1] !== '..') out.pop();
+    else out.push(seg);
+  }
+  return out.join('/');
+}
+
+/** Validates `config.tokens` item by item; invalid items are reported and left out. */
+export function parseTokenSets(config: DdvConfig, configPath = 'ddv.config.yaml'): { sets: TokenSetConfig[]; issues: TokenConfigIssue[] } {
+  const sets: TokenSetConfig[] = [];
+  const issues: TokenConfigIssue[] = [];
+  const add = (severity: 'error' | 'warning', message: string) => issues.push({ severity, rule: 'tokens-config', path: configPath, message });
+  const mocksRoot = normalizeRel(config.mocksRoot);
+  const seen = new Set<string>();
+  for (const raw of config.tokens) {
+    if (typeof raw === 'string') {
+      add('warning', `tokens の文字列の項目は使われなくなりました（無視します）: ${raw}`);
+      continue;
+    }
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      add('error', `tokens の項目はオブジェクトで書いてください: ${JSON.stringify(raw)}`);
+      continue;
+    }
+    const obj = raw as Record<string, unknown>;
+    if (obj.kind !== 'xaml' && obj.kind !== 'css') {
+      add('error', `tokens の kind は xaml か css です: ${obj.kind === undefined ? '（なし）' : String(obj.kind)}`);
+      continue;
+    }
+    const r = TokenSetSchema.safeParse(obj);
+    if (!r.success) {
+      const label = typeof obj.name === 'string' ? obj.name : '?';
+      for (const iss of r.error.issues) add('error', iss.message.startsWith('tokens の') ? iss.message : `tokens（${label}）の ${iss.path.join('.')}: ${iss.message}`);
+      continue;
+    }
+    const v = r.data;
+    const other = v.kind === 'xaml' ? 'css' : 'xaml';
+    for (const key of KIND_ONLY[other]) if (key in obj) add('warning', `kind: ${v.kind} では ${key} は使いません`);
+    if (seen.has(v.name)) {
+      add('error', `tokens の name が重複しています: ${v.name}`);
+      continue;
+    }
+    seen.add(v.name);
+    let out = `${mocksRoot}/_tokens/${v.name}.css`;
+    if (v.out !== undefined) {
+      const n = normalizeRel(v.out);
+      if (!n.endsWith('.css') || !n.startsWith(`${mocksRoot}/`) || n.split('/').includes('..') || /^[a-zA-Z]:|^\//.test(v.out)) {
+        add('error', `tokens の out は mocksRoot（${config.mocksRoot}）の下の .css にしてください: ${v.out}`);
+        continue;
+      }
+      out = n;
+    }
+    sets.push({
+      name: v.name,
+      kind: v.kind,
+      sources: v.sources,
+      prefix: v.kind === 'xaml' ? v.prefix : undefined,
+      fontSizeKeys: v.kind === 'xaml' ? v.fontSizeKeys : [],
+      classes: v.kind === 'css' ? v.classes : [],
+      elements: v.kind === 'css' ? v.elements : [],
+      overrides: v.overrides,
+      out,
+      optional: v.optional,
+    });
+  }
+  return { sets, issues };
+}
 
 export function parseConfig(raw: unknown): DdvConfig {
   return ConfigSchema.parse(raw ?? {});

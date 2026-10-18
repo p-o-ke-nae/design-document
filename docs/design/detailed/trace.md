@@ -48,6 +48,9 @@ traces: [BD-TRACE]
 | ステップのエラー | `trace-error` | メッセージ | — | — | 非表示 | `error` | — |
 | API | `api-calls` | 表 | — | — | — | `calls`（列：メソッド・パス・状態・所要時間。行を開くと要求と応答の本文。`truncated` なら「64KB で切り詰め」） | 0 件：「通信はありません」。`status` が 0：「失敗」、-1：「未完了」 |
 | DB の変化 | `db-diff` | 表 | — | — | — | `db`（テーブルごとに 追加・変更・削除の行。変更は項目ごとに 前 → 後 で、変わった項目だけ強調） | `[]`：「変化なし」、null：「対象外（実アプリ）」 |
+| 証跡 | `evidence-list` | 表 | — | — | — | `evidence`（ステップの詳細の末尾。項目・操作・表示は :ref[evidence-trace.md#トレース追加分]） | `evidence` が無い：節を出さない |
+
+- タイムラインの行の証跡の件数・警告の印、テスト結果の `evidence-count` も :ref[evidence-trace.md#画面] で扱う
 
 ### トレースなし
 
@@ -239,5 +242,6 @@ GitHub のワークスペースでは既存と同じく `/api/w/<ワークスペ
 |---|---|---|---|
 | GET | `/api/traces/{runId}/{testId}` | — | 200 `TraceFile` ＋ `commit`・`dirty`（実行記録から）。404 `{ code: NoTraceReason, error }`。400 形式違反 |
 | GET | `/api/traces/{runId}/{testId}/steps/{n}.png` | — | `image/png`（`Cache-Control: private, max-age=86400`）。無ければ 404 |
+| GET | `/api/traces/{runId}/{testId}/evidence/{file}` | `?platform=`・`?download=1` | 証跡の本体。検査・ヘッダ・エラーは :ref[evidence-trace.md#api] |
 | GET | `/api/runs/{id}` | — | 既存＋ `traces`（:ref[run-record.md#api]）と `traceOf: Record<テストID, boolean>`（ファイルが今もあるか） |
 | GET | `/api/results/latest` | — | 既存の各結果に `trace: boolean` を加える |

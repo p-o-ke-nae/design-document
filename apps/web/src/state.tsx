@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { emitActionsEvent, resetActionsEvents } from './actionsApi.ts';
 import { api, workspace } from './backend/index.ts';
 import { ApiError } from './backend/types.ts';
-import type { CaseResult, DdvConfig, DepsMissingDetail, HistorySummary, RunSummary } from './api.ts';
+import type { CaseResult, DdvConfig, DepsMissingDetail, HistorySummary, RunBody, RunSummary, Target } from './api.ts';
 import type { HrefView, Route } from './route.ts';
 
 export type { Route } from './route.ts';
@@ -51,7 +51,10 @@ export function parseHash(hash: string): Route {
   const hm = /^\/tests\/history\/([^/]+)$/.exec(p);
   if (hm) return { ws, view: 'tests', path: '', heading: '', sub: 'history', testId: decodeURIComponent(hm[1]) };
   const tm = /^\/tests\/trace\/([^/]+)\/([^/]+)$/.exec(p);
-  if (tm) return { ws, view: 'tests', path: '', heading: '', sub: 'trace', runId: decodeURIComponent(tm[1]), testId: decodeURIComponent(tm[2]) };
+  if (tm) {
+    const platform = params.get('platform');
+    return { ws, view: 'tests', path: '', heading: '', sub: 'trace', runId: decodeURIComponent(tm[1]), testId: decodeURIComponent(tm[2]), ...(platform ? { platform } : {}) };
+  }
   if (ws && p === '/review') return { ws, view: 'review', path: '', heading: '' };
   if (ws && p === '/review/done') return { ws, view: 'done', path: '', heading: '' };
   return { ws, view: 'doc', path: params.get('path') ?? '', heading: params.get('h') ?? '' };
@@ -85,9 +88,10 @@ export function flakyHref(): string {
 }
 
 /** Trace view of one test id in one run. */
-export function traceHref(runId: string, id: string): string {
-  if (codec) return codec.href({ view: 'tests', path: '', heading: '', sub: 'trace', runId, testId: id });
-  return `${wsBase()}/tests/trace/${encodeURIComponent(runId)}/${encodeURIComponent(id)}`;
+export function traceHref(runId: string, id: string, platform?: string): string {
+  const p = platform && platform !== 'web' ? platform : undefined;
+  if (codec) return codec.href({ view: 'tests', path: '', heading: '', sub: 'trace', runId, testId: id, ...(p ? { platform: p } : {}) });
+  return `${wsBase()}/tests/trace/${encodeURIComponent(runId)}/${encodeURIComponent(id)}${p ? `?platform=${encodeURIComponent(p)}` : ''}`;
 }
 
 /** PR review (`done` = after submitting). */
@@ -131,7 +135,9 @@ interface AppState {
   activeRun: RunSummary | null;
   runLog: string[];
   runError: string;
-  runTests(body: { ids?: string[]; runner?: string }): Promise<void>;
+  runTests(body: RunBody): Promise<void>;
+  /** Follows a test run already started by the caller (the target selection posts the request itself to show 400 / 409). */
+  followStarted(id: string, body: RunBody): void;
   /** Re-runs the failures of the latest run `times` times. Resolves to the error text ('' = started). */
   rerunTests(times: number): Promise<string>;
   /** Trend / flaky summary (refetched on file changes and at the end of each run). */
@@ -139,6 +145,8 @@ interface AppState {
   showMatrix: boolean;
   setShowMatrix(v: boolean): void;
   refreshResults(): void;
+  /** `GET /api/tests/targets` (refetched on file changes; [] when it fails). */
+  targets: Target[];
 }
 
 const Ctx = createContext<AppState | null>(null);
@@ -154,6 +162,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [repoName, setRepoName] = useState('');
   const [route, setRoute] = useState<Route>(() => parseRoute(location.hash));
   const [version, setVersion] = useState(0);
+  const [targets, setTargets] = useState<Target[]>([]);
   const [latest, setLatest] = useState<Record<string, CaseResult>>({});
   const [activeRun, setActiveRun] = useState<RunSummary | null>(null);
   const [runLog, setRunLog] = useState<string[]>([]);
@@ -242,7 +251,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [follow]);
 
   const runTests = useCallback(
-    async (body: { ids?: string[]; runner?: string }) => {
+    async (body: RunBody) => {
       setRunError('');
       let id: string;
       try {
@@ -255,6 +264,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
       }
       await follow({ id, startedAt: new Date().toISOString(), status: 'running', request: body, runners: [], results: {}, total: 0 });
+    },
+    [follow],
+  );
+  useEffect(() => {
+    let alive = true;
+    api
+      .targets()
+      .then((r) => alive && setTargets(r.targets))
+      .catch(() => alive && setTargets([]));
+    return () => {
+      alive = false;
+    };
+  }, [version]);
+
+  const followStarted = useCallback(
+    (id: string, body: RunBody) => {
+      setRunError('');
+      void follow({ id, startedAt: new Date().toISOString(), status: 'running', request: body, runners: [], results: {}, total: 0 });
     },
     [follow],
   );
@@ -289,8 +316,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [version]);
 
   const value = useMemo<AppState>(
-    () => ({ config, repoName, route, version, latest, activeRun, runLog, runError, runTests, rerunTests, history, showMatrix, setShowMatrix, refreshResults }),
-    [config, repoName, route, version, latest, activeRun, runLog, runError, runTests, rerunTests, history, showMatrix, setShowMatrix, refreshResults],
+    () => ({ config, repoName, route, version, latest, activeRun, runLog, runError, runTests, followStarted, rerunTests, history, showMatrix, setShowMatrix, refreshResults, targets }),
+    [config, repoName, route, version, latest, activeRun, runLog, runError, runTests, followStarted, rerunTests, history, showMatrix, setShowMatrix, refreshResults, targets],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -13,9 +13,11 @@ export interface Route {
   testId?: string;
   /** Tests tab, `trace`: the run id. */
   runId?: string;
+  /** Tests tab, `trace`: `?platform=` (wpf / winforms; none = web). */
+  platform?: string;
   /** Pages edition: `view=diff` (open the PR diff of the document). */
   diff?: boolean;
 }
 
 /** The part of a route an href points at (`state.tsx` helpers; Pages: `formatHostedHash`). */
-export type HrefView = Pick<Route, 'view' | 'path' | 'heading' | 'sub' | 'actions' | 'testId' | 'runId' | 'diff'>;
+export type HrefView = Pick<Route, 'view' | 'path' | 'heading' | 'sub' | 'actions' | 'testId' | 'runId' | 'platform' | 'diff'>;

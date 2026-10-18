@@ -3,7 +3,8 @@ import { splitLabel } from '@ddv/graph';
 import type { DdvConfig, DocEntry, LintIssue } from '@ddv/core';
 import type { TestIdLock } from '@ddv/testid/core';
 import type { MockModel } from './analyze.ts';
-import { ScreenMapSchema, SCREEN_MAP_FILE } from './map.ts';
+import { normalizeScreenMap, SCREEN_MAP_FILE } from './map.ts';
+import { PLATFORMS } from './platform.ts';
 import { matchPath } from './match.ts';
 import { pathSpecs } from './paths.ts';
 import { lineAt, parseScenarioFile } from './scenario.ts';
@@ -111,12 +112,17 @@ export async function checkMocksWith(io: MockCheckIo, config: DdvConfig, docs: D
         warn(mapRel, `対応表の YAML が不正です: ${(e as Error).message.split('\n')[0]}`, undefined, 'scenario');
         continue;
       }
-      const r = ScreenMapSchema.safeParse(raw ?? {});
-      if (!r.success) {
-        for (const i of r.error.issues) warn(mapRel, `対応表の形式が不正です: ${i.path.join('.')}: ${i.message}`, lineAt(text, i.path), 'scenario');
+      const r = normalizeScreenMap(raw);
+      if (!r.ok) {
+        for (const i of r.issues) error(mapRel, `対応表の形式が不正です: ${i.message}`, lineAt(text, i.path));
       } else if (sd) {
-        for (const k of Object.keys(r.data.screens)) if (!states.has(k)) warn(mapRel, `対応表の画面 ${k} は画面遷移図にありません`, lineAt(text, ['screens', k]), 'scenario');
-        for (const k of Object.keys(r.data.events)) if (!events.has(k)) warn(mapRel, `対応表のイベント ${k} は画面遷移図にありません`, lineAt(text, ['events', k]), 'scenario');
+        for (const p of PLATFORMS) {
+          const sec = r.map.of(p);
+          const at = (...rest: string[]) => lineAt(text, r.legacy ? rest : [p, ...rest]);
+          const label = r.legacy ? '' : `（${p}）`;
+          for (const k of Object.keys(sec.screens)) if (!states.has(k)) warn(mapRel, `対応表${label}の画面 ${k} は画面遷移図にありません`, at('screens', k), 'scenario');
+          for (const k of Object.keys(sec.events)) if (!events.has(k)) warn(mapRel, `対応表${label}のイベント ${k} は画面遷移図にありません`, at('events', k), 'scenario');
+        }
       }
     }
   }

@@ -16,6 +16,8 @@ export const actionsApi = {
   init: (force = false) => api.actionsInit(force),
   /** A file of the run on the results branch (`runs/<id>/<path>`): a URL (Pages: `blob:`). */
   file: (id: string, path: string) => api.actionsFile(id, path),
+  /** The same file's contents. */
+  blob: (id: string, path: string) => api.actionsBlob(id, path),
 };
 
 // --- ActionsStatus shared by the tests tab and the matrices (one request per workspace at a time) ---

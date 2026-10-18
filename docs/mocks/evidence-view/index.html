@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>証跡の表示・保存（モック）</title>
+  <link rel="stylesheet" href="../../../apps/web/src/styles.css" />
+  <style>
+    .page { padding: 12px; display: grid; gap: 10px; }
+    .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    table { border-collapse: collapse; font-size: 13px; }
+    th, td { border: 1px solid #d0d7de; padding: 4px 8px; text-align: left; vertical-align: top; }
+    .split { display: grid; grid-template-columns: 240px 1fr; gap: 12px; }
+    .timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+    .timeline li { border: 1px solid #d0d7de; border-radius: 6px; padding: 4px 8px; font-size: 13px; }
+    .timeline li.sel { background: #ddf4ff; }
+    .shot { border: 1px solid #d0d7de; height: 120px; display: grid; place-items: center; color: #57606a; background: #f6f8fa; }
+    .badge { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 10px; border: 1px solid #d0d7de; }
+    .badge.ok { background: #dafbe1; color: #1a7f37; } .badge.warn { background: #fff8c5; color: #9a6700; } .badge.ng { background: #ffebe9; color: #cf222e; } .badge.skip { color: #8c959f; }
+    .note { font-size: 12px; color: #57606a; }
+    .mockonly { border-style: dashed; }
+    .dialog { border: 1px solid #d0d7de; border-radius: 6px; padding: 12px; background: #fff; display: grid; gap: 8px; }
+    .error { color: #cf222e; font-size: 13px; }
+  </style>
+  <script type="module" src="../_ddv/mock-runtime.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <span class="brand">ddv</span>
+      <span class="muted">テスト</span>
+      <span class="spacer"></span>
+      <span class="muted">acme/order-app（main・a1b2c3d）</span>
+    </header>
+
+    <!-- テスト結果 -->
+    <section data-screen="Result">
+      <div class="page">
+        <strong>マトリクス：screen-flow</strong>
+        <table>
+          <thead><tr><th>テストID</th><th>結果</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td>BD-ORDER-SCREEN-P001</td>
+              <td><span class="badge ok">web ✓</span> <span class="badge ok">wpf ✓</span> <span class="badge warn" data-testid="evidence-count">証跡 3・警告 1</span></td>
+              <td><button data-testid="trace-open" data-event="トレースを開く" data-goto="Trace">トレース</button></td>
+            </tr>
+            <tr><td>BD-ORDER-SCREEN-P002</td><td><span class="badge ok">web ✓</span></td><td><button>トレース</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- トレース -->
+    <section data-screen="Trace" hidden>
+      <div class="page">
+        <div class="row">
+          <button data-testid="trace-back" data-event="戻る" data-goto="Result">← 戻る</button>
+          <strong>BD-ORDER-SCREEN-P001</strong>
+          <span class="badge ok">web ✓</span>
+          <span class="muted">10/18 09:12・a1b2c3d・Web アプリ・6.3s</span>
+        </div>
+        <div class="split">
+          <ol class="timeline" data-testid="timeline">
+            <li>1 新規 ✓</li>
+            <li>2 次へ [入力OK] ✓</li>
+            <li class="sel"><button class="link" data-testid="step-select" data-event="ステップを選ぶ" data-goto="Trace">3 確定 ✓ 証跡 3 ⚠</button></li>
+          </ol>
+          <div>
+            <div class="shot" data-testid="screenshot">（自動のスクリーンショット：完了）</div>
+            <p>操作：submit をクリック　画面：Confirm → Done</p>
+            <h4>証跡</h4>
+            <table data-testid="evidence-list">
+              <thead><tr><th>#</th><th>表示名</th><th>時点</th><th>種類</th><th>取得手段</th><th>状態</th><th></th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td>確定前の確認画面</td><td>操作前</td><td>画像</td><td>screenshot</td><td><span class="badge ok">取得</span></td><td><button>開く</button> <button>保存</button></td></tr>
+                <tr><td>2</td><td>確定した注文</td><td>判定後</td><td>表（1 行）</td><td>db（app・sqlite）</td><td><span class="badge ok">取得</span></td><td><button>開く</button> <button>保存</button></td></tr>
+                <tr><td>3</td><td>アプリのログ</td><td>判定後</td><td>テキスト</td><td>app-log（コマンド）</td><td><span class="badge warn">警告</span></td><td><button>開く</button></td></tr>
+              </tbody>
+            </table>
+            <div class="row">
+              <select class="mockonly" data-testid="evidence-state" title="（モック）開く証跡の状態">
+                <option value="ok">（モック）取得済みの証跡</option>
+                <option value="failed">（モック）取得に失敗した証跡</option>
+              </select>
+              <button data-testid="evidence-open" data-event="証跡を開く" data-submit="POST /evidence-open" data-ok="Evidence">開く</button>
+            </div>
+            <p class="error" data-testid="evidence-error" data-error hidden></p>
+            <p class="note">プレイヤーの再生では証跡を取得しません（E2E の実行で取得します）。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 証跡の表示 -->
+    <section data-screen="Evidence" hidden>
+      <div class="page">
+        <div class="dialog">
+          <div class="row">
+            <strong data-testid="evidence-title">確定した注文</strong>
+            <span class="muted">判定後・db（app・sqlite）・0.2s</span>
+            <span class="spacer"></span>
+            <button data-testid="evidence-close" data-event="閉じる" data-goto="Trace">閉じる</button>
+          </div>
+          <table data-testid="evidence-table">
+            <thead><tr><th>id</th><th>customer</th><th>sku</th><th>quantity</th><th>card_no</th></tr></thead>
+            <tbody><tr><td>1001</td><td>山田 太郎</td><td>A-100</td><td>1</td><td>***</td></tr></tbody>
+          </table>
+          <p class="note" data-testid="evidence-note">card_no は伏せています。1 行中 1 行を表示。</p>
+          <div class="row">
+            <button data-testid="evidence-save" data-event="保存" data-goto="Evidence">保存（CSV）</button>
+            <button data-testid="evidence-next" data-event="次の証跡" data-goto="Evidence">次の証跡 →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

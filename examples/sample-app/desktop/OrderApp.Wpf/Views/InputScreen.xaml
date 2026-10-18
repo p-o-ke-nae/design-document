@@ -1,0 +1,36 @@
+<UserControl x:Class="OrderApp.Wpf.Views.InputScreen"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Input">
+  <!-- 画面 Input（注文入力） -->
+  <StackPanel>
+    <TextBlock Text="注文入力" Style="{StaticResource Heading}" />
+    <Grid Margin="0,0,0,12">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="80" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
+      <Label Grid.Row="0" Content="顧客名" Target="{Binding ElementName=customer}" />
+      <TextBox Grid.Row="0" Grid.Column="1" x:Name="customer" MaxLength="50" Margin="0,4"
+               Text="{Binding Customer, UpdateSourceTrigger=PropertyChanged}" />
+      <Label Grid.Row="1" Content="商品" Target="{Binding ElementName=sku}" />
+      <ComboBox Grid.Row="1" Grid.Column="1" x:Name="sku" Width="160" HorizontalAlignment="Left" Margin="0,4"
+                ItemsSource="{Binding Skus}" SelectedItem="{Binding Sku}" />
+      <Label Grid.Row="2" Content="数量" Target="{Binding ElementName=quantity}" />
+      <TextBox Grid.Row="2" Grid.Column="1" x:Name="quantity" Width="80" HorizontalAlignment="Left" Margin="0,4"
+               Text="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}" />
+    </Grid>
+    <TextBlock x:Name="error" Style="{StaticResource ErrorText}"
+               Text="{Binding InputErrorMessage}" ToolTip="{Binding InputErrorDetail}"
+               Visibility="{Binding HasInputError, Converter={StaticResource BoolToVisibility}}" />
+    <StackPanel Orientation="Horizontal">
+      <Button x:Name="cancel" Content="キャンセル" Command="{Binding CancelCommand}" />
+      <Button x:Name="next" Content="次へ" Command="{Binding NextCommand}" IsDefault="True" />
+    </StackPanel>
+  </StackPanel>
+</UserControl>

@@ -7,7 +7,7 @@ import {
   mergeScenario,
   parseScenarioFile,
   scaffoldScenario,
-  ScreenMapSchema,
+  screenMapFrom,
   type FieldModel,
   type PathSpec,
   type Scenario,
@@ -55,7 +55,7 @@ describe('matchPath', () => {
   });
   it('[DD-SCENARIO-MATCH-P004][DD-SCENARIO-MATCH-T007][DD-SCENARIO-MATCH-T008] expect.screen が遷移先と違えば不一致: 画面とステップ番号', () => {
     const s = scenario();
-    s.steps[0].expect.screen = 'List';
+    s.steps[0].expect!.screen = 'List';
     expect(matchPath(s, path)).toMatchObject({ ok: false, kind: 'screen', step: 0, expected: 'Input', actual: 'List' });
   });
   it('[DD-SCENARIO-MATCH-P005][DD-SCENARIO-MATCH-T009] すべて一致すれば一致（空白は正規化）', () => {
@@ -154,6 +154,44 @@ describe('mergeScenario', () => {
     expect(r.unchanged).toBe(false);
     expect(mergeScenario(r.scenario, generated()).unchanged).toBe(true);
   });
+  describe('補助ステップの保持（DD-DSCN-AUXMRG）', () => {
+    const existing = (): Scenario => ({
+      ...generated(),
+      steps: [
+        { click: 'closeSplash', only: 'desktop' },
+        { event: '新規', click: 'new', expect: { screen: 'Input' } },
+        { click: 'tab2', only: ['wpf'] },
+        { input: { note: 'x' }, expect: { visible: ['note'] } },
+        { event: '削除', click: 'del', expect: { screen: 'List' } },
+        { click: 'confirmDelete', only: 'winforms' },
+        { event: '次へ [入力OK]', click: 'next2', expect: { screen: 'Confirm' } },
+      ],
+    });
+    it('[DD-DSCN-AUXMRG-P001][DD-DSCN-AUXMRG-T001][DD-DSCN-AUXMRG-T002] 前に遷移のステップが無い補助ステップは結果の先頭に残す', () => {
+      const r = mergeScenario(existing(), generated());
+      expect(r.scenario.steps[0]).toEqual({ click: 'closeSplash', only: 'desktop' });
+      expect(r.sources[0]).toEqual({ step: 0, input: 'none', aux: true });
+    });
+    it('[DD-DSCN-AUXMRG-P002][DD-DSCN-AUXMRG-T003][DD-DSCN-AUXMRG-T004] 対応した遷移のステップの直後に、そのままの順で置く', () => {
+      const r = mergeScenario(existing(), generated());
+      expect(r.scenario.steps).toEqual([
+        { click: 'closeSplash', only: 'desktop' },
+        { event: '新規', click: 'new', expect: { screen: 'Input' } },
+        { click: 'tab2', only: ['wpf'] },
+        { input: { note: 'x' }, expect: { visible: ['note'] } },
+        { event: '次へ [入力OK]', input: { customer: 'テスト' }, click: 'next2', expect: { screen: 'Confirm' } },
+      ]);
+      expect(r.positions).toEqual([1, 4]);
+      expect(r.unchanged).toBe(false);
+      expect(mergeScenario(r.scenario, generated()).unchanged).toBe(true);
+    });
+    it('[DD-DSCN-AUXMRG-P003][DD-DSCN-AUXMRG-T005] 対応しない遷移のステップの補助ステップは消し、件数を数える', () => {
+      const r = mergeScenario(existing(), generated());
+      expect(r.removed).toBe(1);
+      expect(r.auxRemoved).toBe(1);
+      expect(r.scenario.steps.some((s) => s.click === 'confirmDelete')).toBe(false);
+    });
+  });
   it('同じ event と遷移先の組が複数あれば出現順で対応する', () => {
     const g = generated();
     g.steps = [
@@ -247,11 +285,11 @@ describe('executeStep', () => {
 });
 
 describe('resolveLocator', () => {
-  const map = ScreenMapSchema.parse({
+  const map = screenMapFrom({
     screens: { List: { url: '/orders$' }, Input: { selector: "h1:has-text('注文入力')" } },
     events: { 次へ: 'button[type=submit]' },
     fields: { customer: '#customerName' },
-  });
+  }).web;
   it('[DD-SCENARIO-RESOLVE-P001][DD-SCENARIO-RESOLVE-T001][DD-SCENARIO-RESOLVE-T002][DD-SCENARIO-RESOLVE-T003] mock の画面は表示中の [data-screen=ID]', () => {
     expect(resolveLocator('screen', 'Input', 'mock')).toEqual({ ok: true, selector: '[data-screen="Input"]', visible: true });
   });

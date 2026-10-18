@@ -9,7 +9,7 @@ import { initWorkflow, TemplateMissingError } from './workflow-init.ts';
 
 export const CI_HELP = `  ddv actions init [--repo <path>] [--force]
       ddv ワークフロー（.github/workflows/ddv-tests.yml）を配置します（既存と違えば差分を表示して終了コード 1、--force で上書き）
-  ddv ci run [--repo <path>] [--ids <id,...>] [--runner <name>] [--out <dir>] [--request <依頼ID>] [--sha <sha>]
+  ddv ci run [--repo <path>] [--ids <id,...>] [--runner <name>] [--out <dir>] [--request <依頼ID>] [--sha <sha>] [--evidence-max-bytes <n>] [--evidence-max-total <n>]
       ddv ワークフローの中で、ランナー・スナップショットを実行し、実行記録・トレース・スナップショットを --out に出力します
   ddv ci publish --out <dir> [--repo <path>] [--branch ddv-results] [--max-runs 200] [--max-days 90] [--max-trace-runs 20]
       --out の結果を結果ブランチに保存し、古い結果を削除します
@@ -93,7 +93,22 @@ export class CiCommand {
   }
 
   private async ciRun(argv: string[]): Promise<number> {
+    const evidenceLimits: { maxBytes?: number; maxTotal?: number } = {};
+    for (const [flag, key] of [
+      ['--evidence-max-bytes', 'maxBytes'],
+      ['--evidence-max-total', 'maxTotal'],
+    ] as const) {
+      const v = arg(argv, flag)?.trim();
+      // Empty = the default (an old workflow without the template's env).
+      if (!v) continue;
+      if (!/^\d+$/.test(v) || Number(v) < 1) {
+        this.error(`${flag} は 1 以上の整数です`);
+        return 2;
+      }
+      evidenceLimits[key] = Number(v);
+    }
     const r = await new CiRun({
+      evidenceLimits,
       repoRoot: this.repo(argv),
       out: arg(argv, '--out') || undefined,
       ids: parseIds(arg(argv, '--ids')),

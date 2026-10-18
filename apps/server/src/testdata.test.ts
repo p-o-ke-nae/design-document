@@ -138,7 +138,7 @@ describe('TestDataService.validate（VALIDATE）', () => {
     const b = await svc.load(ID, LOCAL);
     const r = await svc.validate(
       draftOf(b, (d) => {
-        d.scenario.steps[3].expect.count = { orders: -1 };
+        d.scenario.steps[3].expect!.count = { orders: -1 };
         d.scenario.steps[0].click = 'changed'; // generated: not reported in the same run
         (d.fixtures.default.orders[0] as Record<string, unknown>).customer = { x: 1 };
       }),
@@ -158,8 +158,8 @@ describe('TestDataService.validate（VALIDATE）', () => {
       draftOf(b, (d) => {
         d.scenario.steps[0].event = 'x';
         d.scenario.steps[0].click = 'x';
-        d.scenario.steps[1].expect.screen = 'Done';
-        d.scenario.steps[2].expect.hidden = ['error'];
+        d.scenario.steps[1].expect!.screen = 'Done';
+        d.scenario.steps[2].expect!.hidden = ['error'];
         d.scenario.start = 'Input';
         d.scenario.fixtures = ['nope']; // unknownFixture: a later stage
       }),
@@ -220,7 +220,7 @@ describe('TestDataService.validate（VALIDATE）', () => {
     const r = await svc.validate(
       draftOf(b, (d) => {
         d.scenario.steps[1].input!.nothing = 'x';
-        d.scenario.steps[1].expect.text!['confirm-customer'] = '鈴木 一郎';
+        d.scenario.steps[1].expect!.text!['confirm-customer'] = '鈴木 一郎';
         d.fixtures.default.coupons = [{ id: 1, code: 'X' }];
       }),
       LOCAL,
@@ -309,7 +309,7 @@ describe('TestDataService.save', () => {
     const { dir, read } = await setup();
     const svc = new TestDataService(dir, config);
     const sc = await read(SC);
-    const e = await rejects(svc.save(draftOf(await svc.load(ID, LOCAL), (d) => (d.scenario.steps[3].expect.count = { orders: 1.5 })), LOCAL));
+    const e = await rejects(svc.save(draftOf(await svc.load(ID, LOCAL), (d) => (d.scenario.steps[3].expect!.count = { orders: 1.5 })), LOCAL));
     expect(e.status).toBe(422);
     expect(e.extra.errors).toMatchObject([{ code: 'schema' }]);
     expect(await read(SC)).toBe(sc);

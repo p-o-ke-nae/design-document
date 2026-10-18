@@ -69,9 +69,11 @@ description: 承認済みの ddv 基本設計から詳細設計（クラス図�
 | ファイル | 内容 |
 |---|---|
 | `docs/mocks/<name>/scenarios/_map.yaml` | 実アプリの画面（`url` 正規表現 / `selector`）・イベント（セレクタ）・入力要素（既定は `[data-testid=キー]`）の対応表 |
-| `e2e/ddv-hooks.ts`（任意） | `export const seed`（fixtures を実アプリの API/DB へ投入）、`export const steps`（シナリオの `do` の独自操作） |
+| `e2e/ddv-hooks.ts`（任意） | `export const seed`（fixtures を実アプリの API/DB へ投入）、`export const steps`（シナリオの `do` の独自操作）、`export const evidence`（シナリオの `evidence: use:` の独自の取得。`defineEvidence`） |
+| `_map.yaml` の `wpf:`・`winforms:` 節 | デスクトップアプリの画面・イベント・入力要素の AutomationId の対応（`ddv.config.yaml` の `runners` に `type: flaui`） |
+| `ddv.config.yaml` の `evidence` | 証跡で使う DB（接続文字列は環境変数）・外部コマンド |
 
-実行：`DDV_BASE_URL=<実アプリのURL>` を付けて playwright ランナーを実行（未設定ならモックに対して実行）。
+実行：`DDV_BASE_URL=<実アプリのURL>` を付けて playwright ランナーを実行（未設定ならモックに対して実行）。デスクトップは `npm --prefix "$DDV_HOME" run ddv -- desktop run --runner <name> --repo <repo>`（事前に `desktop doctor`）。
 テンプレート：`../../templates/docs/mocks/sample/scenarios/_map.yaml`、`../../templates/e2e/ddv-hooks.ts`
 
 ## 禁止

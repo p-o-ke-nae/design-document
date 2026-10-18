@@ -25,7 +25,10 @@ flowchart LR
 | `packages/testid` | テストID 採番・ロック・テスト紐づけ検出、`ddv-testid` CLI |
 | `packages/mock` | シナリオ YAML（スキーマ・骨組み生成・経路照合・lint）、E2E 実行器 `@ddv/mock/playwright`、スナップショット比較 |
 | `packages/mock-runtime` | モック内で動く runtime（疑似 API/DB・画面切替・プレイヤー連携）。`ddv mock init` で配置 |
-| `examples/sample-app` | デモ対象（Web: Vitest / .NET: xUnit） |
+| `packages/tokens` | 実アプリのデザインのトークン（XAML・CSS → `<mocksRoot>/_tokens/<name>.css`）と乖離の検査 |
+| `packages/desktop` | FlaUI のドライバ（C#）と `ddv desktop`：シナリオを WPF・WinForms のアプリで実行 |
+| `packages/evidence` | シナリオの証跡（スクリーンショット・DB・hooks・外部コマンド）の指定・検査・取得・保存 |
+| `examples/sample-app` | デモ対象（Web: Vitest / .NET: xUnit / デスクトップ: WPF・WinForms（`desktop/`）） |
 | `docs/design` | ddv 自身の設計書（ドッグフーディング） |
 | `plugin/` | Copilot CLI / Claude Code 用プラグイン（スキル・テンプレート）→ [plugin/README.md](plugin/README.md) |
 
@@ -90,6 +93,78 @@ runners:
 - 実行記録（`.ddv/runs/`）には、実行時のコミットと未コミットの変更の有無を残します
 - シナリオの E2E は、ステップごとの画面・API 呼び出し・DB の差分・期待の判定をトレース（`.ddv/traces/`）に残します。結果の「トレース」で開き、←→ でステップを移れます。プレイヤーでの再生中も同じ内容をライブ表示できます
 - マトリクスの行・プレイヤーの「テストデータ」で、シナリオの入力値・期待値と fixtures を編集できます。手元では元の YAML の書式を保ったまま保存し、PR では該当行への suggestion として保留中のレビューに入れます。保存前に編集中のデータで再生できます
+
+### デスクトップアプリでのシナリオ実行（WPF・WinForms）
+
+モックのシナリオ（`scenarios/*.yaml`）を、テストコードを書かずに .NET のデスクトップアプリに対して実行します（Windows・.NET 8 以上の SDK。設計：[基本設計](docs/design/basic/desktop-run.md)・[FlaUI のドライバ](docs/design/detailed/flaui-driver.md)・[シナリオのプラットフォーム対応](docs/design/detailed/desktop-scenario.md)）。
+
+```yaml
+runners:
+  - name: wpf
+    type: flaui
+    platform: wpf                     # wpf / winforms
+    level: integration
+    app: { path: desktop/OrderApp.Wpf/bin/Debug/net8.0-windows/OrderApp.Wpf.exe }
+    source: desktop/OrderApp.Wpf      # ddv-lint が名前（AutomationId）を探す画面定義の場所
+```
+
+```powershell
+npm run ddv -- desktop doctor --repo <path>                 # OS・.NET SDK・実行ファイル・ドライバ・画面定義を確かめる
+npm run ddv -- desktop run --runner wpf --repo <path> [--ids <id,...>] [--junit <file>]
+```
+
+- 論理名と AutomationId が違うときは `scenarios/_map.yaml` の `wpf:` / `winforms:` の節で読み替えます（直下に書いた従来の形式は `web:` とみなします）
+- `event` の無い補助ステップ（タブの切り替えなど）と `only: wpf` などで、プラットフォームごとの差を吸収します。`ddv-lint` は XAML・WinForms の `*.Designer.cs` を走査し、シナリオの名前が画面に無ければ指摘します
+- ビューアの「実行」は接続先（モック・各デスクトップのランナー）を選んで開始します。結果はテストIDとプラットフォームごと（`BD-…@wpf`）に残り、テスト一覧・マトリクスのバッジからそれぞれのトレースを開けます
+- サンプル：[examples/sample-app/desktop](examples/sample-app/desktop/README.md)（注文画面の WPF・WinForms と xUnit）
+
+### 実アプリのデザインのトークン
+
+実アプリの XAML のリソース・CSS のカスタムプロパティとクラスを、モックで使う CSS（`<mocksRoot>/_tokens/<name>.css`）に変換します（設計：[基本設計](docs/design/basic/design-tokens.md)・[詳細設計](docs/design/detailed/tokens.md)）。
+
+```yaml
+tokens:
+  - { name: order-wpf, kind: xaml, sources: [desktop/OrderApp.Wpf/App.xaml] }   # MergedDictionaries は自動で辿る
+  - { name: pokenae-web, kind: css, sources: [../pokenae.Web/app/globals.css], classes: [site-frame], optional: true }
+```
+
+```powershell
+npm run ddv -- tokens generate [--name <name>] --repo <path>   # 生成（コミットする）
+npm run ddv -- tokens check --repo <path>                      # 生成物と生成元の乖離を検査（ddv-lint でも検査）
+```
+
+### 証跡（スクリーンショット・DB・ログ）
+
+シナリオのステップに `evidence:` を書くと、E2E・デスクトップの実行時に証跡を取得してトレースに残します（設計：[要件定義](docs/design/requirements/evidence.md)・基本設計（[取得](docs/design/basic/evidence-capture.md)・[表示](docs/design/basic/evidence-view.md)））。
+
+```yaml
+  - event: 確定
+    click: submit
+    expect: { screen: Done }
+    evidence:
+      - { use: screenshot, at: before, label: 確定前の確認画面 }
+      - use: db
+        label: 確定した注文
+        with: { db: app, sql: "SELECT id, customer, card_no FROM orders WHERE customer = :customer", params: { customer: { input: customer } }, mask: [card_no] }
+```
+
+```yaml
+# ddv.config.yaml
+evidence:
+  databases:
+    app: { type: sqlite, env: DDV_DB_APP, mask: [card_no] }   # sqlite / sqlserver（mssql）/ postgres（pg）。接続文字列は環境変数から
+  commands:
+    app-log: { run: pwsh, args: [-File, scripts/collect-log.ps1, -Out, '{out}'] }   # 外部コマンド（シェルを介さない）
+```
+
+```powershell
+npm run ddv -- evidence list --repo <path>                         # 使える取得手段と接続先
+npm run ddv -- evidence try <名前> --repo <path> [--with key=value]  # 1 つをその場で試す
+```
+
+- DB は読み取り専用（SELECT・WITH だけ。読み取り専用のトランザクションで実行して巻き戻す）。行数・大きさ・時間に上限があり、`mask` の列は伏せて保存します
+- 利用側の取得手段は `e2e/ddv-hooks.ts` の `evidence` で登録できます
+- ビューアでは、トレースのステップに証跡の一覧が出ます。画像・表（CSV で保存）・JSON・テキストをダイアログで開き、←→ で移れます。Actions の結果（Pages 版も）では結果ブランチから読みます（大きさの上限：`DDV_EVIDENCE_MAX_BYTES`・`DDV_EVIDENCE_MAX_TOTAL`）
 
 ### GitHub の PR・branch を表示する
 
@@ -219,6 +294,6 @@ npm run ddv -- serve --repo .   # ddv 自身の設計書を表示し、ビュー
 | 2 | モック runtime（疑似 BE/DB）、シナリオ DSL＋データ分離（骨組み自動生成）、プレイヤー（巻き戻し/速度）、シナリオの E2E 実行（データ駆動）、スナップショット | ✅（[要件](docs/design/requirements/mock.md) / [基本設計](docs/design/basic/mock-player.md) / 詳細設計：[シナリオ](docs/design/detailed/scenario.md)・[runtime](docs/design/detailed/mock-runtime.md)・[スナップショット](docs/design/detailed/snapshot.md)） |
 | 3 | GitHub repo/branch 指定、PR 行コメント・Approve 連携、モックのレビュー調整 → suggestion | ✅（実 GitHub での受入確認は省略してクローズ。[受入チェックリスト](docs/acceptance/phase3-github.md)）：ワークスペース（PR・branch の取得と表示）、PR の差分・レビュースレッドの表示、コメント・送信・Approve＋status 連動・スレッド返信/解決、モックの調整 → suggestion、`ddv review comments`・`ddv-review-response` スキル（[要件](docs/design/requirements/github.md) / [基本設計](docs/design/basic/github-review.md) / 詳細設計：[ワークスペース](docs/design/detailed/workspace.md) / [レビューコメント](docs/design/detailed/review-comment.md) / [モック調整](docs/design/detailed/mock-tune.md)） |
 | 4 | テスト監視（履歴・フレーキー・カバレッジ）、テストデータ編集（シナリオの入力値・fixtures・期待値をビューアで編集）、トレースビュー | 設計中：[要件定義](docs/design/requirements/testops.md) ✅ → 基本設計（[テスト監視](docs/design/basic/test-monitoring.md)・[テストデータ編集](docs/design/basic/test-data-editor.md)・[トレースビュー](docs/design/basic/trace-view.md)）✅ → 詳細設計（[実行記録](docs/design/detailed/run-record.md)・[テスト履歴](docs/design/detailed/test-history.md)・[テストデータ編集](docs/design/detailed/test-data.md)・[トレース記録](docs/design/detailed/trace-recorder.md)・[トレース表示](docs/design/detailed/trace.md)）✅ → 実装済み ✅ |
-| 5 | .NET デスクトップ（XAML → CSS トークン、FlaUI エクスポート） | 未着手 |
+| 5 | .NET デスクトップ（XAML → CSS トークン、FlaUI でのシナリオ実行）、実アプリ（Web：pokenae.Web など）のデザインのトークン・共通クラスの取り込み、シナリオからの証跡の取得・表示 | ✅：[要件定義](docs/design/requirements/desktop.md)・[証跡の要件定義](docs/design/requirements/evidence.md) ✅ → 基本設計（[デザインのトークン](docs/design/basic/design-tokens.md)・[デスクトップアプリでのシナリオ実行](docs/design/basic/desktop-run.md)・[証跡の取得](docs/design/basic/evidence-capture.md)・[証跡の表示](docs/design/basic/evidence-view.md)）✅ → 詳細設計（[トークン](docs/design/detailed/tokens.md)・[FlaUI のドライバ](docs/design/detailed/flaui-driver.md)・[プラットフォーム別の結果](docs/design/detailed/platform-results.md)・[シナリオのプラットフォーム対応](docs/design/detailed/desktop-scenario.md)・[証跡の指定](docs/design/detailed/evidence-spec.md)・[証跡の取得](docs/design/detailed/evidence-runner.md)・[証跡の保存と表示](docs/design/detailed/evidence-trace.md)）✅ → 実装済み ✅（CI：Windows のジョブで FlaUI、サービスコンテナで PostgreSQL・SQL Server） |
 | 6 | ホスト型（GitHub Pages で公開するビューア＋GitHub API 直結（PAT）、Actions でのテスト実行・履歴、ローカル版の作業フォルダ選択） | ✅（実 GitHub での受入確認は省略。公開先：<https://p-o-ke-nae.github.io/design-document/>、`.github/workflows/pages.yml` で master から自動デプロイ）：[要件定義](docs/design/requirements/hosted.md) ✅ → 基本設計（[Pages 版ビューア](docs/design/basic/hosted-viewer.md)・[Actions でのテスト実行](docs/design/basic/actions-run.md)・[ローカル版の作業フォルダ選択](docs/design/basic/local-folder.md)）✅ → 詳細設計（[サービス層・Backend](docs/design/detailed/services.md)・[Pages 版ビューア](docs/design/detailed/pages-viewer.md)・[PAT・ビルド・デプロイ](docs/design/detailed/pat.md)・[モックの sandbox 再生](docs/design/detailed/mock-sandbox.md)・[Actions での実行](docs/design/detailed/actions-run.md)・[ddv ワークフロー・ddv ci](docs/design/detailed/actions-workflow.md)・[作業フォルダ・起動トークン](docs/design/detailed/local-folder.md)）✅ |
 | 7 | 品質ゲート（描画検査・改ざん検出・CI テンプレート）、プラグイン eval | 未着手 |

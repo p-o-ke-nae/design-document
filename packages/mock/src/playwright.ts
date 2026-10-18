@@ -2,17 +2,20 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import YAML from 'yaml';
 import { test } from '@playwright/test';
-import { ScreenMapSchema, SCREEN_MAP_FILE, type ScreenMap } from './map.ts';
+import type { StepEvidenceRunner } from './evidence-host.ts';
+import { createScreenMap, parseScreenMap, SCREEN_MAP_FILE, type ScreenMap } from './map.ts';
 import { runScenario, type ScenarioHooks, type ScenarioTarget } from './run-scenario.ts';
 import { findScenarioFiles, loadConfigSync, mocksRootOf, scenarioIdOf } from './scenario-files.ts';
 import { parseScenarioFile } from './scenario.ts';
 import { startStaticServer, type StaticServer } from './static-server.ts';
 import { recorderFor, traceDirOf } from './trace.ts';
+import type { Scenario } from './types.ts';
 
-export { runScenario, PlaywrightDriver } from './run-scenario.ts';
-export type { RunScenarioOptions, ScenarioHooks, ScenarioTarget, SeedContext, StepHook } from './run-scenario.ts';
+export { runScenario, runScenarioWith, stepLabel } from './run-scenario.ts';
+export type { Capture, RunScenarioOptions, ScenarioSession } from './run-scenario.ts';
+export { PlaywrightDriver, PlaywrightSession, webMapOf } from './playwright-driver.ts';
+export type { PlaywrightSessionOptions, ScenarioHooks, ScenarioTarget, SeedContext, StepHook } from './playwright-driver.ts';
 export { browserChannel, channelName, BrowserLauncher, launchBrowser, BrowserLaunchError } from './browser.ts';
 export { startStaticServer } from './static-server.ts';
 export { loadConfigSync, findScenarioFiles } from './scenario-files.ts';
@@ -60,10 +63,12 @@ function resolveRepoRoot(repoRoot: string): string {
 
 function loadMap(repoRoot: string, mocksRoot: string, mock: string): ScreenMap {
   const p = path.join(repoRoot, mocksRoot, mock, 'scenarios', SCREEN_MAP_FILE);
-  if (!existsSync(p)) return ScreenMapSchema.parse({});
-  const r = ScreenMapSchema.safeParse(YAML.parse(readFileSync(p, 'utf8')) ?? {});
-  if (!r.success) throw new Error(`対応表 ${path.relative(repoRoot, p)} の形式が不正です: ${r.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join(', ')}`);
-  return r.data;
+  if (!existsSync(p)) return createScreenMap();
+  try {
+    return parseScreenMap(readFileSync(p, 'utf8'));
+  } catch (e) {
+    throw new Error(`対応表 ${path.relative(repoRoot, p)} の形式が不正です: ${e instanceof Error ? e.message : String(e)}`);
+  }
 }
 
 async function loadHooks(file: string): Promise<ScenarioHooks> {
@@ -111,7 +116,24 @@ export function defineScenarioTests(opts: ScenarioTestOptions): void {
         target = { kind: 'mock', url: new URL(`${entry.mock}/index.html`, server.url).href, mock: entry.mock };
       }
       const trace = traceDir ? recorderFor(traceDir, test.info().title, entry.mock, target.kind) : undefined;
-      await runScenario(page, scenario, target, { timeout: opts.timeout, trace });
+      // Evidence only while recording (trace-recorder.md「記録の流れ」).
+      const evidence = trace && traceDir ? await evidenceFor(scenario, trace.key, traceDir) : undefined;
+      await runScenario(page, scenario, target, { timeout: opts.timeout, trace, evidence });
+    });
+  }
+
+  /** Evidence runner of one scenario (`@ddv/evidence` loaded only when the config or the scenario has evidence). */
+  async function evidenceFor(scenario: Scenario, key: string, dir: string): Promise<StepEvidenceRunner | undefined> {
+    if (config.evidence === undefined && !scenario.steps.some((s) => s.evidence?.length)) return undefined;
+    const { evidenceRunnerForRun } = await import('@ddv/evidence/run');
+    return evidenceRunnerForRun({
+      repoRoot,
+      config,
+      hooks: opts.hooks ?? DEFAULT_HOOKS,
+      traceDir: dir,
+      key,
+      testId: scenario.id,
+      scenario,
     });
   }
 }

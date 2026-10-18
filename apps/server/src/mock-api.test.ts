@@ -235,7 +235,7 @@ describe('シナリオの状態（BD-MOCK-SCEN）', () => {
     const req = await api(await createContext(repo, { watch: false }));
     const s = (await req('/api/mocks/scenarios')).body.scenarios.find((x: any) => x.id === 'BD-DEMO-SCREEN-P009');
     expect(s.status).toBe('Unverified');
-    expect(s.issues[0]).toMatch(/行目: steps\.0\.expect/);
+    expect(s.issues).toContainEqual(expect.stringMatching(/^4 行目: シナリオ BD-DEMO-SCREEN-P009 のステップ 1: 遷移のステップには expect\.screen が必要です$/));
   });
 });
 

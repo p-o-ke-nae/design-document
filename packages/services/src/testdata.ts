@@ -360,8 +360,8 @@ export class TestDataService<T extends { headSha: string } = ReviewTarget> {
       next.steps.forEach((step, i) => {
         const was = s.scenario.steps[i];
         for (const k of GENERATED) if (!sameValue(step[k], was[k])) gen(`steps[${i}].${k}`, `${k} `);
-        if (step.expect.screen !== was.expect.screen) gen(`steps[${i}].expect.screen`, 'expect.screen ');
-        if (!sameValue(step.expect.hidden ?? [], was.expect.hidden ?? [])) gen(`steps[${i}].expect.hidden`, 'expect.hidden ');
+        if (step.expect?.screen !== was.expect?.screen) gen(`steps[${i}].expect.screen`, 'expect.screen ');
+        if (!sameValue(step.expect?.hidden ?? [], was.expect?.hidden ?? [])) gen(`steps[${i}].expect.hidden`, 'expect.hidden ');
       });
     if (out.errors.length) return out;
 
@@ -421,9 +421,9 @@ export class TestDataService<T extends { headSha: string } = ReviewTarget> {
     };
     next.steps.forEach((step, i) => {
       for (const k of Object.keys(step.input ?? {})) unknown(`steps[${i}].input.${k}`, k);
-      for (const k of Object.keys(step.expect.text ?? {})) unknown(`steps[${i}].expect.text.${k}`, k);
-      for (const k of Object.keys(step.expect.count ?? {})) unknown(`steps[${i}].expect.count.${k}`, k);
-      (step.expect.visible ?? []).forEach((k, j) => unknown(`steps[${i}].expect.visible[${j}]`, k));
+      for (const k of Object.keys(step.expect?.text ?? {})) unknown(`steps[${i}].expect.text.${k}`, k);
+      for (const k of Object.keys(step.expect?.count ?? {})) unknown(`steps[${i}].expect.count.${k}`, k);
+      (step.expect?.visible ?? []).forEach((k, j) => unknown(`steps[${i}].expect.visible[${j}]`, k));
     });
 
     const sAfter = scenarioAfter(s.raw, next);

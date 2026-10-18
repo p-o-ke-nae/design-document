@@ -48,6 +48,8 @@ classDiagram
     +calls: ApiCall[]
     +db: DbChange[] or null
     +screenshot?: string
+    +evidence?: TraceEvidence[]
+    +evidenceWarnings?: number
   }
   class ExpectObservation {
     +kind: ExpectKind
@@ -140,6 +142,7 @@ classDiagram
 - `TraceStep.index` は 1 始まり（画面の「ステップ n」と同じ）。`TraceFile.failedStep` も 1 始まり、0 はステップの前（ページを開く・fixtures の投入）での失敗
 - `TraceStep.db` が null は「対象外」（実アプリ）。空の配列は「変化なし」
 - `screenshot` は `<テストID>/<index>.png`（トレースのディレクトリからの相対パス）。撮れなかったら項目を書かない
+- `evidence` はそのステップの証跡の取得結果（時点 → 書いた順）、`evidenceWarnings` は `warn` の件数。形（`TraceEvidence`）と本体の置き場所は :ref[evidence-trace.md#構造]。証跡の指定が無いステップは両方とも書かない
 
 ## 記録の有効化
 
@@ -166,10 +169,14 @@ sequenceDiagram
   participant D as PlaywrightDriver
   participant R as window.__ddv.trace（mock）
   participant N as page の通信（app）
+  participant E as EvidenceRunner
   X->>X: goto・reset / seed
   loop ステップ i（1 始まり）
     X->>D: screen()
     X->>T: beginStep(i, step, screenBefore)
+    opt 証跡の指定がある
+      X->>E: runAt(before)
+    end
     alt mock
       X->>R: begin()
     else app
@@ -185,7 +192,10 @@ sequenceDiagram
       N-->>X: calls（db は null）
     end
     X->>D: page.screenshot（失敗しても続ける）
-    X->>T: endStep
+    opt 証跡の指定がある
+      X->>E: runAt(after)（判定が失敗していても）
+    end
+    X->>T: endStep（evidence・evidenceWarnings を含む）
     opt ステップが失敗
       X->>T: write
       X-->>X: 覚えた失敗を投げる（既存の文言）
@@ -195,6 +205,7 @@ sequenceDiagram
 ```
 
 - 例外の文言・種類（`StepError`）は既存の `runScenario` と変えない。記録の失敗（`take`・スクリーンショット・書き込み）はテストの結果を変えず、`console.warn` に出す
+- 証跡の取得（`EvidenceRunner`）は記録が有効なとき（`DDV_TRACE_DIR` がある）だけ行う。取得の流れ・失敗によるステップの結果は :ref[evidence-runner.md#時点ごとの取得]・:ref[evidence-runner.md#ステップの結果]（`fail` の失敗はテストの結果を変える。記録の失敗とは扱いが違う）
 - ステップより前の失敗（runtime が読み込まれない等）は `fail(message)`（`failedStep: 0`、`steps: []`）を書いてから投げる
 - `observeExpect` はステップの成功・失敗にかかわらず 1 回呼ぶ（失敗時の「実際の値」を画面に出すため）。要素が無い項目は `actual: null`
 

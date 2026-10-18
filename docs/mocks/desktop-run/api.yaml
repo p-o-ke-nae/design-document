@@ -1,0 +1,15 @@
+# 疑似 API（デスクトップアプリでのシナリオ実行のモック用。パスは基本設計 desktop-run.md の API にそろえる）
+tables:
+  - targets
+  - runs
+routes:
+  - { method: GET, path: /tests/targets, op: list, table: targets }
+  - method: POST
+    path: /tests/run
+    when:                       # 接続先を 1 つも選んでいなければ始めない
+      - if: "body['target-e2e'] != true && body['target-wpf'] != true"
+        status: 422
+        body: { error: 接続先を選んでください, code: no-target, message: 接続先を選んでください }
+    op: insert
+    table: runs
+    status: 202

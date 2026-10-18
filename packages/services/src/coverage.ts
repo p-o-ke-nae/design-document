@@ -4,6 +4,7 @@ import { classify, countClass, elementClasses, emptyCount, type CoverageClass, t
 import type { MatrixService } from './matrix.ts';
 import { normalizeRepoPath } from './repo-path.ts';
 import type { RepoReader } from './repo-reader.ts';
+import { PlatformResults } from './result-key.ts';
 
 /** Design coverage of one document (DD-HIST-CLASSIFY / ELEMENT). */
 export class CoverageService {
@@ -21,6 +22,7 @@ export class CoverageService {
     const active = activeIds(lock);
     const matrices = docMatrices(doc, config, lock);
     const linked = new Set((await this.matrix.links()).map((l) => l.id));
+    const byTest = PlatformResults.byTest(latest);
     const out: DocCoverage = { path: doc.path, total: emptyCount(), diagrams: {}, cases: {}, elements: {} };
     for (const m of matrices) {
       const counts = emptyCount();
@@ -28,7 +30,7 @@ export class CoverageService {
       for (const c of m.cases) {
         if (c.provisional || !active.has(c.id)) continue;
         // Results of an id that is no longer linked are ignored: it cannot be run now.
-        const cls = classify(c.id, linked.has(c.id), latest[c.id]);
+        const cls = classify(c.id, linked.has(c.id), PlatformResults.combine(byTest.get(c.id)));
         classes[c.id] = cls;
         out.cases[c.id] = cls;
         countClass(counts, cls);

@@ -1,0 +1,17 @@
+# ddv mock scaffold が生成。event / click / expect.screen は再生成で更新、それ以外は保持
+
+id: BD-DESKRUN-SCREEN-P003
+title: 開始 → テスト一覧 → [実行] 接続先の選択 → [開始 [接続先あり]] 実行中 → [実行完了] テスト一覧 → 終了
+fixtures: [ default ]
+start: List
+steps:
+  - event: 実行
+    click: run
+    expect: { screen: Target }
+  - event: 開始 [接続先あり]
+    input: { target-e2e: true, target-wpf: true }
+    click: target-start
+    expect: { screen: Running, visible: [desktop-warning] }
+  - event: 実行完了
+    click: run-done
+    expect: { screen: List }

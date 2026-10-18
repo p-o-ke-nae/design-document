@@ -1,25 +1,44 @@
 import { Fragment, useEffect, useState } from 'react';
 import type { DbChange, TraceStep } from '../trace-view.ts';
 import { callStatus, describeAction } from '../trace-view.ts';
+import { stepMarks } from '../evidence-view.ts';
+import { EvidencePanel, EvidencePlanList, type EvidenceLoader } from './EvidencePanel.tsx';
 
 const show = (v: unknown) => (v === null || v === undefined ? '—' : typeof v === 'string' ? v : JSON.stringify(v));
 const secs = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
 const KIND_LABEL: Record<DbChange['kind'], string> = { added: '追加', changed: '変更', removed: '削除' };
 
+/** 「飛ばした（only: <値>）」 of a step not run on the platform (platform-results.md「トレース（追加分）」). */
+export const skippedLabel = (s: Pick<TraceStep, 'only'>) => `飛ばした（only: ${(s.only ?? []).join(', ')}）`;
+
 /** Steps of a trace (番号・イベント・✓ / ✗・所要時間). */
 export function TraceTimeline({ steps, selected, onSelect }: { steps: TraceStep[]; selected: number | null; onSelect(index: number): void }) {
   return (
     <ol className="trace-timeline" data-testid="timeline">
-      {steps.map((s) => (
-        <li key={s.index} data-testid="timeline-step" data-index={s.index} data-ok={String(s.ok)} aria-current={s.index === selected ? 'step' : undefined} className={`${s.ok ? '' : 'ng'}${s.index === selected ? ' sel' : ''}`}>
+      {steps.map((s) => {
+        const marks = stepMarks(s.evidence);
+        return (
+        <li key={s.index} data-testid="timeline-step" data-index={s.index} data-ok={String(s.ok)} aria-current={s.index === selected ? 'step' : undefined} data-skipped={s.skipped ? 'true' : undefined} className={`${s.skipped ? 'skipped' : s.ok ? '' : 'ng'}${s.index === selected ? ' sel' : ''}`}>
           <button type="button" className="link" data-testid="step-select" onClick={() => onSelect(s.index)}>
             <span className="ts-no">{s.index}</span>
             <span className="ts-event">{s.event}</span>
-            <span className="ts-ok">{s.ok ? '✓' : '✗'}</span>
+            <span className="ts-ok">{s.skipped ? skippedLabel(s) : s.ok ? '✓' : '✗'}</span>
             <span className="ts-time">{secs(s.durationMs)}</span>
+            {marks && (
+              <span className="ts-evidence" data-testid="timeline-evidence">
+                証跡 {marks.count}
+                {marks.warn && (
+                  <span className="warn" title="証跡の警告・失敗があります">
+                    {' '}
+                    ⚠
+                  </span>
+                )}
+              </span>
+            )}
           </button>
         </li>
-      ))}
+        );
+      })}
     </ol>
   );
 }
@@ -135,7 +154,21 @@ function ApiCalls({ step }: { step: TraceStep }) {
  * Details of one step: screenshot, operation, screens, expectations, API calls and DB changes. `shotUrl` = undefined hides the screenshot (live view);
  * a promise is `Backend.traceShot` (Pages makes a `blob:` URL).
  */
-export function TraceStepDetail({ step, shotUrl: shot }: { step: TraceStep; shotUrl?: string | null | Promise<string> }) {
+export function TraceStepDetail({
+  step,
+  shotUrl: shot,
+  desktop = false,
+  evidence,
+  plan,
+}: {
+  step: TraceStep;
+  shotUrl?: string | null | Promise<string>;
+  desktop?: boolean;
+  /** Reads the evidence bodies (none = no evidence section). */
+  evidence?: EvidenceLoader;
+  /** Live view: the step's planned evidence (evidence-trace.md「ライブ表示」). */
+  plan?: Array<{ label: string; at: 'before' | 'after'; use: string }>;
+}) {
   const [broken, setBroken] = useState('');
   const [resolved, setResolved] = useState<{ from: Promise<string>; url: string | null } | null>(null);
   useEffect(() => {
@@ -154,7 +187,12 @@ export function TraceStepDetail({ step, shotUrl: shot }: { step: TraceStep; shot
   const screenExpect = step.expects.find((e) => e.kind === 'screen');
   return (
     <div className="trace-detail" data-testid="trace-detail" data-index={step.index}>
-      {shotUrl !== undefined &&
+      {step.skipped && shotUrl !== undefined ? (
+        <div className="trace-shot empty muted" data-testid="screenshot">
+          このプラットフォームでは実行していません
+        </div>
+      ) : (
+        shotUrl !== undefined &&
         (pending ? (
           <div className="trace-shot empty muted" />
         ) : shotUrl && broken !== shotUrl ? (
@@ -163,7 +201,8 @@ export function TraceStepDetail({ step, shotUrl: shot }: { step: TraceStep; shot
           <div className="trace-shot empty muted" data-testid="screenshot">
             スクリーンショットはありません
           </div>
-        ))}
+        ))
+      )}
       <p data-testid="trace-action">
         <strong>操作：</strong>
         {describeAction(step)}
@@ -202,10 +241,16 @@ export function TraceStepDetail({ step, shotUrl: shot }: { step: TraceStep; shot
           {step.error}
         </div>
       )}
-      <h4>API</h4>
-      <ApiCalls key={step.index} step={step} />
-      <h4>DB の変化</h4>
-      <DbDiff db={step.db} />
+      {!desktop && (
+        <>
+          <h4>API</h4>
+          <ApiCalls key={step.index} step={step} />
+          <h4>DB の変化</h4>
+          <DbDiff db={step.db} />
+        </>
+      )}
+      {evidence && <EvidencePanel key={step.index} evidence={step.evidence} load={evidence} />}
+      {plan && <EvidencePlanList plan={plan} />}
     </div>
   );
 }

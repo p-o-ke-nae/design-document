@@ -1,0 +1,5 @@
+# TraceEvidence（トレースの BD-ORDER-SCREEN-P004 のステップ 3 の証跡。evidence-trace.md の「構造」）
+evidence:
+  - { seq: 1, label: 確定前の確認画面, use: screenshot, at: before, provider: screenshot, status: ok, durationMs: 180, files: [{ path: BD-ORDER-SCREEN-P004/evidence/3-1-確定前の確認画面.png, kind: image, mime: image/png, bytes: 48213 }] }
+  - { seq: 2, label: 確定した注文, use: db, at: after, provider: db, status: ok, durationMs: 42, db: { name: app, type: sqlite }, totalRows: 1, masked: [card_no], files: [{ path: BD-ORDER-SCREEN-P004/evidence/3-2-確定した注文.table.json, kind: table, mime: application/json, bytes: 186 }] }
+  - { seq: 3, label: アプリのログ, use: app-log, at: after, provider: command, status: warn, reason: "app-log（判定後）— 終了コード 1：ログのファイルが見つかりません", durationMs: 95, files: [] }

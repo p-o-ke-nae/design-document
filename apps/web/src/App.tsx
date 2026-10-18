@@ -73,7 +73,7 @@ function ShellBody() {
               route.sub === 'history' ? (
                 <TestHistoryView id={route.testId ?? ''} />
               ) : route.sub === 'trace' ? (
-                <TraceView runId={route.runId ?? ''} testId={route.testId ?? ''} />
+                <TraceView runId={route.runId ?? ''} testId={route.testId ?? ''} platform={route.platform} />
               ) : route.sub === 'actions' ? (
                 <ActionsPanel path={route.actions ?? ''} />
               ) : route.sub === 'flaky' ? (

@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>デスクトップアプリでのシナリオ実行（モック）</title>
+  <link rel="stylesheet" href="../../../apps/web/src/styles.css" />
+  <style>
+    .page { padding: 12px; display: grid; gap: 10px; }
+    .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    table { border-collapse: collapse; font-size: 13px; }
+    th, td { border: 1px solid #d0d7de; padding: 4px 8px; text-align: left; vertical-align: top; }
+    .badge { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 10px; margin-right: 4px; border: 1px solid transparent; }
+    .badge.p { background: #dafbe1; color: #1a7f37; } .badge.f { background: #ffebe9; color: #cf222e; } .badge.n { background: #fff; color: #57606a; border-color: #d0d7de; }
+    button.badge { cursor: pointer; }
+    .disabled { color: #8c959f; }
+    .reason { font-size: 12px; color: #9a6700; }
+    .note { font-size: 12px; color: #57606a; }
+    .warn { background: #fff8c5; padding: 6px 8px; border-radius: 4px; font-size: 13px; }
+    .mockonly { border-style: dashed; }
+    .log { font-family: ui-monospace, monospace; font-size: 12px; background: #f6f8fa; padding: 6px; white-space: pre; }
+    .shot { width: 360px; height: 200px; border: 1px solid #d0d7de; background: #f3f3f3; display: grid; place-items: center; color: #57606a; font-size: 12px; }
+    .skip { color: #8c959f; }
+    dialog[open], .dialog { border: 1px solid #d0d7de; border-radius: 6px; padding: 12px; max-width: 720px; background: #fff; }
+  </style>
+  <script type="module" src="../_ddv/mock-runtime.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <span class="brand">ddv</span>
+      <span class="muted">テスト</span>
+      <span class="spacer"></span>
+      <span class="muted">acme/order-app（main・a1b2c3d）ローカル版（Windows）</span>
+    </header>
+
+    <!-- テスト一覧 -->
+    <section data-screen="List">
+      <div class="page">
+        <div class="row">
+          <strong>テスト</strong>
+          <span class="muted">シナリオ 5 件 × 接続先 3（web・wpf・winforms）</span>
+          <span class="spacer"></span>
+          <button class="primary" data-testid="run" data-event="実行" data-goto="Target">実行</button>
+        </div>
+        <table data-testid="test-list">
+          <thead><tr><th>テストID</th><th>タイトル</th><th>結果（プラットフォーム別）</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>BD-ORDER-SCREEN-P001</td>
+              <td>注文一覧 → 注文入力 → 注文確認 → 完了</td>
+              <td data-testid="badges">
+                <span class="badge p">web ✓</span>
+                <button class="badge f" data-testid="badge-wpf" data-event="結果を選ぶ" data-goto="Trace" title="wpf のトレースを開く">wpf ✗</button>
+                <span class="badge n" title="未実行">winforms –</span>
+              </td>
+            </tr>
+            <tr>
+              <td>BD-ORDER-SCREEN-P002</td>
+              <td>注文一覧 → 注文入力 → キャンセル</td>
+              <td><span class="badge p">web ✓</span><span class="badge p">wpf ✓</span><span class="badge n">winforms –</span></td>
+            </tr>
+            <tr>
+              <td>DD-ORDER-STATUS-T001</td>
+              <td>新規作成すると Draft（xUnit）</td>
+              <td><span class="badge p">✓</span><span class="note">単体テスト（dotnet）</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="note">文書のマトリクスの行・図の経路も同じバッジで表示します。</p>
+      </div>
+    </section>
+
+    <!-- 接続先の選択 -->
+    <section data-screen="Target" hidden>
+      <div class="page">
+        <div class="dialog">
+          <h3>接続先を選んで実行</h3>
+          <p class="note">シナリオ 5 件を、選んだ接続先で順に実行します。</p>
+          <table data-testid="targets">
+            <thead><tr><th></th><th>接続先</th><th>プラットフォーム</th><th>対象</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><input type="checkbox" id="target-e2e" data-testid="target-e2e" checked /></td>
+                <td><label for="target-e2e">e2e</label></td><td>web</td><td>モック（docs/mocks）</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" id="target-wpf" data-testid="target-wpf" /></td>
+                <td><label for="target-wpf">wpf</label></td><td>wpf</td><td>desktop/OrderApp.Wpf/bin/Debug/net8.0-windows/OrderApp.Wpf.exe</td>
+              </tr>
+              <tr class="disabled">
+                <td><input type="checkbox" id="target-winforms" data-testid="target-winforms" disabled /></td>
+                <td><label for="target-winforms">winforms</label></td><td>winforms</td>
+                <td>desktop/OrderApp.WinForms/bin/Debug/net8.0-windows/OrderApp.WinForms.exe
+                  <div class="reason" data-testid="target-winforms-reason">アプリの実行ファイルが見つかりません（ビルドしてください）</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="error" data-testid="target-error" data-error hidden></p>
+          <div class="row">
+            <span class="spacer"></span>
+            <button data-testid="target-cancel" data-event="キャンセル" data-goto="List">キャンセル</button>
+            <button class="primary" data-testid="target-start" data-event="開始" data-submit="POST /tests/run" data-ok="Running">開始</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 実行中 -->
+    <section data-screen="Running" hidden>
+      <div class="page">
+        <div class="row">
+          <strong>実行中</strong>
+          <span class="badge p">e2e 完了</span>
+          <span class="badge n">wpf 実行中（2 / 5）</span>
+        </div>
+        <p class="warn" data-testid="desktop-warning">デスクトップアプリの操作中はマウス・キーボードに触れないでください（前面のウィンドウを操作しています）。</p>
+        <div class="log" data-testid="run-log">[wpf] BD-ORDER-SCREEN-P001 起動 OrderApp.Wpf.exe
+[wpf]   新規 → Input ✓
+[wpf]   (only: web) dialog-close … 飛ばす
+[wpf]   次へ [入力OK] → Confirm ✗ next が見つかりません（wpf の AutomationId: next）</div>
+        <div class="row">
+          <button class="mockonly" data-testid="run-done" data-event="実行完了" data-goto="List">（モック）実行完了</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- トレース -->
+    <section data-screen="Trace" hidden>
+      <div class="page">
+        <div class="row">
+          <button data-testid="trace-back" data-event="一覧へ" data-goto="List">← 一覧へ</button>
+          <strong>BD-ORDER-SCREEN-P001</strong>
+          <span class="badge f" data-testid="trace-platform">wpf ✗</span>
+          <span class="muted">10/17 09:12・a1b2c3d</span>
+        </div>
+        <table data-testid="trace-steps">
+          <thead><tr><th>#</th><th>ステップ</th><th>結果</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>新規 → Input</td><td>成功</td></tr>
+            <tr class="skip"><td>2</td><td>（only: web）dialog-close</td><td>飛ばした</td></tr>
+            <tr><td>3</td><td>次へ [入力OK] → Confirm</td><td>失敗：next が見つかりません</td></tr>
+          </tbody>
+        </table>
+        <div class="shot" data-testid="trace-shot">（ステップ 3 のアプリのウィンドウの画像）</div>
+        <p class="note">デスクトップのトレースには DOM・ネットワークの記録はありません。</p>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

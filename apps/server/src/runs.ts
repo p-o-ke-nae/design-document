@@ -3,15 +3,19 @@ import { promises as fs, existsSync } from 'node:fs';
 import path from 'node:path';
 import type { DdvConfig } from '@ddv/core';
 import { safeJoin } from '@ddv/core/node';
-import { idPattern, scanTestLinks, type TestLink } from '@ddv/testid';
+import { parseResultKey, resultKey } from '@ddv/services';
+import { idPattern, linksScenarios, scanTestLinks, type TestLink } from '@ddv/testid';
 import { executeRunner, type CaseResult } from './runner.ts';
 import { RepoStateReader } from './repo-state.ts';
 import { Pruner, TRACES_DIR, traceDirs, type PrunePlan } from './prune.ts';
 import type { StepResultMeta } from './snapshots.ts';
+import { evidenceResultFields } from '@ddv/evidence/counts';
 
 export interface RunRequest {
   ids?: string[];
   runner?: string;
+  /** Targets (runner names) to run the scenarios on (platform-results.md「開始の要求」). */
+  runners?: string[];
 }
 
 export type RunKind = 'test' | 'snapshot' | 'deps';
@@ -36,7 +40,7 @@ export interface RunRecord {
   finishedAt?: string;
   status: 'running' | 'passed' | 'failed' | 'error';
   request: RunRequest;
-  runners: Array<{ name: string; command: string; exitCode: number | null; error?: string }>;
+  runners: Array<{ name: string; command: string; exitCode: number | null; error?: string; skipped?: boolean; message?: string }>;
   results: Record<string, CaseResult>;
   log: string[];
   /** Custom SSE events of task runs (replayed to late subscribers). */
@@ -76,6 +80,8 @@ export interface SnapshotOutcome {
 export interface RerunSession {
   originId: string;
   ids: string[];
+  /** `request.runners` of the origin run (re-runs use the same targets). */
+  runners?: string[];
   times: number;
   attempt: number;
 }
@@ -94,41 +100,81 @@ export class RerunError extends Error {
 
 export const BUSY_MESSAGE = '別のテスト実行が進行中です';
 
+export type ExecuteRunner = typeof executeRunner;
+
 export interface RunManagerOptions {
   repoState?: RepoStateReader;
+  /** Replaces the runner process (tests). */
+  execute?: ExecuteRunner;
+}
+
+export interface RunTestsDeps {
+  execute?: ExecuteRunner;
+  /** A reason to skip a runner (no results are made for its ids), e.g. flaui outside Windows in `ddv ci run`. */
+  skip?: (runner: DdvConfig['runners'][number]) => string | undefined;
+}
+
+/** Runners of a request: with `runners`, the non-target runners plus the listed targets (config order); otherwise as before. */
+export function runnersOf(config: DdvConfig, request: RunRequest): DdvConfig['runners'] {
+  if (request.runners) {
+    const chosen = new Set(request.runners);
+    return config.runners.filter((r) => !linksScenarios(r) || chosen.has(r.name));
+  }
+  return config.runners.filter((r) => !request.runner || r.name === request.runner);
+}
+
+/** Platform of a runner's results: its `platform`, playwright = web; none for vitest / dotnet / command. */
+export function platformOf(r: DdvConfig['runners'][number]): 'web' | 'wpf' | 'winforms' | undefined {
+  return r.platform ?? (r.type === 'playwright' ? 'web' : undefined);
 }
 
 /** Runs the configured runners for `run.request` and sets `run.runners` / `results` / `status` (the body of a test run, shared with `ddv ci run`). Throws on unexpected failures. */
-export async function runTests(repoRoot: string, config: DdvConfig, run: RunRecord, log: (line: string) => void): Promise<void> {
+export async function runTests(repoRoot: string, config: DdvConfig, run: RunRecord, log: (line: string) => void, deps: RunTestsDeps = {}): Promise<void> {
+  const execute = deps.execute ?? executeRunner;
   const links: TestLink[] = await scanTestLinks(repoRoot, config);
   const idRe = idPattern(Object.values(config.idPrefix));
-  const requested = run.request.ids?.length ? run.request.ids : null;
-  const runners = config.runners.filter((r) => !run.request.runner || r.name === run.request.runner);
-  for (const r of runners) {
+  // Requested entries may be result keys (re-runs): `<id>@<platform>` only runs on that platform, a plain id on every runner.
+  const requested = run.request.ids?.length ? run.request.ids.map(parseResultKey).map((k, i) => ({ ...k, any: !run.request.ids![i].includes('@') })) : null;
+  const multi = !!run.request.runners;
+  const skippedIds = new Set<string>();
+  for (const r of runnersOf(config, run.request)) {
+    const platform = platformOf(r);
+    const skip = deps.skip?.(r);
+    if (skip) {
+      log(`── ${r.name} (${r.type}, ${r.level}): ${skip} ──`);
+      run.runners.push({ name: r.name, command: '', exitCode: null, skipped: true, message: skip });
+      for (const l of links) if (l.runner === r.name) skippedIds.add(l.id);
+      continue;
+    }
     let ids: string[] | null = null;
     if (requested) {
-      ids = [...new Set(links.filter((l) => l.runner === r.name && requested.includes(l.id)).map((l) => l.id))];
+      const wanted = new Set(requested.filter((k) => k.any || k.platform === (platform ?? 'web')).map((k) => k.testId));
+      ids = [...new Set(links.filter((l) => l.runner === r.name && wanted.has(l.id)).map((l) => l.id))];
       if (!ids.length) continue;
     }
+    const runLog = multi ? (line: string) => log(`[${r.name}] ${line}`) : log;
     log(`── ${r.name} (${r.type}, ${r.level}) ──`);
-    const res = await executeRunner(repoRoot, r, ids, links, idRe, log, run.id);
+    const res = await execute(repoRoot, r, ids, links, idRe, runLog, run.id);
     run.runners.push({ name: r.name, command: res.command, exitCode: res.exitCode, error: res.error });
-    if (res.error) log(`! ${res.error}`);
-    Object.assign(run.results, res.results);
+    if (res.error) runLog(`! ${res.error}`);
+    for (const [id, result] of Object.entries(res.results)) {
+      run.results[resultKey(id, platform)] = platform && platform !== 'web' ? { ...result, platform } : result;
+    }
     const startFailed = res.error ?? (res.exitCode === null && !Object.keys(res.results).length ? 'プロセスを起動できませんでした' : undefined);
     if (startFailed) {
       const message = `ランナー ${r.name} を起動できませんでした: ${startFailed}`;
       const failedIds = ids ?? [...new Set(links.filter((l) => l.runner === r.name).map((l) => l.id))];
-      for (const id of failedIds) run.results[id] ??= { status: 'error', durationMs: 0, message, runner: r.name, test: '' };
+      for (const id of failedIds) run.results[resultKey(id, platform)] ??= { status: 'error', durationMs: 0, message, runner: r.name, test: '', ...(platform && platform !== 'web' ? { platform } : {}) };
     }
   }
   if (requested) {
-    for (const id of requested) {
-      if (!run.results[id]) run.results[id] = { status: 'error', durationMs: 0, message: '紐づくテストが無いか、結果が見つかりませんでした', runner: '', test: '' };
+    const done = new Set(Object.keys(run.results).map((k) => parseResultKey(k).testId));
+    for (const { testId: id } of requested) {
+      if (!done.has(id) && !run.results[id] && !skippedIds.has(id)) run.results[id] = { status: 'error', durationMs: 0, message: '紐づくテストが無いか、結果が見つかりませんでした', runner: '', test: '' };
     }
   }
   const statuses = Object.values(run.results).map((r) => r.status);
-  const runnerFailed = run.runners.some((r) => r.error || r.exitCode === null);
+  const runnerFailed = run.runners.some((r) => !r.skipped && (r.error || r.exitCode === null));
   run.status = runnerFailed || statuses.includes('error') ? (statuses.includes('failed') ? 'failed' : 'error') : statuses.includes('failed') ? 'failed' : 'passed';
   if (!run.runners.length) {
     run.status = 'error';
@@ -143,6 +189,7 @@ export class RunManager extends EventEmitter {
   active: RunRecord | null = null;
   rerunSession: RerunSession | null = null;
   private repoState: RepoStateReader;
+  private executeRunner?: ExecuteRunner;
 
   constructor(
     private repoRoot: string,
@@ -151,6 +198,7 @@ export class RunManager extends EventEmitter {
   ) {
     super();
     this.repoState = opts.repoState ?? new RepoStateReader();
+    this.executeRunner = opts.execute;
   }
 
   async load(): Promise<void> {
@@ -219,8 +267,9 @@ export class RunManager extends EventEmitter {
     if (!ids.length) throw new RerunError('no-failures');
     const head = this.list()[0];
     const originId = head.rerunOf ?? head.id;
-    this.rerunSession = { originId, ids, times, attempt: 1 };
-    const run = this.newRun({ ids }, { rerunOf: originId, attempt: 1, times });
+    const runners = this.runs.get(originId)?.request.runners;
+    this.rerunSession = { originId, ids, times, attempt: 1, ...(runners ? { runners } : {}) };
+    const run = this.newRun({ ids, ...(runners ? { runners } : {}) }, { rerunOf: originId, attempt: 1, times });
     this.active = run;
     void this.execute(run);
     return run;
@@ -296,7 +345,7 @@ export class RunManager extends EventEmitter {
     try {
       const state = await this.repoState.read(this.repoRoot);
       if (state) Object.assign(run, { commit: state.commit, dirty: state.dirty });
-      await runTests(this.repoRoot, config, run, (l) => this.log(run, l));
+      await runTests(this.repoRoot, config, run, (l) => this.log(run, l), { execute: this.executeRunner });
     } catch (e) {
       run.status = 'error';
       this.log(run, `! ${(e as Error).stack ?? e}`);
@@ -314,6 +363,7 @@ export class RunManager extends EventEmitter {
       if (existsSync(dir)) {
         const ids = (await fs.readdir(dir)).filter((f) => f.endsWith('.json')).map((f) => f.slice(0, -'.json'.length));
         if (ids.length) run.traces = ids.sort();
+        await writeEvidenceCounts(dir, run.traces ?? [], run.results);
       }
     } catch {
       /* no traces */
@@ -328,7 +378,7 @@ export class RunManager extends EventEmitter {
     if (session && run.rerunOf === session.originId && session.attempt < session.times) {
       session.attempt++;
       // `active` is never empty between attempts so that no other run can start.
-      const next = this.newRun({ ids: session.ids }, { rerunOf: session.originId, attempt: session.attempt, times: session.times });
+      const next = this.newRun({ ids: session.ids, ...(session.runners ? { runners: session.runners } : {}) }, { rerunOf: session.originId, attempt: session.attempt, times: session.times });
       this.active = next;
       this.emit('end', run.id, run);
       this.emit('run', next.id, next);
@@ -359,5 +409,18 @@ export class RunManager extends EventEmitter {
     }
     for (const id of p.runs) if (!existsSync(safeJoin(this.repoRoot, `${RUNS_DIR}/${id}.json`))) this.runs.delete(id);
     return p;
+  }
+}
+
+/** Writes `evidence` / `evidenceWarnings` of each traced result (run-record.md「実行の終了」). Unreadable traces are skipped. */
+export async function writeEvidenceCounts(dir: string, keys: readonly string[], results: Record<string, CaseResult>): Promise<void> {
+  for (const key of keys) {
+    const res = results[key];
+    if (!res) continue;
+    try {
+      Object.assign(res, evidenceResultFields(JSON.parse(await fs.readFile(path.join(dir, `${key}.json`), 'utf8'))));
+    } catch {
+      /* unreadable trace */
+    }
   }
 }

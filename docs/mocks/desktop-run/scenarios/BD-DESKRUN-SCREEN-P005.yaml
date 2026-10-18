@@ -1,0 +1,13 @@
+# ddv mock scaffold が生成。event / click / expect.screen は再生成で更新、それ以外は保持
+
+id: BD-DESKRUN-SCREEN-P005
+title: 開始 → テスト一覧 → [結果を選ぶ] トレース → [一覧へ] テスト一覧 → 終了
+fixtures: [ default ]
+start: List
+steps:
+  - event: 結果を選ぶ
+    click: badge-wpf
+    expect: { screen: Trace, text: { trace-platform: wpf ✗ } }
+  - event: 一覧へ
+    click: trace-back
+    expect: { screen: List }
