@@ -285,7 +285,8 @@ test.describe('起動トークンとセッション Cookie（BD-LOCAL-TOKEN）',
     await expect(page.getByRole('heading', { name: '作業フォルダを開く' })).toBeVisible();
     // The session becomes invalid (e.g. the server was restarted): the next API call shows the guide.
     await context.clearCookies();
-    await page.getByTestId('dirs-roots').click();
+    // The next API call shows the guide: this click, or a request the page makes on its own first (then the button is gone).
+    await page.getByTestId('dirs-roots').click({ timeout: 5_000 }).catch(() => {});
     await expect(page.getByTestId('token-required')).toBeVisible();
     await context.close();
   });
