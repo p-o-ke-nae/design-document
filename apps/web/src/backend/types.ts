@@ -103,6 +103,8 @@ export type Backend = Omit<ApiMethods, 'traceShot' | 'actionsFile'> & {
   rawUrl(p: string): Promise<string>;
   /** A file of an Actions run on the results branch (Pages: a `blob:` URL). */
   actionsFile(id: string, path: string): Promise<string>;
+  /** The same file's contents (Pages: no `fetch` of a `blob:` URL, which the CSP's connect-src does not allow). */
+  actionsBlob(id: string, path: string): Promise<Blob>;
   /** Pages: the target head's reader (MockFrame builds `srcdoc` from it). Local: `null`. */
   repo(): RepoReader | null;
 };

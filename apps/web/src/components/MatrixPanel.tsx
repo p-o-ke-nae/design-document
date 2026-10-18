@@ -134,7 +134,7 @@ export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; se
                   onSelect={() => onSelect(selected === c.id ? null : c.id)}
                   result={latest[c.id]}
                   evidence={evidenceBadge(resultsByPlatform(latest, c.id))}
-                  badges={hasBadges(c.id, platforms, latest) ? <PlatformBadges testId={c.id} platforms={platforms} latest={latest} /> : undefined}
+                  badges={hasBadges(c.id, platforms, latest) ? <PlatformBadges testId={c.id} platforms={platforms} latest={latest} running={running} /> : undefined}
                   coverage={coverage?.cases[c.id]}
                   summary={history?.tests[c.id]}
                   running={running}

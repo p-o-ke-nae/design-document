@@ -397,6 +397,7 @@ export function createPagesBackend(scope: string, getContext: () => PagesContext
     // Placing the workflow writes a file of the local folder.
     actionsInit: () => unsupported('scaffold'),
     actionsFile: (id, p) => read((s) => blobUrl(`actions:${id}/${p}`, async () => new Blob([bytes(await actions(s).file(id, p))], { type: mimeOf(p) }))),
+    actionsBlob: (id, p) => read(async (s) => new Blob([bytes(await actions(s).file(id, p))], { type: mimeOf(p) })),
   };
 }
 

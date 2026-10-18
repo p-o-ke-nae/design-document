@@ -4,7 +4,7 @@
  */
 import { apiPath, createApi, gh, rawPath } from '../api.ts';
 import { LOCAL_CAPABILITIES } from './capabilities.ts';
-import type { Backend, BackendEvent, BackendListener, RunHandlers, Unsubscribe } from './types.ts';
+import { ApiError, type Backend, type BackendEvent, type BackendListener, type RunHandlers, type Unsubscribe } from './types.ts';
 
 /** 停止 / 接続中 / 受信中 / 再接続待ち (diagram `sse-feed`). */
 export type FeedState = 'Stopped' | 'Connecting' | 'Open' | 'Retrying';
@@ -228,6 +228,11 @@ export function createHttpBackend(scope: string): Backend {
     traceShot: async (runId, id, n, platform) => base.traceShot(runId, id, n, platform),
     rawUrl: async (p) => rawPath(scope, p),
     actionsFile: async (id, p) => base.actionsFile(id, p),
+    actionsBlob: async (id, p) => {
+      const r = await fetch(base.actionsFile(id, p));
+      if (!r.ok) throw new ApiError(`ファイルがありません: ${p}`, r.status, r.status === 404 ? 'not-found' : 'error');
+      return r.blob();
+    },
     repo: () => null,
   };
 }

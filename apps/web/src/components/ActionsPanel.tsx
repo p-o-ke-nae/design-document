@@ -779,13 +779,12 @@ function DetailView({ id, status }: { id: string; status: ActionsStatus }) {
 function ActionsTrace({ id, testId }: { id: string; testId: string }) {
   const load = useCallback(
     () =>
-      actionsApi
-        .file(id, `traces/${testId}.json`)
-        .then((u) => fetch(u))
-        .then(async (r) => {
-          if (!r.ok) throw new ApiError('トレースがありません', r.status, 'missing');
-          return (await r.json()) as TraceResponse;
-        }),
+      actionsApi.blob(id, `traces/${testId}.json`).then(
+        async (b) => JSON.parse(await b.text()) as TraceResponse,
+        (e: { status?: number }) => {
+          throw new ApiError('トレースがありません', e.status ?? 404, 'missing');
+        },
+      ),
     [id, testId],
   );
   const shotUrl = useCallback((n: number) => actionsApi.file(id, `traces/${testId}/${n}.png`), [id, testId]);
@@ -796,13 +795,9 @@ function ActionsTrace({ id, testId }: { id: string; testId: string }) {
         const k = parseResultKey(testId);
         return api.evidence(id, k.testId, k.platform, baseName(f.path), signal);
       }
-      return actionsApi
-        .file(id, `traces/${f.path}`)
-        .then((u) => fetch(u, { signal }))
-        .then((r) => {
-          if (!r.ok) throw new ApiError('古い実行のため証跡は削除されました', 404, 'pruned');
-          return r.blob();
-        });
+      return actionsApi.blob(id, `traces/${f.path}`).catch(() => {
+        throw new ApiError('古い実行のため証跡は削除されました', 404, 'pruned');
+      });
     },
     [id, testId],
   );

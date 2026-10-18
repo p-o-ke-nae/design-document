@@ -1,8 +1,11 @@
 import { badgesFor, resultsByPlatform, type BadgeResult } from '../targets.ts';
 import { traceHref } from '../state.tsx';
 
-/** Results per platform of one test id (platform-results.md「バッジの表示」). Renders nothing when only web (the old display stays). */
-export function PlatformBadges({ testId, platforms, latest }: { testId: string; platforms: string[]; latest: Record<string, BadgeResult> }) {
+/**
+ * Results per platform of one test id (platform-results.md「バッジの表示」). Renders nothing when only web (the old display stays).
+ * unning: no trace is opened while a run is going on (desktop-run.md「画面遷移」: 実行中 has no 結果を選ぶ).
+ */
+export function PlatformBadges({ testId, platforms, latest, running = false }: { testId: string; platforms: string[]; latest: Record<string, BadgeResult>; running?: boolean }) {
   const badges = badgesFor(testId, platforms, resultsByPlatform(latest, testId));
   if (!badges) return null;
   return (
@@ -13,7 +16,7 @@ export function PlatformBadges({ testId, platforms, latest }: { testId: string; 
           type="button"
           className={`badge st-${b.mark === '✓' ? 'passed' : b.mark === '✗' ? 'failed' : 'skipped'}`}
           data-testid={`badge-${b.platform}`}
-          disabled={!b.trace}
+          disabled={!b.trace || running}
           title={b.title}
           onClick={() => b.trace && (location.hash = traceHref(b.trace.runId, b.trace.testId, b.trace.platform))}
         >

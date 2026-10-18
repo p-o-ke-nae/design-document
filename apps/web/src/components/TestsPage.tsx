@@ -249,7 +249,7 @@ export function TestsPage() {
                     </td>
                     <td>
                       {hasBadges(c.id, platforms, latest) ? (
-                        <PlatformBadges testId={c.id} platforms={platforms} latest={latest} />
+                        <PlatformBadges testId={c.id} platforms={platforms} latest={latest} running={running} />
                       ) : r ? (
                         <StatusBadge status={r.status} title={r.message} />
                       ) : (
