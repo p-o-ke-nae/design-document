@@ -1,4 +1,5 @@
 // Browser-safe trace format shared by the recorder (Node), mock-runtime (iframe) and the viewer. No Node imports.
+import type { Platform } from './platform.ts';
 import type { Value } from './types.ts';
 
 export const TRACE_VERSION = 1;
@@ -41,9 +42,14 @@ export interface DbChange {
 }
 
 export interface TraceStep {
-  /** 1-based. */
+  /** 1-based (auxiliary steps included). */
   index: number;
+  /** '' for auxiliary steps. */
   event: string;
+  /** Platforms of the step's `only:` (`desktop` expanded). */
+  only?: Platform[];
+  /** Not run on this platform (`only:`); not part of the pass / fail result. */
+  skipped?: true;
   input?: Record<string, Value>;
   click?: string;
   do?: string;
@@ -67,6 +73,8 @@ export interface TraceFile {
   title: string;
   mock: string;
   target: TraceTarget;
+  /** Platform the scenario ran on (absent = web). */
+  platform?: Platform;
   startedAt: string;
   durationMs: number;
   status: TraceStatus;

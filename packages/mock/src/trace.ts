@@ -1,6 +1,7 @@
 // Trace recorder for scenario E2E (Node). Browser-safe format helpers live in trace-format.ts.
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { expandOnly, type Platform } from './platform.ts';
 import type { Step } from './types.ts';
 import { TRACE_DIR_ENV, TRACE_VERSION, type ApiCall, type DbChange, type ExpectObservation, type TraceFile, type TraceStep, type TraceTarget } from './trace-format.ts';
 
@@ -12,6 +13,8 @@ export interface TraceMeta {
   title: string;
   mock: string;
   target: TraceTarget;
+  /** Absent = web. */
+  platform?: Platform;
 }
 
 /** What `runScenario` observed for one step. */
@@ -60,17 +63,28 @@ export class TraceRecorder {
     return { rel, abs: path.join(this.dir, this.file.testId, `${index}.png`) };
   }
 
-  beginStep(index: number, step: Step, screenBefore: string | null): void {
-    if (this.state !== 'idle') throw new Error(ORDER_ERROR);
-    this.state = 'inStep';
-    this.current = {
+  private head(index: number, step: Step, screenBefore: string | null): Omit<TraceStep, keyof StepTrace> {
+    return {
       index,
-      event: step.event,
+      event: step.event ?? '',
+      ...(step.only !== undefined ? { only: expandOnly(step.only) } : {}),
       ...(step.input !== undefined ? { input: step.input } : {}),
       ...(step.click !== undefined ? { click: step.click } : {}),
       ...(step.do !== undefined ? { do: step.do } : {}),
       screenBefore,
     };
+  }
+
+  /** Step not run on this platform (`only:`): recorded as passed without expects; the trace status is unaffected. */
+  skipStep(index: number, step: Step, screen: string | null): void {
+    if (this.state !== 'idle') throw new Error(ORDER_ERROR);
+    this.file.steps.push({ ...this.head(index, step, screen), skipped: true, screenAfter: screen, expects: [], ok: true, durationMs: 0, calls: [], db: null });
+  }
+
+  beginStep(index: number, step: Step, screenBefore: string | null): void {
+    if (this.state !== 'idle') throw new Error(ORDER_ERROR);
+    this.state = 'inStep';
+    this.current = this.head(index, step, screenBefore);
   }
 
   /** Ends the step; a failed step finishes the trace (written immediately). */
