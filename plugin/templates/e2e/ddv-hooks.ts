@@ -12,3 +12,11 @@ export const seed: ScenarioHooks['seed'] = async (fixtures, { page, baseURL }) =
 export const steps: ScenarioHooks['steps'] = {
   // ログイン: async (page) => { await page.fill('#user', 'test'); await page.click('text=ログイン'); },
 };
+
+// シナリオの evidence: の use: <名前> で呼ばれる証跡の取得手段（任意）。import { defineEvidence } from '@ddv/evidence' を足して有効にする
+// export const evidence = {
+//   'app-log': defineEvidence({
+//     params: { lines: { default: 50 } },
+//     run: async (args, ctx) => ({ kind: 'text', text: await (await ctx.page.request.get(`/test/log?lines=${args.lines}`)).text() }),
+//   }),
+// };

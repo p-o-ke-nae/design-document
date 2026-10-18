@@ -44,6 +44,9 @@ description: 承認済みの ddv 要件定義から基本設計（画面遷移�
 - シナリオは書かずに生成する：テストID採番の後に `npm --prefix "$DDV_HOME" run ddv -- mock scaffold --repo <repo>` → `scenarios/<テストID>.yaml`
   - 生成されたシナリオの `# 要確認` の値（入力値・期待値）を埋める。**式やスクリプトは書かない**（人間も保守するため）
   - 図を直したら再度 `scaffold`（編集した値は保持され、消えた経路は `scenarios/_retired/` へ）
+- 実アプリにデスクトップ（WPF・WinForms）があるとき：シナリオは Web と共通に書く。プラットフォームだけの補助ステップ（例：ダイアログを閉じる）は `only: [wpf]` を付けて足す（`mock scaffold` で再生成しても保たれる）。`event` は補助ステップでは省ける
+- `ddv.config.yaml` に `tokens` があれば `ddv -- tokens generate` で生成した `<mocksRoot>/_tokens/<name>.css` もモックで `<link>` し、実アプリの色・余白に合わせる
+- 受入で確かめたい画面・データの記録は、ステップの `evidence:`（`use: screenshot` / `db` / `command` / hooks の名前、`at: before|after`、`with:`）で指定する。DB の SQL は読み取りだけ。使える名前は `ddv -- evidence list`、`ddv-lint` が名前・引数を検査する
 - ddv のモック表示のプレイヤーで全シナリオを再生し、すべて「完了」になることを確認してからレビュー依頼する
 - テンプレート：`../../templates/docs/mocks/sample/`
 ## 手順

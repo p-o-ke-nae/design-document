@@ -19,3 +19,19 @@ runners: []
 #  - { name: web,    type: vitest,     cwd: web,    level: integration }
 #  - { name: e2e,    type: playwright, cwd: web,    level: integration }
 #  - { name: dotnet, type: dotnet,     cwd: tests,  level: unit }
+#  - name: wpf                       # デスクトップ（Windows。シナリオを FlaUI で実行。ddv desktop doctor で確認）
+#    type: flaui
+#    platform: wpf                   # wpf / winforms
+#    level: integration
+#    app: { path: desktop/App/bin/Debug/net8.0-windows/App.exe }
+#    source: desktop/App             # ddv-lint が AutomationId を探す画面定義（XAML・*.Designer.cs）の場所
+# 実アプリのデザインのトークン（ddv tokens generate で <mocksRoot>/_tokens/<name>.css を生成）
+# tokens:
+#   - { name: app-wpf, kind: xaml, sources: [desktop/App/App.xaml] }
+#   - { name: app-web, kind: css, sources: [web/src/styles/app.css], classes: [card] }
+# 証跡（シナリオの evidence:）で使う DB と外部コマンド
+# evidence:
+#   databases:
+#     app: { type: sqlite, env: DDV_DB_APP, mask: [password] }   # sqlite / sqlserver / postgres。接続文字列は環境変数から
+#   commands:
+#     app-log: { run: pwsh, args: [-File, scripts/collect-log.ps1, -Out, '{out}'] }
