@@ -7,6 +7,11 @@ export const TRACE_VERSION = 1;
 export const BODY_LIMIT = 64 * 1024;
 export const TRACE_DIR_ENV = 'DDV_TRACE_DIR';
 
+/** File name (without `.json`) of a trace = the result key: `testId` for web, else `<testId>@<platform>` (platform-results.md「トレース」). */
+export function traceKey(testId: string, platform?: Platform | null): string {
+  return !platform || platform === 'web' ? testId : `${testId}@${platform}`;
+}
+
 export type TraceTarget = 'mock' | 'app';
 export type TraceStatus = 'passed' | 'failed';
 export type ExpectKind = 'screen' | 'visible' | 'hidden' | 'text' | 'count';

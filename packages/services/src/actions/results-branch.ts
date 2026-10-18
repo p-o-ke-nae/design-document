@@ -28,6 +28,7 @@ const CaseResultSchema = z.object({
   message: z.string().optional(),
   runner: z.string(),
   test: z.string(),
+  platform: z.enum(['web', 'wpf', 'winforms']).optional(),
 });
 
 const StepResultMetaSchema = z.object({
@@ -48,7 +49,7 @@ export const ActionsRunRecordSchema = z
     startedAt: z.string(),
     finishedAt: z.string().optional(),
     status: z.enum(['passed', 'failed', 'error']),
-    request: z.object({ ids: z.array(z.string()).optional(), runner: z.string().optional() }).prefault({}),
+    request: z.object({ ids: z.array(z.string()).optional(), runner: z.string().optional(), runners: z.array(z.string()).optional() }).prefault({}),
     runners: z.array(z.object({ name: z.string(), command: z.string(), exitCode: z.number().nullable(), error: z.string().optional() })).prefault([]),
     results: z.record(z.string(), CaseResultSchema),
     log: z.array(z.string()).prefault([]),

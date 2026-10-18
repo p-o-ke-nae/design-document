@@ -34,7 +34,14 @@ export function globToRegExp(glob: string): RegExp {
   return new RegExp(`^${re}$`);
 }
 
+/** Runners linked to scenario YAML files: playwright with `scenarios` and flaui (flaui-driver.md「設定」). */
+export function linksScenarios(r: Pick<RunnerConfig, 'type' | 'scenarios'>): boolean {
+  return (r.type === 'playwright' && !!r.scenarios) || r.type === 'flaui';
+}
+
 export function runnerFilter(r: RunnerConfig): (relToCwd: string) => boolean {
+  // flaui runners have no test sources: only scenario YAML files link to them.
+  if (r.type === 'flaui') return () => false;
   if (r.include?.length) {
     const res = r.include.map(globToRegExp);
     return (p) => res.some((x) => x.test(p));

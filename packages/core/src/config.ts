@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const RunnerSchema = z.object({
   name: z.string(),
-  type: z.enum(['vitest', 'playwright', 'dotnet', 'command']),
+  type: z.enum(['vitest', 'playwright', 'dotnet', 'command', 'flaui']),
   /** Working directory relative to the repository root. */
   cwd: z.string().default('.'),
   level: z.enum(['unit', 'integration']).default('unit'),
@@ -12,6 +12,15 @@ export const RunnerSchema = z.object({
   command: z.string().optional(),
   /** Playwright runners: also link scenario YAML files under mocksRoot by their `id`. */
   scenarios: z.boolean().default(false),
+  /** Platform of the results (playwright: web; flaui: wpf / winforms). flaui-driver.md「設定」 */
+  platform: z.enum(['web', 'wpf', 'winforms']).optional(),
+  /** flaui: the application to start (path relative to the repository root). */
+  app: z.object({ path: z.string(), args: z.array(z.string()).default([]), cwd: z.string().optional() }).optional(),
+  /** flaui: where the screen definitions are. */
+  source: z.string().optional(),
+  /** flaui: wait limit in milliseconds. */
+  timeout: z.number().int().min(100).optional(),
+  automation: z.enum(['uia3', 'uia2']).optional(),
 });
 
 export const ConfigSchema = z.object({

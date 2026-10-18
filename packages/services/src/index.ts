@@ -31,6 +31,7 @@ export * from './pr.ts';
 export * from './repo-path.ts';
 export * from './repo-reader.ts';
 export * from './repo-ref.ts';
+export * from './result-key.ts';
 export * from './review.ts';
 export * from './status-commit.ts';
 export * from './testdata.ts';

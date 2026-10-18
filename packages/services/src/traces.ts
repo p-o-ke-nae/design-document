@@ -1,5 +1,6 @@
 import type { DdvConfig } from '@ddv/core';
 import { TRACE_VERSION, type TraceFile } from '@ddv/mock/browser';
+import { resultKey, type Platform } from './result-key.ts';
 import { idPattern } from '@ddv/testid/core';
 import { TraceError } from './errors.ts';
 import type { LocalRuns, RunRecord } from './history.ts';
@@ -32,10 +33,13 @@ export class TraceService {
     private readonly getConfig: () => DdvConfig,
   ) {}
 
-  private validate(runId: string, testId: string): void {
+  /** Checks the platform and the ids, and returns the result key (DD-PLATRES-TRPATH). No platform / `web` = the plain test id. */
+  validate(runId: string, testId: string, platform?: string | null): string {
+    if (platform && platform !== 'web' && platform !== 'wpf' && platform !== 'winforms') throw new TraceError(400, 'bad-platform', '不明なプラットフォームです');
     const re = idPattern(Object.values(this.getConfig().idPrefix));
     const m = testId.match(re);
     if (!RUN_ID.test(runId) || !m || m[0] !== testId) throw new TraceError(400, 'invalid-id', '実行ID またはテストID の形式が不正です');
+    return resultKey(testId, (platform || undefined) as Platform | undefined);
   }
 
   private run(runId: string): RunRecord | undefined {
@@ -43,25 +47,25 @@ export class TraceService {
   }
 
   /** Whether the trace file still exists (no validation of the ids beyond the path). */
-  async exists(runId: string, testId: string): Promise<boolean> {
+  async exists(runId: string, key: string): Promise<boolean> {
     try {
-      return await this.reader.exists(`${TRACES_DIR}/${runId}/${testId}.json`);
+      return await this.reader.exists(`${TRACES_DIR}/${runId}/${key}.json`);
     } catch {
       return false;
     }
   }
 
-  async read(runId: string, testId: string): Promise<TraceRead> {
-    this.validate(runId, testId);
+  async read(runId: string, testId: string, platform?: string | null): Promise<TraceRead> {
+    const key = this.validate(runId, testId, platform);
     const run = this.run(runId);
     if (!run) return { ok: false, reason: 'unknownRun' };
-    const res = run.results[testId];
+    const res = run.results[key];
     if (!res) return { ok: false, reason: 'notInRun' };
     if (!run.traces) return { ok: false, reason: 'beforeTrace' };
-    if (!run.traces.includes(testId)) return { ok: false, reason: res.status === 'error' ? 'aborted' : 'notRecorded' };
+    if (!run.traces.includes(key)) return { ok: false, reason: res.status === 'error' ? 'aborted' : 'notRecorded' };
     let trace: TraceFile;
     try {
-      trace = JSON.parse(await this.reader.readText(`${TRACES_DIR}/${runId}/${testId}.json`)) as TraceFile;
+      trace = JSON.parse(await this.reader.readText(`${TRACES_DIR}/${runId}/${key}.json`)) as TraceFile;
     } catch {
       return { ok: false, reason: 'pruned' };
     }
@@ -70,10 +74,10 @@ export class TraceService {
   }
 
   /** PNG bytes of step `n`'s screenshot, or null when it does not exist. */
-  async screenshot(runId: string, testId: string, n: number): Promise<Uint8Array | null> {
-    this.validate(runId, testId);
+  async screenshot(runId: string, testId: string, n: number, platform?: string | null): Promise<Uint8Array | null> {
+    const key = this.validate(runId, testId, platform);
     if (!Number.isInteger(n) || n < 1) return null;
-    const p = `${TRACES_DIR}/${runId}/${testId}/${n}.png`;
+    const p = `${TRACES_DIR}/${runId}/${key}/${n}.png`;
     try {
       if (!(await this.reader.exists(p))) return null;
       return await this.reader.readBinary(p);

@@ -55,7 +55,7 @@ export const BODY_MAX = 5000;
 
 export class HistoryError extends ServiceError {
   constructor(
-    readonly status: 404,
+    readonly status: 400 | 404,
     readonly code: string,
     message: string,
   ) {
