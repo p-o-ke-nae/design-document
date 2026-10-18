@@ -64,7 +64,9 @@ export interface XNode {
 
 const META = XMLParser.getMetaDataSymbol() as unknown as symbol;
 
-export function parseXml(text: string): XNode[] {
+export function parseXml(source: string): XNode[] {
+  // startIndex of fast-xml-parser counts in newline-normalized text (XML end-of-line handling).
+  const text = source.replace(/\r\n?/g, '\n');
   const parser = new XMLParser({
     ignoreAttributes: false,
     preserveOrder: true,

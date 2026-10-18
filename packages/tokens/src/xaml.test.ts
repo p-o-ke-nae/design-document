@@ -109,6 +109,14 @@ describe('XAML の辞書の直下の要素（XRES）', () => {
     expect(r.tokens.filter((t) => t.kind !== 'standard')).toEqual([]);
     expect(r.skipped).toBe(3);
   });
+
+  it('改行が CRLF でも warning の行番号はずれない', async () => {
+    const body = `
+      <Color x:Key="A">#111111</Color>
+      <LinearGradientBrush x:Key="HeaderBrush" />`;
+    const r = await readXaml({ 'app/App.xaml': app(body).replace(/\n/g, '\r\n') });
+    expect(r.warnings).toEqual([{ file: 'app/App.xaml', line: 6, message: 'グラデーション・画像のブラシは変換しません: HeaderBrush（LinearGradientBrush）' }]);
+  });
 });
 
 describe('トークン名（KEBAB）', () => {

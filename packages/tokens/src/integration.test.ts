@@ -62,7 +62,8 @@ describe('結合テスト（WPF の固定ファイルと pokenae.Web の globals
       await fsp.writeFile(path.join(EXPECTED, 'report.txt'), first.sets.map((s) => JSON.stringify(s.warnings)).join('\n') + '\n', 'utf8');
     }
     for (const n of OUTPUTS) expect(byName(n), n).toBe(lf(await fsp.readFile(path.join(EXPECTED, n), 'utf8')));
-    expect(first.sets.map((s) => JSON.stringify(s.warnings)).join('\n') + '\n').toBe(lf(await fsp.readFile(path.join(EXPECTED, 'report.txt'), 'utf8')));
+    const report = lf(await fsp.readFile(path.join(EXPECTED, 'report.txt'), 'utf8')).trimEnd().split('\n');
+    expect(first.sets.map((s) => s.warnings)).toEqual(report.map((l) => JSON.parse(l)));
 
     const snapshot = new Map(fs.written);
     const writes = fs.writes.length;
