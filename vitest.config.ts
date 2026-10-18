@@ -24,6 +24,7 @@ export default defineConfig({
       '@ddv/mock/trace-format': r('./packages/mock/src/trace-format.ts'),
       '@ddv/mock/trace': r('./packages/mock/src/trace.ts'),
       '@ddv/mock-runtime': r('./packages/mock-runtime/src/index.ts'),
+      '@ddv/desktop': r('./packages/desktop/src/index.ts'),
       '@ddv/tokens/node': r('./packages/tokens/src/node.ts'),
       '@ddv/tokens': r('./packages/tokens/src/index.ts'),
       '@ddv/mock': r('./packages/mock/src/index.ts'),
