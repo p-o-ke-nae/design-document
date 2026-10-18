@@ -40,3 +40,64 @@ jobs:
           name: test-results
           path: test-results/
           retention-days: 7
+
+  # Evidence from real databases (evidence-runner.md): PostgreSQL and SQL Server service containers (Linux runners only).
+  db:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: ddv
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_SA_PASSWORD: Ddv-Test-1234
+        ports: ['1433:1433']
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ddv-Test-1234 -Q 'SELECT 1' || exit 1"
+          --health-interval 10s --health-timeout 5s --health-retries 30 --health-start-period 20s
+    env:
+      DDV_IT_POSTGRES: postgres://postgres:ddv@127.0.0.1:5432/postgres
+      DDV_IT_SQLSERVER: Server=127.0.0.1,1433;Database=master;User Id=sa;Password=Ddv-Test-1234;Encrypt=false;TrustServerCertificate=true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run packages/evidence/src/db
+
+  # Desktop (flaui-driver.md・desktop-run.md): the FlaUI driver, the sample apps and `ddv desktop run` on a Windows session.
+  desktop:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - run: npm ci
+      - run: dotnet test packages/desktop/driver.Tests/FlaUiDriver.Tests.csproj
+      - run: dotnet test examples/sample-app/desktop/OrderApp.Desktop.slnx
+      - run: npm run ddv -- desktop doctor --repo examples/sample-app
+      - run: npm run ddv -- desktop run --runner wpf --repo examples/sample-app --junit test-results/desktop-wpf.xml
+      - run: npm run ddv -- desktop run --runner winforms --repo examples/sample-app --junit test-results/desktop-winforms.xml
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: desktop-results
+          path: test-results/
+          retention-days: 7
