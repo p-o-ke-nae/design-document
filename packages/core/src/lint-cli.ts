@@ -14,7 +14,8 @@ const config = await loadConfig(repo);
 // @ddv/mock and @ddv/tokens depend on core, so they are loaded dynamically to avoid a static import cycle.
 const { checkMocks } = await import('@ddv/mock');
 const { checkTokens } = await import('@ddv/tokens/node');
-const issues = await lintRepo(repo, config, { extraChecks: [checkMocks, checkTokens] });
+const { checkEvidence } = await import('@ddv/evidence/check');
+const issues = await lintRepo(repo, config, { extraChecks: [checkMocks, checkTokens, checkEvidence] });
 if (json) {
   console.log(JSON.stringify(issues, null, 2));
 } else {

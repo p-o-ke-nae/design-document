@@ -92,6 +92,7 @@ export function mergeScenario(existing: Scenario | undefined, generated: Scenari
     if (g.click !== undefined) step.click = g.click;
     if (e.do !== undefined) step.do = e.do;
     if (e.wait !== undefined) step.wait = e.wait;
+    if (e.evidence !== undefined) step.evidence = structuredClone(e.evidence);
     step.expect = extra ? { ...structuredClone(eExpect), screen: g.expect?.screen } : structuredClone(g.expect);
     sources.push({ step: j, input: e.input !== undefined ? 'existing' : g.input !== undefined ? 'generated' : 'none' });
     steps.push(step);

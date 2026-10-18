@@ -1,4 +1,5 @@
 // Browser-safe shared types (no runtime imports).
+import type { EvidenceSpecInput } from '@ddv/evidence/spec';
 import type { OnlyValue } from './platform.ts';
 
 export type Value = string | number | boolean;
@@ -22,6 +23,8 @@ export interface Step {
   do?: string;
   wait?: number;
   expect?: Expect;
+  /** Evidence to capture on this step (`@ddv/evidence/spec`). */
+  evidence?: EvidenceSpecInput[];
 }
 
 export interface Scenario {

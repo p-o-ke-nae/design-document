@@ -71,6 +71,8 @@ export const ConfigSchema = z.object({
       url: z.url({ protocol: /^https$/, error: 'pages.url は https:// で始まる URL を書いてください' }).transform((u) => u.replace(/\/+$/, '')),
     })
     .optional(),
+  /** 証跡の取得（evidence-runner.md#設定）。中身は @ddv/evidence/config の EvidenceConfigSchema で lint・実行時に検査する。 */
+  evidence: z.unknown().optional(),
 });
 
 export type DdvConfig = z.infer<typeof ConfigSchema>;

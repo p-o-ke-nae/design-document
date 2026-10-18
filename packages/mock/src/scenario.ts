@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import YAML, { isNode, LineCounter, type Document } from 'yaml';
 import type { Scenario } from './types.ts';
+import { EvidenceListSchema, validateEvidence } from '@ddv/evidence/spec';
 import { isOnlyValue, onlyList, ONLY_VALUES } from './platform.ts';
 
 export const TODO_MARK = '要確認';
@@ -24,6 +25,7 @@ export const StepSchema = z.strictObject({
   do: z.string().optional(),
   wait: z.number().min(0).optional(),
   expect: ExpectSchema.optional(),
+  evidence: EvidenceListSchema.optional(),
 });
 
 export const ScenarioSchema = z.strictObject({
@@ -128,7 +130,15 @@ const stepPath = (i: number, ...rest: string[]) => ['steps', String(i), ...rest]
  */
 export function validateScenario(scenario: Pick<Scenario, 'id' | 'steps'>): ScenarioIssue[] {
   const issues: ScenarioIssue[] = [];
+  const evidence = validateEvidence(scenario);
   scenario.steps.forEach((step, i) => {
+    checkStep(step, i);
+    // evidence-spec.md#形式の検査: evidence issues follow the step's own issue.
+    issues.push(...evidence.filter((e) => e.path.startsWith(`${stepPath(i)}.`)));
+  });
+  return issues;
+
+  function checkStep(step: Scenario['steps'][number], i: number) {
     const at = `シナリオ ${scenario.id} のステップ ${i + 1}`;
     const add = (path: string, message: string) => issues.push({ path, message: `${at}: ${message}` });
     if (step.only !== undefined) {
@@ -143,7 +153,7 @@ export function validateScenario(scenario: Pick<Scenario, 'id' | 'steps'>): Scen
       return;
     }
     const hasAny = step.click !== undefined || step.input !== undefined || step.do !== undefined || step.wait !== undefined || step.expect !== undefined;
+    // `evidence` alone does not make an auxiliary step (write it on the previous step instead).
     if (!hasAny) add(stepPath(i), '補助ステップに操作も期待もありません');
-  });
-  return issues;
+  }
 }

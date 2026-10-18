@@ -17,7 +17,7 @@ import type { PathSpec, Scenario, Step } from './types.ts';
 
 export const SCENARIO_HEADER = ' ddv mock scaffold が生成。event / click / expect.screen は再生成で更新、それ以外は保持';
 const KEY_ORDER = ['id', 'title', 'fixtures', 'start', 'steps'];
-const STEP_ORDER = ['event', 'only', 'input', 'click', 'do', 'wait', 'expect'];
+const STEP_ORDER = ['event', 'only', 'input', 'click', 'do', 'wait', 'expect', 'evidence'];
 const TODO_COMMENT = ` ${TODO_MARK}`;
 
 /** Scenario files (repo-relative) of a mock, excluding `_map.yaml`, `_retired/` and other `_` files. */

@@ -1,3 +1,4 @@
+import { traceKey } from './trace-format.ts';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -331,7 +332,7 @@ describe('only の適用（BD-DESKRUN-ONLY）', () => {
     const rec = new TraceRecorder(path.join(dir, platform), { runId: 'r', testId: 'T', title: 't', mock: 'm', target: 'app', platform });
     const session = new FakeSession(platform, driver);
     await runScenarioWith(session, scenarioOf(steps), { trace: rec, timeout: 100 });
-    return { session, trace: JSON.parse(await fs.readFile(path.join(dir, platform, 'T.json'), 'utf8')) as TraceFile };
+    return { session, trace: JSON.parse(await fs.readFile(path.join(dir, platform, `${traceKey('T', platform)}.json`), 'utf8')) as TraceFile };
   };
 
   it('[BD-DESKRUN-ONLY-P001][BD-DESKRUN-ONLY-T001][BD-DESKRUN-ONLY-T002][BD-DESKRUN-ONLY-S001] only の無いステップはどのプラットフォームでも実行する', () => {
@@ -457,7 +458,7 @@ describe('runScenarioWith（ドライバに依存しない実行器）', () => {
       };
       const rec = new TraceRecorder(dir, { runId: 'r', testId: 'T', title: 't', mock: 'm', target: 'app', platform: 'wpf' });
       await expect(runScenarioWith(session, desktopScenario, { trace: rec })).rejects.toThrow('起動できません');
-      expect(JSON.parse(await fs.readFile(path.join(dir, 'T.json'), 'utf8'))).toMatchObject({ status: 'failed', failedStep: 0, error: '起動できません', steps: [] });
+      expect(JSON.parse(await fs.readFile(path.join(dir, 'T@wpf.json'), 'utf8'))).toMatchObject({ status: 'failed', failedStep: 0, error: '起動できません', steps: [] });
     } finally {
       await fs.rm(dir, { recursive: true, force: true });
     }

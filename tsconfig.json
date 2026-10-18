@@ -36,6 +36,15 @@
       "@ddv/tokens/node": ["./packages/tokens/src/node.ts"],
       "@ddv/tokens": ["./packages/tokens/src/index.ts"],
       "@ddv/mock": ["./packages/mock/src/index.ts"],
+      "@ddv/evidence/spec": ["./packages/evidence/src/spec.ts"],
+      "@ddv/evidence/with": ["./packages/evidence/src/with.ts"],
+      "@ddv/evidence/config": ["./packages/evidence/src/config.ts"],
+      "@ddv/evidence/sql-guard": ["./packages/evidence/src/sql-guard.ts"],
+      "@ddv/evidence/registry": ["./packages/evidence/src/registry.ts"],
+      "@ddv/evidence/hooks-scan": ["./packages/evidence/src/hooks-scan.ts"],
+      "@ddv/evidence/check": ["./packages/evidence/src/check.ts"],
+      "@ddv/evidence/cli": ["./packages/evidence/src/cli.ts"],
+      "@ddv/evidence": ["./packages/evidence/src/index.ts"],
       "#backend-impl": ["./apps/web/src/backend/http.ts"],
       "#app-impl": ["./apps/web/src/App.tsx"]
     }

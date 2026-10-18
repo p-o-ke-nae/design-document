@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@ddv/core": "*",
+    "@ddv/evidence": "*",
     "@ddv/graph": "*",
     "@ddv/testid": "*",
     "node-html-parser": "^9.0.4",

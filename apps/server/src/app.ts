@@ -387,7 +387,7 @@ export function createApp(ctx: ServerContext): Hono {
 
   app.get('/api/lint', async (c) => {
     const docs = await svc().docs.loadDocs();
-    return c.json([...(await svc().docs.lint(docs)), ...(await checkMocks(root, ctx.config, docs)), ...(await checkTokens(root, ctx.config))]);
+    return c.json([...(await svc().docs.lint(docs)), ...(await checkMocks(root, ctx.config, docs)), ...(await checkTokens(root, ctx.config)), ...(await (await import('@ddv/evidence/check')).checkEvidence(root, ctx.config, docs))]);
   });
   app.post('/api/mocks/scaffold', async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as { mock?: unknown };
