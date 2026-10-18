@@ -102,7 +102,7 @@ export function SnapshotPanel({ scenarioId }: { scenarioId: string }) {
         <section key={s.step} className={`snapshot-step snap-${s.status}`} data-testid="snapshot-step" data-step={s.step} data-status={s.status}>
           <header>
             <strong>ステップ {s.step}</strong>
-            <span className={`snap-status snap-${s.status}`}>{STATUS_LABEL[s.status] ?? s.status}</span>
+            <span className={`snap-status snap-${s.status}`}>{s.skipped ? '飛ばした（Web では実行しない）' : (STATUS_LABEL[s.status] ?? s.status)}</span>
             {typeof s.diffRatio === 'number' && <span className="muted">差分 {(s.diffRatio * 100).toFixed(2)}%</span>}
             <span className="spacer" />
             {(s.status === 'NoBase' || s.status === 'Diff') && (

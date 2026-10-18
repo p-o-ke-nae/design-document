@@ -6,6 +6,7 @@ import { playableScenarios, useMockHub } from '../mockHub.tsx';
 import { PlayerController, SPEEDS, STATE_LABEL, createFrameTransport, type DraftData, type FrameTransport, type PlayerSnapshot, type TuneMessage } from '../player.ts';
 import type { TdScenario } from '../api.ts';
 import type { PickedElement } from '@ddv/mock/tune-patch';
+import { expandOnly, stepApplies } from '@ddv/mock/platform';
 import { SnapshotPanel } from './SnapshotPanel.tsx';
 import { TunePanel } from './TunePanel.tsx';
 import { LiveTracePanel } from './LiveTracePanel.tsx';
@@ -432,11 +433,12 @@ export function MockFrame({ target, attrs, source }: { target: string; attrs: Re
         {hasPlayer && (
           <ol className="player-steps" data-testid="player-steps" aria-label="ステップ（クリックでそこまで巻き戻し）">
             {steps.map((s, i) => (
-              <li key={i} data-testid="player-step-item" data-index={i} data-status={stepStatus(i)} className={`ps-${stepStatus(i)}`}>
+              <li key={i} data-testid="player-step-item" data-index={i} data-status={stepStatus(i)} className={`ps-${stepStatus(i)}${stepApplies(s, 'web') ? '' : ' ps-skipped'}`}>
                 <button type="button" disabled={!can.rewind} onClick={() => ctl?.rewind(i)} title={can.rewind ? 'このステップの手前まで巻き戻す' : '一時停止・完了・失敗のときに巻き戻せます'}>
                   <span className="ps-no">{i + 1}</span>
-                  <span className="ps-event">{s.event}</span>
-                  <span className="ps-screen">→ {s.expect?.screen}</span>
+                  {s.event !== undefined ? <span className="ps-event">{s.event}</span> : <span className="ps-event ps-aux">補助{s.click ?? s.do ? `・${s.click ?? s.do}` : ''}</span>}
+                  {s.expect?.screen !== undefined && <span className="ps-screen">→ {s.expect.screen}</span>}
+                  {!stepApplies(s, 'web') && <span className="ps-only">（{expandOnly(s.only).join('・')} だけ）</span>}
                 </button>
               </li>
             ))}

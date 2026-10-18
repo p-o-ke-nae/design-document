@@ -2,6 +2,7 @@ import type { Step, StepFailure } from './api.ts';
 import type { ElementPatch, PickedElement } from '@ddv/mock/tune-patch';
 import type { LiveStepTrace, TraceStep } from '@ddv/mock/trace-format';
 import { FRAME_PROTOCOL, acceptFrameMessage, parseFromFrame, type FromFrame } from '@ddv/mock/frame-protocol';
+import { expandOnly, planSteps, type StepPlan } from '@ddv/mock/platform';
 
 /** BD-MOCK-PLAYER (docs/design/basic/mock-player.md#プレイヤー). */
 export type PlayerState = 'Idle' | 'Playing' | 'Paused' | 'Done' | 'Failed';
@@ -117,7 +118,8 @@ export class LiveTrace {
     const t = result.trace;
     const rec: TraceStep = {
       index: index + 1,
-      event: step.event,
+      event: step.event ?? '',
+      ...(step.only !== undefined ? { only: expandOnly(step.only) } : {}),
       ...(step.input ? { input: step.input } : {}),
       ...(step.click !== undefined ? { click: step.click } : {}),
       ...(step.do !== undefined ? { do: step.do } : {}),
@@ -132,6 +134,28 @@ export class LiveTrace {
     };
     const steps = [...this.snap.steps.filter((s) => s.index !== rec.index), rec].sort((a, b) => a.index - b.index);
     this.emit({ steps, supported: this.snap.supported && (!responded || !!t) });
+  }
+
+  /** Records step `index` (0-based) as skipped on the web (`only:`). */
+  addSkipped(index: number, step: Step, screen: string | null) {
+    const rec: TraceStep = {
+      index: index + 1,
+      event: step.event ?? '',
+      ...(step.only !== undefined ? { only: expandOnly(step.only) } : {}),
+      ...(step.input ? { input: step.input } : {}),
+      ...(step.click !== undefined ? { click: step.click } : {}),
+      ...(step.do !== undefined ? { do: step.do } : {}),
+      skipped: true,
+      screenBefore: screen,
+      screenAfter: screen,
+      expects: [],
+      ok: true,
+      durationMs: 0,
+      calls: [],
+      db: null,
+    };
+    const steps = [...this.snap.steps.filter((s) => s.index !== rec.index), rec].sort((a, b) => a.index - b.index);
+    this.emit({ steps });
   }
 
   clear(draft = false) {
@@ -209,6 +233,8 @@ export class PlayerController {
   private listeners = new Set<() => void>();
   private scenario: PlayerScenario | null = null;
   private data: DraftData | null = null;
+  /** `planSteps(scenario, 'web')`: skipped steps and the expect each step is judged with. */
+  private plans: StepPlan<Step>[] = [];
   private timer: PlayerTimer;
   private timeoutMs: number;
   /** Invalidates in-flight work (load / reset / rewind). */
@@ -261,6 +287,7 @@ export class PlayerController {
   private loadWith(scenario: PlayerScenario | null, data: DraftData | null) {
     this.invalidate();
     this.scenario = scenario;
+    this.plans = scenario ? planSteps(scenario, 'web') : [];
     this.data = scenario ? data : null;
     this.clearTrace();
     this.set({ state: INITIAL_STATE, scenarioId: scenario?.id ?? null, cursor: 0, total: scenario?.steps.length ?? 0, running: null, busy: false, failure: null, draft: !!this.data });
@@ -412,12 +439,18 @@ export class PlayerController {
 
   /** Runs one step and records it in the live view (unless the work was invalidated meanwhile). */
   private async callStep(epoch: number, index: number, step: Step, highlight?: StepHighlight): Promise<StepResult> {
+    const plan = this.plans[index];
+    if (plan && !plan.run) {
+      if (this.alive(epoch)) this.liveTrace.addSkipped(index, step, this.snap.screen);
+      return { ok: true, screen: this.snap.screen, failures: [] };
+    }
+    const sent: Step = plan ? { ...step, expect: plan.expect } : step;
     const t0 = this.now();
     let r: StepResult;
     let responded = true;
     try {
       const ops = highlight ? Object.keys(step.input ?? {}).length + (step.click !== undefined ? 1 : 0) : 0;
-      r = await this.withTimeout(this.transport.step(index, step, highlight, true), highlight ? highlight.holdMs * ops : 0);
+      r = await this.withTimeout(this.transport.step(index, sent, highlight, true), highlight ? highlight.holdMs * ops : 0);
     } catch (e) {
       responded = false;
       r = { ok: false, screen: null, failures: [], message: (e as Error)?.message || NO_RESPONSE };
@@ -428,7 +461,7 @@ export class PlayerController {
 
   private failureOf(index: number | null, r: { screen: string | null; failures: StepFailure[]; message?: string }): PlayerFailure {
     const step = index === null ? undefined : this.scenario?.steps[index];
-    return { index, event: step?.event, message: r.message, screen: r.screen, expectedScreen: step?.expect.screen, failures: r.failures ?? [] };
+    return { index, event: step?.event, message: r.message, screen: r.screen, expectedScreen: index === null ? undefined : (this.plans[index]?.expect.screen ?? step?.expect?.screen), failures: r.failures ?? [] };
   }
 
   /** Resets the mock to the scenario start; on failure records it (and fails a running playback). */
@@ -491,9 +524,10 @@ export class PlayerController {
         this.finish(true);
         return;
       }
+      const skipped = this.plans[this.snap.cursor]?.run === false;
       await this.execStep('play');
       if (!going()) return;
-      await this.sleep(this.snap.speed);
+      if (!skipped) await this.sleep(this.snap.speed);
     }
   }
 

@@ -201,7 +201,8 @@ export interface DocCoverage {
 export type StepValue = string | number | boolean;
 
 export interface StepExpect {
-  screen: string;
+  /** Required on transition steps; optional on auxiliary steps. */
+  screen?: string;
   visible?: string[];
   hidden?: string[];
   text?: Record<string, string>;
@@ -209,12 +210,15 @@ export interface StepExpect {
 }
 
 export interface Step {
-  event: string;
+  /** Absent on auxiliary steps. */
+  event?: string;
+  /** Platforms the step runs on (`web` / `wpf` / `winforms` / `desktop`). */
+  only?: string | string[];
   click?: string;
   input?: Record<string, StepValue>;
   do?: string;
   wait?: number;
-  expect: StepExpect;
+  expect?: StepExpect;
 }
 
 export type ScenarioStatus = 'Unverified' | 'Passed' | 'Failed' | 'Retired';
@@ -264,6 +268,8 @@ export interface SnapshotStep {
   /** 1-based step number. */
   step: number;
   status: SnapshotStatus;
+  /** Not run on the web (`only:`), so never captured. */
+  skipped?: true;
   diffRatio?: number;
   warnings: string[];
   images: { baseline?: string; current?: string; diff?: string };

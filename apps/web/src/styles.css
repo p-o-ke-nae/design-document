@@ -1057,6 +1057,17 @@ button.run:not(:disabled) {
 .player-steps .ps-screen {
   color: var(--muted);
 }
+.player-steps .ps-aux {
+  font-weight: normal;
+  color: var(--muted);
+}
+.player-steps .ps-skipped button {
+  opacity: 0.5;
+}
+.player-steps .ps-only {
+  color: var(--muted);
+  font-size: 0.9em;
+}
 .player-steps .ps-done .ps-no {
   background: var(--ok);
   color: #fff;
