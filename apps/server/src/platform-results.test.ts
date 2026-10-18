@@ -203,7 +203,7 @@ describe('実行の可否の表示（BD-DESKRUN-GATE、ローカル版）', () =
   const config = parseConfig({
     runners: [
       { name: 'e2e', type: 'playwright', scenarios: true },
-      { name: 'wpf', type: 'flaui', platform: 'wpf', app: { path: 'apps/Order.exe' } },
+      { name: 'wpf', type: 'flaui', platform: 'wpf', app: { path: 'apps/Order.exe' }, source: 'apps/Order' },
     ],
   });
   const list = (o: { platform?: NodeJS.Platform; sdks?: string; exists?: boolean }) =>
@@ -348,7 +348,7 @@ describe('プラットフォーム別の結果（結合）', () => {
 describe('flaui のランナーの起動', () => {
   it('サーバ自身の CLI で desktop run を起動し、DDV_TRACE_DIR を渡す', async () => {
     const { buildInvocation } = await import('./runner.ts');
-    const r = parseConfig({ runners: [{ name: 'wpf', type: 'flaui', platform: 'wpf', app: { path: 'a.exe' } }] }).runners[0] as RunnerConfig;
+    const r = parseConfig({ runners: [{ name: 'wpf', type: 'flaui', platform: 'wpf', app: { path: 'a.exe' }, source: 'a' }] }).runners[0] as RunnerConfig;
     const inv = buildInvocation('/repo', r, [ID, ID2], '/rep', [], 'run-1');
     expect(inv.command).toBe(process.execPath);
     expect(inv.args.slice(-8)).toEqual(['desktop', 'run', '--runner', 'wpf', '--junit', path.join('/rep', 'wpf.xml'), '--ids', `${ID},${ID2}`]);

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { RunRecord } from '../runs.ts';
 import { SnapshotStore, type CaptureSummary } from '../snapshots.ts';
-import { CiRun, type CiEnv, type CiRunOptions, type SnapshotCapturer } from './ci-run.ts';
+import { CiRun, NOT_WINDOWS_SKIP, type CiEnv, type CiRunOptions, type SnapshotCapturer } from './ci-run.ts';
 import { CiCommand } from './cli.ts';
 
 const PNG = Buffer.from('89504e470d0a1a0a', 'hex');
@@ -258,5 +258,18 @@ describe('ci run', () => {
     expect(rec.runners.map((r: { name: string }) => r.name)).toEqual(['sh']);
     expect(code).toBe(rec.status === 'passed' ? 0 : 1);
     expect(lines.at(-1)).toBe(`実行 77-2: ${rec.status}（出力: ${out}）`);
+  });
+
+  it('ddv ci run は Windows 以外で flaui のランナーを実行せず、skipped と理由を残す（テストIDの結果は作らない）', async () => {
+    await fs.writeFile(path.join(repo, 'ddv.config.yaml'), 'runners:\n  - name: sh\n    type: command\n    cwd: .\n    level: unit\n    command: node -e "process.exit(0)"\n  - name: wpf\n    type: flaui\n    platform: wpf\n    app: { path: app/App.exe }\n    source: app\n');
+    const out = path.join(root, 'out');
+    const lines: string[] = [];
+    const r = await new CiRun({ repoRoot: repo, out, env: env(), platform: 'linux', snapshots: noScenarios, log: (l) => lines.push(l), error: (l) => lines.push(l) }).run();
+    expect(r.run?.runners.map((x) => [x.name, x.skipped ?? false, x.message ?? ''])).toEqual([['sh', false, ''], ['wpf', true, NOT_WINDOWS_SKIP]]);
+    expect(Object.values(r.run!.results).some((x) => x.runner === 'wpf')).toBe(false);
+    expect(lines.some((l) => l.includes(`wpf (flaui, unit): ${NOT_WINDOWS_SKIP}`))).toBe(true);
+    const seen: string[] = [];
+    await new CiRun({ repoRoot: repo, out, env: env(), platform: 'win32', snapshots: noScenarios, log: () => {}, error: () => {}, runTests: async (_r, c, run, _l, deps) => { for (const x of c.runners) if (!deps?.skip?.(x)) seen.push(x.name); run.status = 'passed'; } }).run();
+    expect(seen).toEqual(['sh', 'wpf']);
   });
 });

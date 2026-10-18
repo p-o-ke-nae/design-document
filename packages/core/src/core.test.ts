@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { docEntryOf, isOwnerAllowed, lintDocsWith, lintTargets, PagesConfigSchema, PagesTargetSchema, parseConfig, parseConfigText } from './index.ts';
+import { docEntryOf, isOwnerAllowed, lintDocsWith, lintTargets, PagesConfigSchema, PagesTargetSchema, parseConfig, parseConfigText, runnerWarnings } from './index.ts';
 
 describe('isOwnerAllowed（OWNERS）', () => {
   it('[DD-PAT-OWNERS-P001] [DD-PAT-OWNERS-T001] [DD-PAT-OWNERS-T002] allowedOwners が未指定なら true', () => {
@@ -30,6 +30,27 @@ describe('PagesConfigSchema', () => {
     expect(PagesTargetSchema.safeParse({ repo: 'acme' }).error?.issues[0].message).toBe('owner/repo の形式で書いてください');
     expect(PagesTargetSchema.safeParse({ repo: 'acme/a', pr: 1, ref: 'main' }).error?.issues[0].message).toBe('pr と ref はどちらか一方だけ書いてください');
     expect(PagesTargetSchema.parse({ repo: 'acme/a.b', ref: 'main', label: 'x' })).toEqual({ repo: 'acme/a.b', ref: 'main', label: 'x' });
+  });
+});
+
+describe('ランナーの設定（type ごとの検査）', () => {
+  const run = (r: Record<string, unknown>) => () => parseConfig({ runners: [r] });
+  it('flaui は platform: wpf / winforms・app.path・source が必要', () => {
+    expect(run({ name: 'wpf', type: 'flaui' })).toThrow('ランナー wpf: type: flaui には platform: wpf か winforms が必要です');
+    expect(run({ name: 'wpf', type: 'flaui', platform: 'web', app: { path: 'a.exe' }, source: 's' })).toThrow('platform: wpf か winforms が必要です');
+    expect(run({ name: 'wpf', type: 'flaui', platform: 'wpf', source: 's' })).toThrow('ランナー wpf: app.path（アプリの実行ファイル）が必要です');
+    expect(run({ name: 'wpf', type: 'flaui', platform: 'wpf', app: { path: 'a.exe' } })).toThrow('ランナー wpf: source（画面定義の場所）が必要です');
+    expect(run({ name: 'wpf', type: 'flaui', platform: 'wpf', app: { path: 'a.exe' }, source: 's', timeout: 50 })).toThrow();
+    const r = parseConfig({ runners: [{ name: 'wpf', type: 'flaui', platform: 'winforms', app: { path: 'a.exe' }, source: 's' }] }).runners[0];
+    expect(r.app).toEqual({ path: 'a.exe', args: [] });
+  });
+  it('playwright の platform は web だけ。ほかの type に書いた項目は warning', () => {
+    expect(run({ name: 'e2e', type: 'playwright', platform: 'wpf' })).toThrow('ランナー e2e: playwright の platform は web だけです');
+    expect(parseConfig({ runners: [{ name: 'e2e', type: 'playwright', platform: 'web' }] }).runners[0].platform).toBe('web');
+    const v = parseConfig({ runners: [{ name: 'u', type: 'vitest', platform: 'web', timeout: 1000 }] }).runners[0];
+    expect(runnerWarnings(v)).toEqual(['ランナー u: platform は playwright・flaui だけで使います（無視します）', 'ランナー u: timeout は type: flaui だけで使います（無視します）']);
+    const f = parseConfig({ runners: [{ name: 'f', type: 'flaui', platform: 'wpf', app: { path: 'a.exe' }, source: 's', include: ['x'], scenarios: true }] }).runners[0];
+    expect(runnerWarnings(f)).toHaveLength(2);
   });
 });
 

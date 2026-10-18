@@ -21,7 +21,33 @@ export const RunnerSchema = z.object({
   /** flaui: wait limit in milliseconds. */
   timeout: z.number().int().min(100).optional(),
   automation: z.enum(['uia3', 'uia2']).optional(),
+}).superRefine((r, ctx) => {
+  if (r.type === 'flaui') {
+    if (r.platform !== 'wpf' && r.platform !== 'winforms') ctx.addIssue({ code: 'custom', path: ['platform'], message: `ランナー ${r.name}: type: flaui には platform: wpf か winforms が必要です` });
+    if (!r.app?.path) ctx.addIssue({ code: 'custom', path: ['app', 'path'], message: `ランナー ${r.name}: app.path（アプリの実行ファイル）が必要です` });
+    if (!r.source) ctx.addIssue({ code: 'custom', path: ['source'], message: `ランナー ${r.name}: source（画面定義の場所）が必要です` });
+  } else if (r.type === 'playwright' && r.platform !== undefined && r.platform !== 'web') {
+    ctx.addIssue({ code: 'custom', path: ['platform'], message: `ランナー ${r.name}: playwright の platform は web だけです` });
+  }
 });
+
+/** flaui runner defaults (flaui-driver.md「設定」). */
+export const FLAUI_DEFAULT_TIMEOUT = 5000;
+export const FLAUI_DEFAULT_AUTOMATION = 'uia3';
+
+/** Settings written for a runner type that does not use them (warning; they are ignored). */
+export function runnerWarnings(r: RunnerConfig): string[] {
+  const out: string[] = [];
+  const desktopOnly = (['app', 'source', 'timeout', 'automation'] as const).filter((k) => r[k] !== undefined);
+  if (r.type === 'flaui') {
+    for (const k of ['include', 'command'] as const) if (r[k] !== undefined) out.push(`ランナー ${r.name}: type: flaui では ${k} を使いません（無視します）`);
+    if (r.scenarios) out.push(`ランナー ${r.name}: type: flaui では scenarios を使いません（シナリオは常に紐づけます）`);
+  } else {
+    if (r.platform !== undefined && r.type !== 'playwright') out.push(`ランナー ${r.name}: platform は playwright・flaui だけで使います（無視します）`);
+    for (const k of desktopOnly) out.push(`ランナー ${r.name}: ${k} は type: flaui だけで使います（無視します）`);
+  }
+  return out;
+}
 
 export const ConfigSchema = z.object({
   docsRoot: z.string().default('docs'),

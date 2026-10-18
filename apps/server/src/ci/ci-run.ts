@@ -4,7 +4,7 @@ import type { DdvConfig } from '@ddv/core';
 import { loadConfig, safeJoin } from '@ddv/core/node';
 import { TRACES_DIR } from '../prune.ts';
 import { RepoStateReader } from '../repo-state.ts';
-import { runTests as defaultRunTests, type RunRecord, type SnapshotOutcome } from '../runs.ts';
+import { runTests as defaultRunTests, type RunRecord, type RunTestsDeps, type SnapshotOutcome } from '../runs.ts';
 import { SnapshotService, SnapshotStore, type CaptureSummary, type SnapshotEvents } from '../snapshots.ts';
 import type { CiRunRecord } from './results-index.ts';
 
@@ -60,7 +60,9 @@ export interface CiRunOptions {
   sha?: string;
   env: CiEnv;
   repoState?: RepoStateReader;
-  runTests?: (repoRoot: string, config: DdvConfig, run: RunRecord, log: (line: string) => void) => Promise<void>;
+  runTests?: (repoRoot: string, config: DdvConfig, run: RunRecord, log: (line: string) => void, deps?: RunTestsDeps) => Promise<void>;
+  /** process.platform (tests). */
+  platform?: NodeJS.Platform;
   snapshots?: (repoRoot: string, config: DdvConfig) => SnapshotCapturer;
   log?: (line: string) => void;
   error?: (line: string) => void;
@@ -78,6 +80,8 @@ const sameSha = (a: string, b: string) => {
   const y = b.toLowerCase();
   return x.startsWith(y) || y.startsWith(x);
 };
+
+export const NOT_WINDOWS_SKIP = 'Windows 以外のため実行しません';
 
 /** `ddv ci run` (DD-ACTWF-CIRUN): runs the runners and scenarios inside the workflow and writes run.json / traces / snapshots to `out`. */
 export class CiRun {
@@ -136,7 +140,8 @@ export class CiRun {
     };
     for (const w of warnings) log(`! ${w}`);
     try {
-      await (opts.runTests ?? defaultRunTests)(repoRoot, config, run, log);
+      const windows = (opts.platform ?? process.platform) === 'win32';
+      await (opts.runTests ?? defaultRunTests)(repoRoot, config, run, log, { skip: (r) => (r.type === 'flaui' && !windows ? NOT_WINDOWS_SKIP : undefined) });
     } catch (e) {
       run.status = 'error';
       log(`! ${(e as Error).stack ?? e}`);

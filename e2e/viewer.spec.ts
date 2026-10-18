@@ -3,6 +3,25 @@ import { expect, test, type Page } from '@playwright/test';
 const BASIC = '/#/doc?path=docs/design/basic/order.md';
 const REQ = '/#/doc?path=docs/design/requirements/order.md';
 
+/** Passed on web: the single result, or the web badge when the row shows results per platform. */
+const PASSED_WEB = '[data-testid=status-badge][data-status=passed], [data-testid=badge-web].st-passed';
+
+/** The sample has desktop runners too: run the web target only (the desktop apps may not be built). The dialog opens only when a scenario is included; returns once the run has started. */
+async function startWebOnly(page: Page) {
+  const dialog = page.getByTestId('target-select');
+  const running = page.locator('[data-testid=run-indicator] [data-testid=status-badge][data-status=running]');
+  await expect(dialog.or(running).first()).toBeVisible();
+  if (!(await dialog.isVisible())) return;
+  await expect(dialog.getByTestId('target-start')).toBeEnabled();
+  for (const name of ['wpf', 'winforms']) {
+    const box = dialog.getByTestId(`target-${name}`);
+    if ((await box.count()) && (await box.isChecked())) await box.uncheck();
+  }
+  const web = dialog.getByTestId('target-e2e');
+  if (!(await web.isChecked())) await web.check();
+  await dialog.getByTestId('target-start').click();
+  await expect(running).toBeVisible();
+}
 async function openBasic(page: Page) {
   await page.goto(BASIC);
   await expect(page.getByTestId('matrix').first()).toBeVisible();
@@ -171,10 +190,10 @@ test('[BD-VIEWER-RUN-T003] 紐づいたテストをマトリクスから実行�
   const unlinked = page.locator('[data-testid=matrix-row][data-test-id=BD-ORDER-SCREEN-X001]');
   await expect(unlinked.getByTestId('run-case')).toBeDisabled();
   await linked.getByTestId('run-case').click();
+  await startWebOnly(page);
   const indicator = page.getByTestId('run-indicator').getByTestId('status-badge');
-  await expect(indicator).toHaveAttribute('data-status', 'running');
   await expect(indicator).toHaveAttribute('data-status', 'passed', { timeout: 90_000 });
-  await expect(linked.getByTestId('status-badge')).toHaveAttribute('data-status', 'passed');
+  await expect(linked.locator(PASSED_WEB)).toBeVisible();
 });
 
 test('[BD-VIEWER-RUN-T002] テストタブで一括実行し監視できる', async ({ page }) => {
@@ -182,12 +201,13 @@ test('[BD-VIEWER-RUN-T002] テストタブで一括実行し監視できる', as
   await page.goto('/#/tests');
   await expect(page.getByTestId('tests-page')).toBeVisible();
   await page.getByTestId('run-all').click();
+  await startWebOnly(page);
   await expect(page.getByTestId('run-log')).toContainText('dotnet', { timeout: 60_000 });
   const indicator = page.getByTestId('run-indicator').getByTestId('status-badge');
   await expect(indicator).not.toHaveAttribute('data-status', 'running', { timeout: 180_000 });
   await expect(page.getByTestId('run-all')).toBeEnabled();
   const row = page.locator('[data-testid=test-row][data-test-id=DD-ORDER-STATUS-T001]');
-  await expect(row.getByTestId('status-badge')).toHaveAttribute('data-status', 'passed');
+  await expect(row.locator(PASSED_WEB)).toBeVisible();
   // scenario tests run through the server record their traces (DDV_TRACE_DIR)
   const scenarioId = ['BD', 'ORDER', 'SCREEN', 'P001'].join('-');
   const latest = (await (await page.request.get('/api/results/latest')).json()) as Record<string, { runId?: string; trace?: boolean }>;

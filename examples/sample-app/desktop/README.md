@@ -73,3 +73,18 @@ ddv はシナリオごとにアプリを起動し直し、環境変数 `DDV_FIXT
 | | `to-list` | `Button AutomationId` | `Button` `Name` |
 
 - WinForms の `sku` は `ComboBox` ではなく `ListBox` です。WinForms の `ComboBox`（ドロップダウン）は UI Automation で項目（SelectionItem）が見えず、表示文字列で選べないためです
+
+## ddv での実行（`type: flaui`）
+
+`examples/sample-app/ddv.config.yaml` に、ランナー `wpf`・`winforms`（`type: flaui`）を設定してあります。先に上の `dotnet build` でアプリをビルドしてください。
+
+```powershell
+# リポジトリのルートで
+npx tsx apps/server/src/cli.ts desktop doctor --repo examples/sample-app --runner wpf   # 前提（OS・.NET SDK・実行ファイル・ドライバ・画面定義）の確認
+npx tsx apps/server/src/cli.ts desktop run --repo examples/sample-app --runner wpf      # シナリオをすべて実行
+npx tsx apps/server/src/cli.ts desktop run --repo examples/sample-app --runner winforms --ids BD-ORDER-SCREEN-P001
+```
+
+- 実行中は前面のウィンドウを操作します。マウス・キーボードに触れないでください
+- ビューアの「テスト」から実行するときは、接続先の選択で `wpf`・`winforms` を選びます。結果はプラットフォームごとのバッジ（`wpf ✓` など）で表示されます
+- Windows 以外の CI（`ddv ci run`）では、`type: flaui` のランナーは「Windows 以外のため実行しません」として飛ばします

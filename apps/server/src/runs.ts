@@ -39,7 +39,7 @@ export interface RunRecord {
   finishedAt?: string;
   status: 'running' | 'passed' | 'failed' | 'error';
   request: RunRequest;
-  runners: Array<{ name: string; command: string; exitCode: number | null; error?: string }>;
+  runners: Array<{ name: string; command: string; exitCode: number | null; error?: string; skipped?: boolean; message?: string }>;
   results: Record<string, CaseResult>;
   log: string[];
   /** Custom SSE events of task runs (replayed to late subscribers). */
@@ -109,6 +109,8 @@ export interface RunManagerOptions {
 
 export interface RunTestsDeps {
   execute?: ExecuteRunner;
+  /** A reason to skip a runner (no results are made for its ids), e.g. flaui outside Windows in `ddv ci run`. */
+  skip?: (runner: DdvConfig['runners'][number]) => string | undefined;
 }
 
 /** Runners of a request: with `runners`, the non-target runners plus the listed targets (config order); otherwise as before. */
@@ -133,8 +135,16 @@ export async function runTests(repoRoot: string, config: DdvConfig, run: RunReco
   // Requested entries may be result keys (re-runs): `<id>@<platform>` only runs on that platform, a plain id on every runner.
   const requested = run.request.ids?.length ? run.request.ids.map(parseResultKey).map((k, i) => ({ ...k, any: !run.request.ids![i].includes('@') })) : null;
   const multi = !!run.request.runners;
+  const skippedIds = new Set<string>();
   for (const r of runnersOf(config, run.request)) {
     const platform = platformOf(r);
+    const skip = deps.skip?.(r);
+    if (skip) {
+      log(`── ${r.name} (${r.type}, ${r.level}): ${skip} ──`);
+      run.runners.push({ name: r.name, command: '', exitCode: null, skipped: true, message: skip });
+      for (const l of links) if (l.runner === r.name) skippedIds.add(l.id);
+      continue;
+    }
     let ids: string[] | null = null;
     if (requested) {
       const wanted = new Set(requested.filter((k) => k.any || k.platform === (platform ?? 'web')).map((k) => k.testId));
@@ -159,11 +169,11 @@ export async function runTests(repoRoot: string, config: DdvConfig, run: RunReco
   if (requested) {
     const done = new Set(Object.keys(run.results).map((k) => parseResultKey(k).testId));
     for (const { testId: id } of requested) {
-      if (!done.has(id) && !run.results[id]) run.results[id] = { status: 'error', durationMs: 0, message: '紐づくテストが無いか、結果が見つかりませんでした', runner: '', test: '' };
+      if (!done.has(id) && !run.results[id] && !skippedIds.has(id)) run.results[id] = { status: 'error', durationMs: 0, message: '紐づくテストが無いか、結果が見つかりませんでした', runner: '', test: '' };
     }
   }
   const statuses = Object.values(run.results).map((r) => r.status);
-  const runnerFailed = run.runners.some((r) => r.error || r.exitCode === null);
+  const runnerFailed = run.runners.some((r) => !r.skipped && (r.error || r.exitCode === null));
   run.status = runnerFailed || statuses.includes('error') ? (statuses.includes('failed') ? 'failed' : 'error') : statuses.includes('failed') ? 'failed' : 'passed';
   if (!run.runners.length) {
     run.status = 'error';

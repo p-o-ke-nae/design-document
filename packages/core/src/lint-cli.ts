@@ -15,7 +15,8 @@ const config = await loadConfig(repo);
 const { checkMocks } = await import('@ddv/mock');
 const { checkTokens } = await import('@ddv/tokens/node');
 const { checkEvidence } = await import('@ddv/evidence/check');
-const issues = await lintRepo(repo, config, { extraChecks: [checkMocks, checkTokens, checkEvidence] });
+const { checkDesktopNames } = await import('@ddv/desktop/check');
+const issues = await lintRepo(repo, config, { extraChecks: [checkMocks, checkTokens, checkEvidence, checkDesktopNames] });
 if (json) {
   console.log(JSON.stringify(issues, null, 2));
 } else {

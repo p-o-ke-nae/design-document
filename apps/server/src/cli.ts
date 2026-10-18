@@ -19,6 +19,7 @@ import { formatReviewText, parseReviewArgs, ReviewCliError, reviewComments } fro
 import { parseServeArgs, ServeArgsError, type ServeArgs } from './serve-args.ts';
 import { SnapshotService } from './snapshots.ts';
 import { TOKENS_HELP, tokensCommand } from './tokens-cli.ts';
+import { DESKTOP_HELP } from '@ddv/desktop/cli';
 import { cleanWorkspaces, OpenRequestError, WorkspaceManager } from './workspaces.ts';
 
 const HELP = `ddv - Design Doc Viewer
@@ -47,6 +48,7 @@ const HELP = `ddv - Design Doc Viewer
       --approve: 今回の撮影結果を基準として承認します（.ddv/snapshots/baseline/ へコピー）
       ブラウザは mock.browser.channel（環境変数 DDV_BROWSER_CHANNEL で上書き可）
   ${TOKENS_HELP}
+  ${DESKTOP_HELP}
   ddv evidence list [--repo <path>] [--json]
       使える取得手段（組み込み・hooks・外部コマンド）と引数、接続先（名前・種類・環境変数の有無）を表示します
   ddv evidence try <名前> [--repo <path>] [--with key=value ...] [--db <接続先>] [--out <dir>] [--timeout <ms>]
@@ -206,6 +208,11 @@ async function main(argv: string[]) {
     // Loaded on demand (the hooks scan reads the TypeScript parser).
     const { evidenceCommand } = await import('@ddv/evidence/cli');
     process.exitCode = await evidenceCommand(argv.slice(1), { out: (l) => console.log(l), err: (l) => console.error(l), cwd: process.cwd(), help: HELP });
+    return;
+  }
+  if (cmd === 'desktop') {
+    const { desktopCommand } = await import('@ddv/desktop/cli');
+    process.exitCode = await desktopCommand(argv.slice(1), { out: (l) => console.log(l), err: (l) => console.error(l), cwd: process.cwd(), help: HELP, loadConfig });
     return;
   }
   if (cmd === 'actions' || cmd === 'ci') {

@@ -31,3 +31,8 @@ runners:
     level: integration
     command: npx tsx e2e-pages/run.ts {junit} {pattern}
     include: ['e2e-pages/**/*.spec.ts']
+  - name: flaui-driver
+    type: dotnet
+    cwd: packages/desktop/driver.Tests
+    level: unit
+    include: ['*.cs']
