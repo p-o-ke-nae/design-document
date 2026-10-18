@@ -1,7 +1,7 @@
 ---
 id: DSCN
 kind: detailed
-status: review
+status: approved
 title: シナリオのプラットフォーム対応（補助ステップ・only・対応表・名前の検査）詳細設計
 traces: [BD-DESKRUN]
 ---

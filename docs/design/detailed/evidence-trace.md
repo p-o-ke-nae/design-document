@@ -1,7 +1,7 @@
 ---
 id: EVTRACE
 kind: detailed
-status: review
+status: approved
 title: 証跡の保存と表示（トレース・API・ビューア）詳細設計
 traces: [BD-EVIVIEW]
 ---

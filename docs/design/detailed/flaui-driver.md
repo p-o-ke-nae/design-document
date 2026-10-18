@@ -1,7 +1,7 @@
 ---
 id: FLAUI
 kind: detailed
-status: review
+status: approved
 title: FlaUI のドライバとデスクトップの実行 詳細設計
 traces: [BD-DESKRUN]
 ---

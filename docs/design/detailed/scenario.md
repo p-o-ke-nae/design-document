@@ -1,7 +1,7 @@
 ---
 id: SCENARIO
 kind: detailed
-status: review
+status: approved
 title: シナリオ・骨組み生成・E2E 実行 詳細設計
 traces: [BD-MOCK]
 ---

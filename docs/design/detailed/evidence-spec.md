@@ -1,7 +1,7 @@
 ---
 id: EVSPEC
 kind: detailed
-status: review
+status: approved
 title: 証跡の指定・検査（シナリオの形式・ddv-lint・ddv evidence）詳細設計
 traces: [BD-EVICAP]
 ---

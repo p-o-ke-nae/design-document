@@ -1,7 +1,7 @@
 ---
 id: SVC
 kind: detailed
-status: review
+status: approved
 title: サービス層・Backend・RepoReader 詳細設計
 traces: [BD-HOSTV, BD-ACTRUN]
 ---

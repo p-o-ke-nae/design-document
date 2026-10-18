@@ -1,7 +1,7 @@
 ---
 id: TRVIEW
 kind: detailed
-status: review
+status: approved
 title: トレースビュー（表示・API・ライブ表示） 詳細設計
 traces: [BD-TRACE]
 ---

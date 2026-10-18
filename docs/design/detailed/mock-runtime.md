@@ -1,7 +1,7 @@
 ---
 id: MOCKRT
 kind: detailed
-status: review
+status: approved
 title: モック runtime・プレイヤー連携 詳細設計
 traces: [BD-MOCK]
 ---

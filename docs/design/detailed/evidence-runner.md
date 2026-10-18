@@ -1,7 +1,7 @@
 ---
 id: EVRUN
 kind: detailed
-status: review
+status: approved
 title: 証跡の取得（EvidenceRunner・組み込み・登録・接続）詳細設計
 traces: [BD-EVICAP]
 ---

@@ -1,7 +1,7 @@
 ---
 id: RUNREC
 kind: detailed
-status: review
+status: approved
 title: 実行記録の拡張・失敗の再実行・保持件数 詳細設計
 traces: [BD-TMON, BD-TRACE]
 ---
