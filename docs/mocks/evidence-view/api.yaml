@@ -1,0 +1,13 @@
+# 疑似 API（証跡の表示のモック用。基本設計 evidence-view.md）
+tables:
+  - evidence
+routes:
+  - method: POST
+    path: /evidence-open
+    when:                       # 取得に失敗した証跡は表示を開かず 理由を出す
+      - if: "body['evidence-state'] == 'failed'"
+        status: 422
+        body: { error: 取得に失敗しました, code: evidence-failed, message: "取得に失敗しました：app-log（判定後）— 終了コード 1：ログのファイルが見つかりません" }
+    status: 200
+    body: { file: evidence/3-2-確定した注文.table.json }
+evidence: []

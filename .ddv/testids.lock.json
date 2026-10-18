@@ -1373,6 +1373,735 @@
         }
       }
     },
+    "BD-EVICAP-CAPTURE": {
+      "doc": "docs/design/basic/evidence-capture.md",
+      "diagram": "capture",
+      "next": {
+        "P": 10,
+        "T": 15,
+        "S": 16
+      },
+      "cases": {
+        "P:A||B>B|only の対象外|S": {
+          "id": "BD-EVICAP-CAPTURE-P001",
+          "status": "active",
+          "title": "証跡の指定 → ステップを実行する → [only の対象外] 取得しない（記録に skip）"
+        },
+        "P:A||B>B|実行する|C>C|見つからない|F>F||W>W|warn|WN": {
+          "id": "BD-EVICAP-CAPTURE-P002",
+          "status": "active",
+          "title": "証跡の指定 → ステップを実行する → [実行する] 取得手段が見つかる → [見つからない] 失敗：理由を記録 → onError → [warn] 警告として記録しステップの判定は変えない"
+        },
+        "P:A||B>B|実行する|C>C|見つからない|F>F||W>W|fail|NG": {
+          "id": "BD-EVICAP-CAPTURE-P003",
+          "status": "active",
+          "title": "証跡の指定 → ステップを実行する → [実行する] 取得手段が見つかる → [見つからない] 失敗：理由を記録 → onError → [fail] ステップを失敗にし理由を記録・テストは失敗"
+        },
+        "P:A||B>B|実行する|C>C|見つかる|D>D|超えた|F>F||W>W|warn|WN": {
+          "id": "BD-EVICAP-CAPTURE-P004",
+          "status": "active",
+          "title": "証跡の指定 → ステップを実行する → [実行する] 取得手段が見つかる → [見つかる] 時間の上限までに終わる → [超えた] 失敗：理由を記録 → onError → [warn] 警告として記録しステップの判定は変えない"
+        },
+        "P:A||B>B|実行する|C>C|見つかる|D>D|超えた|F>F||W>W|fail|NG": {
+          "id": "BD-EVICAP-CAPTURE-P005",
+          "status": "active",
+          "title": "証跡の指定 → ステップを実行する → [実行する] 取得手段が見つかる → [見つかる] 時間の上限までに終わる → [超えた] 失敗：理由を記録 → onError → [fail] ステップを失敗にし理由を記録・テストは失敗"
+        },
+        "P:A||B>B|実行する|C>C|見つかる|D>D|終わった|E>E|失敗|F>F||W>W|warn|WN": {
+          "id": "BD-EVICAP-CAPTURE-P006",
+          "status": "active",
+          "title": "証跡の指定 → ステップを実行する → [実行する] 取得手段が見つかる → [見つかる] 時間の上限までに終わる → [終わった] 取得手段が成功した → [失敗] 失敗：理由を記録 → onError → [warn] 警告として記録しステップの判定は変えない"
+        },
+        "P:A||B>B|実行する|C>C|見つかる|D>D|終わった|E>E|失敗|F>F||W>W|fail|NG": {
+          "id": "BD-EVICAP-CAPTURE-P007",
+          "status": "active",
+          "title": "証跡の指定 → ステップを実行する → [実行する] 取得手段が見つかる → [見つかる] 時間の上限までに終わる → [終わった] 取得手段が成功した → [失敗] 失敗：理由を記録 → onError → [fail] ステップを失敗にし理由を記録・テストは失敗"
+        },
+        "P:A||B>B|実行する|C>C|見つかる|D>D|終わった|E>E|成功|G>G|超える|H": {
+          "id": "BD-EVICAP-CAPTURE-P008",
+          "status": "active",
+          "title": "証跡の指定 → ステップを実行する → [実行する] 取得手段が見つかる → [見つかる] 時間の上限までに終わる → [終わった] 取得手段が成功した → [成功] 上限を超える大きさ → [超える] 上限で切って保存（切った旨を記録）"
+        },
+        "P:A||B>B|実行する|C>C|見つかる|D>D|終わった|E>E|成功|G>G|以内|OK": {
+          "id": "BD-EVICAP-CAPTURE-P009",
+          "status": "active",
+          "title": "証跡の指定 → ステップを実行する → [実行する] 取得手段が見つかる → [見つかる] 時間の上限までに終わる → [終わった] 取得手段が成功した → [成功] 上限を超える大きさ → [以内] 保存"
+        },
+        "T:A||B": {
+          "id": "BD-EVICAP-CAPTURE-T001",
+          "status": "active",
+          "title": "証跡の指定 --> ステップを実行する"
+        },
+        "T:B|only の対象外|S": {
+          "id": "BD-EVICAP-CAPTURE-T002",
+          "status": "active",
+          "title": "ステップを実行する --[only の対象外]--> 取得しない（記録に skip）"
+        },
+        "T:B|実行する|C": {
+          "id": "BD-EVICAP-CAPTURE-T003",
+          "status": "active",
+          "title": "ステップを実行する --[実行する]--> 取得手段が見つかる"
+        },
+        "T:C|見つからない|F": {
+          "id": "BD-EVICAP-CAPTURE-T004",
+          "status": "active",
+          "title": "取得手段が見つかる --[見つからない]--> 失敗：理由を記録"
+        },
+        "T:C|見つかる|D": {
+          "id": "BD-EVICAP-CAPTURE-T005",
+          "status": "active",
+          "title": "取得手段が見つかる --[見つかる]--> 時間の上限までに終わる"
+        },
+        "T:D|超えた|F": {
+          "id": "BD-EVICAP-CAPTURE-T006",
+          "status": "active",
+          "title": "時間の上限までに終わる --[超えた]--> 失敗：理由を記録"
+        },
+        "T:D|終わった|E": {
+          "id": "BD-EVICAP-CAPTURE-T007",
+          "status": "active",
+          "title": "時間の上限までに終わる --[終わった]--> 取得手段が成功した"
+        },
+        "T:E|失敗|F": {
+          "id": "BD-EVICAP-CAPTURE-T008",
+          "status": "active",
+          "title": "取得手段が成功した --[失敗]--> 失敗：理由を記録"
+        },
+        "T:E|成功|G": {
+          "id": "BD-EVICAP-CAPTURE-T009",
+          "status": "active",
+          "title": "取得手段が成功した --[成功]--> 上限を超える大きさ"
+        },
+        "T:G|超える|H": {
+          "id": "BD-EVICAP-CAPTURE-T010",
+          "status": "active",
+          "title": "上限を超える大きさ --[超える]--> 上限で切って保存（切った旨を記録）"
+        },
+        "T:G|以内|OK": {
+          "id": "BD-EVICAP-CAPTURE-T011",
+          "status": "active",
+          "title": "上限を超える大きさ --[以内]--> 保存"
+        },
+        "T:F||W": {
+          "id": "BD-EVICAP-CAPTURE-T012",
+          "status": "active",
+          "title": "失敗：理由を記録 --> onError"
+        },
+        "T:W|warn|WN": {
+          "id": "BD-EVICAP-CAPTURE-T013",
+          "status": "active",
+          "title": "onError --[warn]--> 警告として記録しステップの判定は変えない"
+        },
+        "T:W|fail|NG": {
+          "id": "BD-EVICAP-CAPTURE-T014",
+          "status": "active",
+          "title": "onError --[fail]--> ステップを失敗にし理由を記録・テストは失敗"
+        },
+        "S:A||B>B|only の対象外|S": {
+          "id": "BD-EVICAP-CAPTURE-S001",
+          "status": "active",
+          "title": "証跡の指定 → ステップを実行する → [only の対象外] 取得しない（記録に skip）"
+        },
+        "S:A||B>B|実行する|C": {
+          "id": "BD-EVICAP-CAPTURE-S002",
+          "status": "active",
+          "title": "証跡の指定 → ステップを実行する → [実行する] 取得手段が見つかる"
+        },
+        "S:B|実行する|C>C|見つからない|F": {
+          "id": "BD-EVICAP-CAPTURE-S003",
+          "status": "active",
+          "title": "ステップを実行する → [実行する] 取得手段が見つかる → [見つからない] 失敗：理由を記録"
+        },
+        "S:B|実行する|C>C|見つかる|D": {
+          "id": "BD-EVICAP-CAPTURE-S004",
+          "status": "active",
+          "title": "ステップを実行する → [実行する] 取得手段が見つかる → [見つかる] 時間の上限までに終わる"
+        },
+        "S:C|見つからない|F>F||W": {
+          "id": "BD-EVICAP-CAPTURE-S005",
+          "status": "active",
+          "title": "取得手段が見つかる → [見つからない] 失敗：理由を記録 → onError"
+        },
+        "S:C|見つかる|D>D|超えた|F": {
+          "id": "BD-EVICAP-CAPTURE-S006",
+          "status": "active",
+          "title": "取得手段が見つかる → [見つかる] 時間の上限までに終わる → [超えた] 失敗：理由を記録"
+        },
+        "S:C|見つかる|D>D|終わった|E": {
+          "id": "BD-EVICAP-CAPTURE-S007",
+          "status": "active",
+          "title": "取得手段が見つかる → [見つかる] 時間の上限までに終わる → [終わった] 取得手段が成功した"
+        },
+        "S:D|超えた|F>F||W": {
+          "id": "BD-EVICAP-CAPTURE-S008",
+          "status": "active",
+          "title": "時間の上限までに終わる → [超えた] 失敗：理由を記録 → onError"
+        },
+        "S:D|終わった|E>E|失敗|F": {
+          "id": "BD-EVICAP-CAPTURE-S009",
+          "status": "active",
+          "title": "時間の上限までに終わる → [終わった] 取得手段が成功した → [失敗] 失敗：理由を記録"
+        },
+        "S:D|終わった|E>E|成功|G": {
+          "id": "BD-EVICAP-CAPTURE-S010",
+          "status": "active",
+          "title": "時間の上限までに終わる → [終わった] 取得手段が成功した → [成功] 上限を超える大きさ"
+        },
+        "S:E|失敗|F>F||W": {
+          "id": "BD-EVICAP-CAPTURE-S011",
+          "status": "active",
+          "title": "取得手段が成功した → [失敗] 失敗：理由を記録 → onError"
+        },
+        "S:E|成功|G>G|超える|H": {
+          "id": "BD-EVICAP-CAPTURE-S012",
+          "status": "active",
+          "title": "取得手段が成功した → [成功] 上限を超える大きさ → [超える] 上限で切って保存（切った旨を記録）"
+        },
+        "S:E|成功|G>G|以内|OK": {
+          "id": "BD-EVICAP-CAPTURE-S013",
+          "status": "active",
+          "title": "取得手段が成功した → [成功] 上限を超える大きさ → [以内] 保存"
+        },
+        "S:F||W>W|warn|WN": {
+          "id": "BD-EVICAP-CAPTURE-S014",
+          "status": "active",
+          "title": "失敗：理由を記録 → onError → [warn] 警告として記録しステップの判定は変えない"
+        },
+        "S:F||W>W|fail|NG": {
+          "id": "BD-EVICAP-CAPTURE-S015",
+          "status": "active",
+          "title": "失敗：理由を記録 → onError → [fail] ステップを失敗にし理由を記録・テストは失敗"
+        }
+      }
+    },
+    "BD-EVICAP-CHECK": {
+      "doc": "docs/design/basic/evidence-capture.md",
+      "diagram": "check",
+      "next": {
+        "P": 9,
+        "T": 16
+      },
+      "cases": {
+        "P:A||B>B|不適合|E1": {
+          "id": "BD-EVICAP-CHECK-P001",
+          "status": "active",
+          "title": "シナリオの evidence → 指定が形式に適合（use・at・onError・label の重複） → [不適合] error: 証跡の指定の形式"
+        },
+        "P:A||B>B|適合|C>C|未登録|E2": {
+          "id": "BD-EVICAP-CHECK-P002",
+          "status": "active",
+          "title": "シナリオの evidence → 指定が形式に適合（use・at・onError・label の重複） → [適合] use が組み込みか登録済み → [未登録] error: 登録されていない取得手段"
+        },
+        "P:A||B>B|適合|C>C|登録済み|D>D|欠け|E3": {
+          "id": "BD-EVICAP-CHECK-P003",
+          "status": "active",
+          "title": "シナリオの evidence → 指定が形式に適合（use・at・onError・label の重複） → [適合] use が組み込みか登録済み → [登録済み] 必須の引数がそろう（input の参照先のキーがそれまでの入力にある） → [欠け] error: 引数の欠け"
+        },
+        "P:A||B>B|適合|C>C|登録済み|D>D|そろう|F>F|db 以外|OK": {
+          "id": "BD-EVICAP-CHECK-P004",
+          "status": "active",
+          "title": "シナリオの evidence → 指定が形式に適合（use・at・onError・label の重複） → [適合] use が組み込みか登録済み → [登録済み] 必須の引数がそろう（input の参照先のキーがそれまでの入力にある） → [そろう] use が db → [db 以外] OK"
+        },
+        "P:A||B>B|適合|C>C|登録済み|D>D|そろう|F>F|db|G>G|未定義|E4": {
+          "id": "BD-EVICAP-CHECK-P005",
+          "status": "active",
+          "title": "シナリオの evidence → 指定が形式に適合（use・at・onError・label の重複） → [適合] use が組み込みか登録済み → [登録済み] 必須の引数がそろう（input の参照先のキーがそれまでの入力にある） → [そろう] use が db → [db] 接続先が mock か databases に定義 → [未定義] error: 定義されていない接続先"
+        },
+        "P:A||B>B|適合|C>C|登録済み|D>D|そろう|F>F|db|G>G|定義|H>H|ない|E5": {
+          "id": "BD-EVICAP-CHECK-P006",
+          "status": "active",
+          "title": "シナリオの evidence → 指定が形式に適合（use・at・onError・label の重複） → [適合] use が組み込みか登録済み → [登録済み] 必須の引数がそろう（input の参照先のキーがそれまでの入力にある） → [そろう] use が db → [db] 接続先が mock か databases に定義 → [定義] SQL ファイルがある（file のとき） → [ない] error: SQL ファイルがない"
+        },
+        "P:A||B>B|適合|C>C|登録済み|D>D|そろう|F>F|db|G>G|定義|H>H|ある|I>I|ほか|E6": {
+          "id": "BD-EVICAP-CHECK-P007",
+          "status": "active",
+          "title": "シナリオの evidence → 指定が形式に適合（use・at・onError・label の重複） → [適合] use が組み込みか登録済み → [登録済み] 必須の引数がそろう（input の参照先のキーがそれまでの入力にある） → [そろう] use が db → [db] 接続先が mock か databases に定義 → [定義] SQL ファイルがある（file のとき） → [ある] SELECT・WITH の 1 文 → [ほか] error: SELECT 以外の SQL"
+        },
+        "P:A||B>B|適合|C>C|登録済み|D>D|そろう|F>F|db|G>G|定義|H>H|ある|I>I|1 文|OK": {
+          "id": "BD-EVICAP-CHECK-P008",
+          "status": "active",
+          "title": "シナリオの evidence → 指定が形式に適合（use・at・onError・label の重複） → [適合] use が組み込みか登録済み → [登録済み] 必須の引数がそろう（input の参照先のキーがそれまでの入力にある） → [そろう] use が db → [db] 接続先が mock か databases に定義 → [定義] SQL ファイルがある（file のとき） → [ある] SELECT・WITH の 1 文 → [1 文] OK"
+        },
+        "T:A||B": {
+          "id": "BD-EVICAP-CHECK-T001",
+          "status": "active",
+          "title": "シナリオの evidence --> 指定が形式に適合（use・at・onError・label の重複）"
+        },
+        "T:B|不適合|E1": {
+          "id": "BD-EVICAP-CHECK-T002",
+          "status": "active",
+          "title": "指定が形式に適合（use・at・onError・label の重複） --[不適合]--> error: 証跡の指定の形式"
+        },
+        "T:B|適合|C": {
+          "id": "BD-EVICAP-CHECK-T003",
+          "status": "active",
+          "title": "指定が形式に適合（use・at・onError・label の重複） --[適合]--> use が組み込みか登録済み"
+        },
+        "T:C|未登録|E2": {
+          "id": "BD-EVICAP-CHECK-T004",
+          "status": "active",
+          "title": "use が組み込みか登録済み --[未登録]--> error: 登録されていない取得手段"
+        },
+        "T:C|登録済み|D": {
+          "id": "BD-EVICAP-CHECK-T005",
+          "status": "active",
+          "title": "use が組み込みか登録済み --[登録済み]--> 必須の引数がそろう（input の参照先のキーがそれまでの入力にある）"
+        },
+        "T:D|欠け|E3": {
+          "id": "BD-EVICAP-CHECK-T006",
+          "status": "active",
+          "title": "必須の引数がそろう（input の参照先のキーがそれまでの入力にある） --[欠け]--> error: 引数の欠け"
+        },
+        "T:D|そろう|F": {
+          "id": "BD-EVICAP-CHECK-T007",
+          "status": "active",
+          "title": "必須の引数がそろう（input の参照先のキーがそれまでの入力にある） --[そろう]--> use が db"
+        },
+        "T:F|db 以外|OK": {
+          "id": "BD-EVICAP-CHECK-T008",
+          "status": "active",
+          "title": "use が db --[db 以外]--> OK"
+        },
+        "T:F|db|G": {
+          "id": "BD-EVICAP-CHECK-T009",
+          "status": "active",
+          "title": "use が db --[db]--> 接続先が mock か databases に定義"
+        },
+        "T:G|未定義|E4": {
+          "id": "BD-EVICAP-CHECK-T010",
+          "status": "active",
+          "title": "接続先が mock か databases に定義 --[未定義]--> error: 定義されていない接続先"
+        },
+        "T:G|定義|H": {
+          "id": "BD-EVICAP-CHECK-T011",
+          "status": "active",
+          "title": "接続先が mock か databases に定義 --[定義]--> SQL ファイルがある（file のとき）"
+        },
+        "T:H|ない|E5": {
+          "id": "BD-EVICAP-CHECK-T012",
+          "status": "active",
+          "title": "SQL ファイルがある（file のとき） --[ない]--> error: SQL ファイルがない"
+        },
+        "T:H|ある|I": {
+          "id": "BD-EVICAP-CHECK-T013",
+          "status": "active",
+          "title": "SQL ファイルがある（file のとき） --[ある]--> SELECT・WITH の 1 文"
+        },
+        "T:I|ほか|E6": {
+          "id": "BD-EVICAP-CHECK-T014",
+          "status": "active",
+          "title": "SELECT・WITH の 1 文 --[ほか]--> error: SELECT 以外の SQL"
+        },
+        "T:I|1 文|OK": {
+          "id": "BD-EVICAP-CHECK-T015",
+          "status": "active",
+          "title": "SELECT・WITH の 1 文 --[1 文]--> OK"
+        }
+      }
+    },
+    "BD-EVICAP-RESOLVE": {
+      "doc": "docs/design/basic/evidence-capture.md",
+      "diagram": "resolve",
+      "next": {
+        "P": 5,
+        "T": 8,
+        "S": 7
+      },
+      "cases": {
+        "P:A||B>B|はい|BI": {
+          "id": "BD-EVICAP-RESOLVE-P001",
+          "status": "active",
+          "title": "use の名前 → screenshot か db → [はい] 組み込み"
+        },
+        "P:A||B>B|いいえ|C>C|ある|HK": {
+          "id": "BD-EVICAP-RESOLVE-P002",
+          "status": "active",
+          "title": "use の名前 → screenshot か db → [いいえ] hooks の evidence にある → [ある] hooks の関数を呼ぶ"
+        },
+        "P:A||B>B|いいえ|C>C|ない|D>D|ある|CM": {
+          "id": "BD-EVICAP-RESOLVE-P003",
+          "status": "active",
+          "title": "use の名前 → screenshot か db → [いいえ] hooks の evidence にある → [ない] 設定の evidence.commands にある → [ある] 外部コマンドを実行する"
+        },
+        "P:A||B>B|いいえ|C>C|ない|D>D|ない|X": {
+          "id": "BD-EVICAP-RESOLVE-P004",
+          "status": "active",
+          "title": "use の名前 → screenshot か db → [いいえ] hooks の evidence にある → [ない] 設定の evidence.commands にある → [ない] 失敗：登録されていない名前"
+        },
+        "T:A||B": {
+          "id": "BD-EVICAP-RESOLVE-T001",
+          "status": "active",
+          "title": "use の名前 --> screenshot か db"
+        },
+        "T:B|はい|BI": {
+          "id": "BD-EVICAP-RESOLVE-T002",
+          "status": "active",
+          "title": "screenshot か db --[はい]--> 組み込み"
+        },
+        "T:B|いいえ|C": {
+          "id": "BD-EVICAP-RESOLVE-T003",
+          "status": "active",
+          "title": "screenshot か db --[いいえ]--> hooks の evidence にある"
+        },
+        "T:C|ある|HK": {
+          "id": "BD-EVICAP-RESOLVE-T004",
+          "status": "active",
+          "title": "hooks の evidence にある --[ある]--> hooks の関数を呼ぶ"
+        },
+        "T:C|ない|D": {
+          "id": "BD-EVICAP-RESOLVE-T005",
+          "status": "active",
+          "title": "hooks の evidence にある --[ない]--> 設定の evidence.commands にある"
+        },
+        "T:D|ある|CM": {
+          "id": "BD-EVICAP-RESOLVE-T006",
+          "status": "active",
+          "title": "設定の evidence.commands にある --[ある]--> 外部コマンドを実行する"
+        },
+        "T:D|ない|X": {
+          "id": "BD-EVICAP-RESOLVE-T007",
+          "status": "active",
+          "title": "設定の evidence.commands にある --[ない]--> 失敗：登録されていない名前"
+        },
+        "S:A||B>B|はい|BI": {
+          "id": "BD-EVICAP-RESOLVE-S001",
+          "status": "active",
+          "title": "use の名前 → screenshot か db → [はい] 組み込み"
+        },
+        "S:A||B>B|いいえ|C": {
+          "id": "BD-EVICAP-RESOLVE-S002",
+          "status": "active",
+          "title": "use の名前 → screenshot か db → [いいえ] hooks の evidence にある"
+        },
+        "S:B|いいえ|C>C|ある|HK": {
+          "id": "BD-EVICAP-RESOLVE-S003",
+          "status": "active",
+          "title": "screenshot か db → [いいえ] hooks の evidence にある → [ある] hooks の関数を呼ぶ"
+        },
+        "S:B|いいえ|C>C|ない|D": {
+          "id": "BD-EVICAP-RESOLVE-S004",
+          "status": "active",
+          "title": "screenshot か db → [いいえ] hooks の evidence にある → [ない] 設定の evidence.commands にある"
+        },
+        "S:C|ない|D>D|ある|CM": {
+          "id": "BD-EVICAP-RESOLVE-S005",
+          "status": "active",
+          "title": "hooks の evidence にある → [ない] 設定の evidence.commands にある → [ある] 外部コマンドを実行する"
+        },
+        "S:C|ない|D>D|ない|X": {
+          "id": "BD-EVICAP-RESOLVE-S006",
+          "status": "active",
+          "title": "hooks の evidence にある → [ない] 設定の evidence.commands にある → [ない] 失敗：登録されていない名前"
+        }
+      }
+    },
+    "BD-EVICAP-SQLGUARD": {
+      "doc": "docs/design/basic/evidence-capture.md",
+      "diagram": "sql-guard",
+      "next": {
+        "P": 6,
+        "T": 12,
+        "S": 11
+      },
+      "cases": {
+        "P:A||B>B|2 つ以上|E1": {
+          "id": "BD-EVICAP-SQLGUARD-P001",
+          "status": "active",
+          "title": "SQL を読む（sql または file） → コメントと文字列を除いて 文が 1 つ → [2 つ以上] 失敗：複数の文は実行しない"
+        },
+        "P:A||B>B|1 つ|C>C|ほか|E2": {
+          "id": "BD-EVICAP-SQLGUARD-P002",
+          "status": "active",
+          "title": "SQL を読む（sql または file） → コメントと文字列を除いて 文が 1 つ → [1 つ] 先頭の語が SELECT か WITH → [ほか] 失敗：SELECT 以外の文は実行しない"
+        },
+        "P:A||B>B|1 つ|C>C|SELECT・WITH|D>D|含む|E3": {
+          "id": "BD-EVICAP-SQLGUARD-P003",
+          "status": "active",
+          "title": "SQL を読む（sql または file） → コメントと文字列を除いて 文が 1 つ → [1 つ] 先頭の語が SELECT か WITH → [SELECT・WITH] 更新・定義の語（INSERT・UPDATE・DELETE・MERGE・INTO・CREATE・ALTER・DROP・EXEC など）を含む → [含む] 失敗：読み取りでない文は実行しない"
+        },
+        "P:A||B>B|1 つ|C>C|SELECT・WITH|D>D|含まない|F>F|mock|M>M||L": {
+          "id": "BD-EVICAP-SQLGUARD-P004",
+          "status": "active",
+          "title": "SQL を読む（sql または file） → コメントと文字列を除いて 文が 1 つ → [1 つ] 先頭の語が SELECT か WITH → [SELECT・WITH] 更新・定義の語（INSERT・UPDATE・DELETE・MERGE・INTO・CREATE・ALTER・DROP・EXEC など）を含む → [含まない] 接続先 → [mock] 疑似 DB の今の表をメモリ上の SQLite に読み込んで実行 → 上限の行数で切り 伏せる列を置き換えて表にする"
+        },
+        "P:A||B>B|1 つ|C>C|SELECT・WITH|D>D|含まない|F>F|実アプリの DB|R>R||L": {
+          "id": "BD-EVICAP-SQLGUARD-P005",
+          "status": "active",
+          "title": "SQL を読む（sql または file） → コメントと文字列を除いて 文が 1 つ → [1 つ] 先頭の語が SELECT か WITH → [SELECT・WITH] 更新・定義の語（INSERT・UPDATE・DELETE・MERGE・INTO・CREATE・ALTER・DROP・EXEC など）を含む → [含まない] 接続先 → [実アプリの DB] 読み取り専用のトランザクションで実行し 常にロールバック → 上限の行数で切り 伏せる列を置き換えて表にする"
+        },
+        "T:A||B": {
+          "id": "BD-EVICAP-SQLGUARD-T001",
+          "status": "active",
+          "title": "SQL を読む（sql または file） --> コメントと文字列を除いて 文が 1 つ"
+        },
+        "T:B|2 つ以上|E1": {
+          "id": "BD-EVICAP-SQLGUARD-T002",
+          "status": "active",
+          "title": "コメントと文字列を除いて 文が 1 つ --[2 つ以上]--> 失敗：複数の文は実行しない"
+        },
+        "T:B|1 つ|C": {
+          "id": "BD-EVICAP-SQLGUARD-T003",
+          "status": "active",
+          "title": "コメントと文字列を除いて 文が 1 つ --[1 つ]--> 先頭の語が SELECT か WITH"
+        },
+        "T:C|ほか|E2": {
+          "id": "BD-EVICAP-SQLGUARD-T004",
+          "status": "active",
+          "title": "先頭の語が SELECT か WITH --[ほか]--> 失敗：SELECT 以外の文は実行しない"
+        },
+        "T:C|SELECT・WITH|D": {
+          "id": "BD-EVICAP-SQLGUARD-T005",
+          "status": "active",
+          "title": "先頭の語が SELECT か WITH --[SELECT・WITH]--> 更新・定義の語（INSERT・UPDATE・DELETE・MERGE・INTO・CREATE・ALTER・DROP・EXEC など）を含む"
+        },
+        "T:D|含む|E3": {
+          "id": "BD-EVICAP-SQLGUARD-T006",
+          "status": "active",
+          "title": "更新・定義の語（INSERT・UPDATE・DELETE・MERGE・INTO・CREATE・ALTER・DROP・EXEC など）を含む --[含む]--> 失敗：読み取りでない文は実行しない"
+        },
+        "T:D|含まない|F": {
+          "id": "BD-EVICAP-SQLGUARD-T007",
+          "status": "active",
+          "title": "更新・定義の語（INSERT・UPDATE・DELETE・MERGE・INTO・CREATE・ALTER・DROP・EXEC など）を含む --[含まない]--> 接続先"
+        },
+        "T:F|mock|M": {
+          "id": "BD-EVICAP-SQLGUARD-T008",
+          "status": "active",
+          "title": "接続先 --[mock]--> 疑似 DB の今の表をメモリ上の SQLite に読み込んで実行"
+        },
+        "T:F|実アプリの DB|R": {
+          "id": "BD-EVICAP-SQLGUARD-T009",
+          "status": "active",
+          "title": "接続先 --[実アプリの DB]--> 読み取り専用のトランザクションで実行し 常にロールバック"
+        },
+        "T:M||L": {
+          "id": "BD-EVICAP-SQLGUARD-T010",
+          "status": "active",
+          "title": "疑似 DB の今の表をメモリ上の SQLite に読み込んで実行 --> 上限の行数で切り 伏せる列を置き換えて表にする"
+        },
+        "T:R||L": {
+          "id": "BD-EVICAP-SQLGUARD-T011",
+          "status": "active",
+          "title": "読み取り専用のトランザクションで実行し 常にロールバック --> 上限の行数で切り 伏せる列を置き換えて表にする"
+        },
+        "S:A||B>B|2 つ以上|E1": {
+          "id": "BD-EVICAP-SQLGUARD-S001",
+          "status": "active",
+          "title": "SQL を読む（sql または file） → コメントと文字列を除いて 文が 1 つ → [2 つ以上] 失敗：複数の文は実行しない"
+        },
+        "S:A||B>B|1 つ|C": {
+          "id": "BD-EVICAP-SQLGUARD-S002",
+          "status": "active",
+          "title": "SQL を読む（sql または file） → コメントと文字列を除いて 文が 1 つ → [1 つ] 先頭の語が SELECT か WITH"
+        },
+        "S:B|1 つ|C>C|ほか|E2": {
+          "id": "BD-EVICAP-SQLGUARD-S003",
+          "status": "active",
+          "title": "コメントと文字列を除いて 文が 1 つ → [1 つ] 先頭の語が SELECT か WITH → [ほか] 失敗：SELECT 以外の文は実行しない"
+        },
+        "S:B|1 つ|C>C|SELECT・WITH|D": {
+          "id": "BD-EVICAP-SQLGUARD-S004",
+          "status": "active",
+          "title": "コメントと文字列を除いて 文が 1 つ → [1 つ] 先頭の語が SELECT か WITH → [SELECT・WITH] 更新・定義の語（INSERT・UPDATE・DELETE・MERGE・INTO・CREATE・ALTER・DROP・EXEC など）を含む"
+        },
+        "S:C|SELECT・WITH|D>D|含む|E3": {
+          "id": "BD-EVICAP-SQLGUARD-S005",
+          "status": "active",
+          "title": "先頭の語が SELECT か WITH → [SELECT・WITH] 更新・定義の語（INSERT・UPDATE・DELETE・MERGE・INTO・CREATE・ALTER・DROP・EXEC など）を含む → [含む] 失敗：読み取りでない文は実行しない"
+        },
+        "S:C|SELECT・WITH|D>D|含まない|F": {
+          "id": "BD-EVICAP-SQLGUARD-S006",
+          "status": "active",
+          "title": "先頭の語が SELECT か WITH → [SELECT・WITH] 更新・定義の語（INSERT・UPDATE・DELETE・MERGE・INTO・CREATE・ALTER・DROP・EXEC など）を含む → [含まない] 接続先"
+        },
+        "S:D|含まない|F>F|mock|M": {
+          "id": "BD-EVICAP-SQLGUARD-S007",
+          "status": "active",
+          "title": "更新・定義の語（INSERT・UPDATE・DELETE・MERGE・INTO・CREATE・ALTER・DROP・EXEC など）を含む → [含まない] 接続先 → [mock] 疑似 DB の今の表をメモリ上の SQLite に読み込んで実行"
+        },
+        "S:D|含まない|F>F|実アプリの DB|R": {
+          "id": "BD-EVICAP-SQLGUARD-S008",
+          "status": "active",
+          "title": "更新・定義の語（INSERT・UPDATE・DELETE・MERGE・INTO・CREATE・ALTER・DROP・EXEC など）を含む → [含まない] 接続先 → [実アプリの DB] 読み取り専用のトランザクションで実行し 常にロールバック"
+        },
+        "S:F|mock|M>M||L": {
+          "id": "BD-EVICAP-SQLGUARD-S009",
+          "status": "active",
+          "title": "接続先 → [mock] 疑似 DB の今の表をメモリ上の SQLite に読み込んで実行 → 上限の行数で切り 伏せる列を置き換えて表にする"
+        },
+        "S:F|実アプリの DB|R>R||L": {
+          "id": "BD-EVICAP-SQLGUARD-S010",
+          "status": "active",
+          "title": "接続先 → [実アプリの DB] 読み取り専用のトランザクションで実行し 常にロールバック → 上限の行数で切り 伏せる列を置き換えて表にする"
+        }
+      }
+    },
+    "BD-EVIVIEW-SCREEN": {
+      "doc": "docs/design/basic/evidence-view.md",
+      "diagram": "screen-flow",
+      "next": {
+        "P": 8,
+        "T": 11,
+        "X": 15
+      },
+      "cases": {
+        "P:[*]start||Result>Result|トレースを開く|Trace>Trace|ステップを選ぶ|Trace>Trace|戻る|Result>Result||[*]end": {
+          "id": "BD-EVIVIEW-SCREEN-P001",
+          "status": "active",
+          "title": "開始 → テスト結果 → [トレースを開く] トレース → [ステップを選ぶ] トレース → [戻る] テスト結果 → 終了"
+        },
+        "P:[*]start||Result>Result|トレースを開く|Trace>Trace|証跡を開く [取得済み]|Evidence>Evidence|保存|Evidence>Evidence|閉じる|Trace>Trace|戻る|Result>Result||[*]end": {
+          "id": "BD-EVIVIEW-SCREEN-P002",
+          "status": "active",
+          "title": "開始 → テスト結果 → [トレースを開く] トレース → [証跡を開く [取得済み]] 証跡の表示 → [保存] 証跡の表示 → [閉じる] トレース → [戻る] テスト結果 → 終了"
+        },
+        "P:[*]start||Result>Result|トレースを開く|Trace>Trace|証跡を開く [取得済み]|Evidence>Evidence|次の証跡|Evidence>Evidence|閉じる|Trace>Trace|戻る|Result>Result||[*]end": {
+          "id": "BD-EVIVIEW-SCREEN-P003",
+          "status": "active",
+          "title": "開始 → テスト結果 → [トレースを開く] トレース → [証跡を開く [取得済み]] 証跡の表示 → [次の証跡] 証跡の表示 → [閉じる] トレース → [戻る] テスト結果 → 終了"
+        },
+        "P:[*]start||Result>Result|トレースを開く|Trace>Trace|証跡を開く [取得済み]|Evidence>Evidence|閉じる|Trace>Trace|戻る|Result>Result||[*]end": {
+          "id": "BD-EVIVIEW-SCREEN-P004",
+          "status": "active",
+          "title": "開始 → テスト結果 → [トレースを開く] トレース → [証跡を開く [取得済み]] 証跡の表示 → [閉じる] トレース → [戻る] テスト結果 → 終了"
+        },
+        "P:[*]start||Result>Result|トレースを開く|Trace>Trace|証跡を開く [取得失敗]|Trace>Trace|戻る|Result>Result||[*]end": {
+          "id": "BD-EVIVIEW-SCREEN-P005",
+          "status": "active",
+          "title": "開始 → テスト結果 → [トレースを開く] トレース → [証跡を開く [取得失敗]] トレース → [戻る] テスト結果 → 終了"
+        },
+        "P:[*]start||Result>Result|トレースを開く|Trace>Trace|戻る|Result>Result||[*]end": {
+          "id": "BD-EVIVIEW-SCREEN-P006",
+          "status": "active",
+          "title": "開始 → テスト結果 → [トレースを開く] トレース → [戻る] テスト結果 → 終了"
+        },
+        "P:[*]start||Result>Result||[*]end": {
+          "id": "BD-EVIVIEW-SCREEN-P007",
+          "status": "active",
+          "title": "開始 → テスト結果 → 終了"
+        },
+        "T:[*]start||Result": {
+          "id": "BD-EVIVIEW-SCREEN-T001",
+          "status": "active",
+          "title": "開始 --> テスト結果"
+        },
+        "T:Result|トレースを開く|Trace": {
+          "id": "BD-EVIVIEW-SCREEN-T002",
+          "status": "active",
+          "title": "テスト結果 --[トレースを開く]--> トレース"
+        },
+        "T:Trace|ステップを選ぶ|Trace": {
+          "id": "BD-EVIVIEW-SCREEN-T003",
+          "status": "active",
+          "title": "トレース --[ステップを選ぶ]--> トレース"
+        },
+        "T:Trace|証跡を開く [取得済み]|Evidence": {
+          "id": "BD-EVIVIEW-SCREEN-T004",
+          "status": "active",
+          "title": "トレース --[証跡を開く [取得済み]]--> 証跡の表示"
+        },
+        "T:Trace|証跡を開く [取得失敗]|Trace": {
+          "id": "BD-EVIVIEW-SCREEN-T005",
+          "status": "active",
+          "title": "トレース --[証跡を開く [取得失敗]]--> トレース"
+        },
+        "T:Evidence|保存|Evidence": {
+          "id": "BD-EVIVIEW-SCREEN-T006",
+          "status": "active",
+          "title": "証跡の表示 --[保存]--> 証跡の表示"
+        },
+        "T:Evidence|次の証跡|Evidence": {
+          "id": "BD-EVIVIEW-SCREEN-T007",
+          "status": "active",
+          "title": "証跡の表示 --[次の証跡]--> 証跡の表示"
+        },
+        "T:Evidence|閉じる|Trace": {
+          "id": "BD-EVIVIEW-SCREEN-T008",
+          "status": "active",
+          "title": "証跡の表示 --[閉じる]--> トレース"
+        },
+        "T:Trace|戻る|Result": {
+          "id": "BD-EVIVIEW-SCREEN-T009",
+          "status": "active",
+          "title": "トレース --[戻る]--> テスト結果"
+        },
+        "T:Result||[*]end": {
+          "id": "BD-EVIVIEW-SCREEN-T010",
+          "status": "active",
+          "title": "テスト結果 --> 終了"
+        },
+        "X:Result|ステップを選ぶ": {
+          "id": "BD-EVIVIEW-SCREEN-X001",
+          "status": "active",
+          "title": "テスト結果 で [ステップを選ぶ]"
+        },
+        "X:Result|証跡を開く": {
+          "id": "BD-EVIVIEW-SCREEN-X002",
+          "status": "active",
+          "title": "テスト結果 で [証跡を開く]"
+        },
+        "X:Result|保存": {
+          "id": "BD-EVIVIEW-SCREEN-X003",
+          "status": "active",
+          "title": "テスト結果 で [保存]"
+        },
+        "X:Result|次の証跡": {
+          "id": "BD-EVIVIEW-SCREEN-X004",
+          "status": "active",
+          "title": "テスト結果 で [次の証跡]"
+        },
+        "X:Result|閉じる": {
+          "id": "BD-EVIVIEW-SCREEN-X005",
+          "status": "active",
+          "title": "テスト結果 で [閉じる]"
+        },
+        "X:Result|戻る": {
+          "id": "BD-EVIVIEW-SCREEN-X006",
+          "status": "active",
+          "title": "テスト結果 で [戻る]"
+        },
+        "X:Trace|トレースを開く": {
+          "id": "BD-EVIVIEW-SCREEN-X007",
+          "status": "active",
+          "title": "トレース で [トレースを開く]"
+        },
+        "X:Trace|保存": {
+          "id": "BD-EVIVIEW-SCREEN-X008",
+          "status": "active",
+          "title": "トレース で [保存]"
+        },
+        "X:Trace|次の証跡": {
+          "id": "BD-EVIVIEW-SCREEN-X009",
+          "status": "active",
+          "title": "トレース で [次の証跡]"
+        },
+        "X:Trace|閉じる": {
+          "id": "BD-EVIVIEW-SCREEN-X010",
+          "status": "active",
+          "title": "トレース で [閉じる]"
+        },
+        "X:Evidence|トレースを開く": {
+          "id": "BD-EVIVIEW-SCREEN-X011",
+          "status": "active",
+          "title": "証跡の表示 で [トレースを開く]"
+        },
+        "X:Evidence|ステップを選ぶ": {
+          "id": "BD-EVIVIEW-SCREEN-X012",
+          "status": "active",
+          "title": "証跡の表示 で [ステップを選ぶ]"
+        },
+        "X:Evidence|証跡を開く": {
+          "id": "BD-EVIVIEW-SCREEN-X013",
+          "status": "active",
+          "title": "証跡の表示 で [証跡を開く]"
+        },
+        "X:Evidence|戻る": {
+          "id": "BD-EVIVIEW-SCREEN-X014",
+          "status": "active",
+          "title": "証跡の表示 で [戻る]"
+        }
+      }
+    },
     "BD-GHREV-APPROVE": {
       "doc": "docs/design/basic/github-review.md",
       "diagram": "approve",

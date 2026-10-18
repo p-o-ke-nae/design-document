@@ -1,7 +1,7 @@
 ---
 id: EVID
 kind: requirements
-status: review
+status: approved
 title: シナリオから取得するテストの証跡 要件定義
 ---
 

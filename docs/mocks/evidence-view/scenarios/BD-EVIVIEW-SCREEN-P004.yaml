@@ -1,0 +1,20 @@
+# ddv mock scaffold が生成。event / click / expect.screen は再生成で更新、それ以外は保持
+
+id: BD-EVIVIEW-SCREEN-P004
+title: 開始 → テスト結果 → [トレースを開く] トレース → [証跡を開く [取得済み]] 証跡の表示 → [閉じる] トレース → [戻る] テスト結果 → 終了
+fixtures: [ default ]
+start: Result
+steps:
+  - event: トレースを開く
+    click: trace-open
+    expect: { screen: Trace }
+  - event: 証跡を開く [取得済み]
+    input: { evidence-state: ok }
+    click: evidence-open
+    expect: { screen: Evidence }
+  - event: 閉じる
+    click: evidence-close
+    expect: { screen: Trace }
+  - event: 戻る
+    click: trace-back
+    expect: { screen: Result }
