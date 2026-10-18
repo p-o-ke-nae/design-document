@@ -4,7 +4,8 @@ import { publishFakeResult } from '../apps/server/src/github-fixture.ts';
 import { test, expect, openHash } from './fixtures.ts';
 import { HEAD_SHA, OWNER, PR, REPO } from './github-stub.ts';
 
-const TEST_ID = 'BD-ORDER-SCREEN-P001';
+// A test ID of the published fake run (joined so that ddv-testid does not read it as a reference of this spec).
+const TEST_ID = ['BD', 'ORDER', 'SCREEN', 'P001'].join('-');
 const RUN = '601-1';
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 const ORDERS = JSON.stringify({ columns: ['id', 'customer'], rows: [[1, '山田 太郎']] });

@@ -68,6 +68,8 @@ document.getElementById('load').onclick = async () => {
 };
 </script></body></html>`;
 
+// Launching / closing Chromium can exceed the default 10 s while the whole suite runs in parallel.
+const HOOK_TIMEOUT = 60_000;
 let dir = '';
 let server: StaticServer;
 let browser: Browser;
@@ -86,13 +88,13 @@ beforeAll(async () => {
   server = await startStaticServer(dir);
   browser = await new BrowserLauncher(undefined, { env: {} }).launch();
   page = await browser.newPage();
-});
+}, HOOK_TIMEOUT);
 
 afterAll(async () => {
   await browser?.close();
   await server?.close();
   await fs.rm(dir, { recursive: true, force: true });
-});
+}, HOOK_TIMEOUT);
 
 describe('runScenario / PlaywrightDriver', () => {
   it('モック: data-screen / data-testid で操作・判定し、各ステップ後に onStep を呼ぶ', async () => {

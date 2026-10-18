@@ -56,6 +56,8 @@ export function MockFrame({ target, attrs, source }: { target: string; attrs: Re
   const [loadedSeq, setLoadedSeq] = useState(-1);
   const transport = useRef<FrameTransport | null>(null);
   const [tuning, setTuning] = useState(false);
+  const tuningRef = useRef(false);
+  tuningRef.current = tuning;
   const [traceOpen, setTraceOpen] = useState(false);
   const [picked, setPicked] = useState<{ el: PickedElement; seq: number } | null>(null);
   const sendTune = useCallback((m: TuneMessage) => transport.current?.send(m), []);
@@ -73,6 +75,8 @@ export function MockFrame({ target, attrs, source }: { target: string; attrs: Re
       onMessage: (m) => {
         if (m.type === 'ddv:ready' || m.type === 'ddv:screen') c.setScreen(m.screen ?? null);
         if (m.type === 'ddv:ready') setMockError('');
+        // A frame that (re)booted after the tune mode started has no tuner running: start it again
+        if (m.type === 'ddv:ready' && tuningRef.current) t.send({ type: 'ddv:tune', on: true });
         if (m.type === 'ddv:error') setMockError(m.message);
         if (m.type === 'ddv:picked') {
           const { type: _type, ...el } = m;
@@ -257,6 +261,7 @@ export function MockFrame({ target, attrs, source }: { target: string; attrs: Re
   };
   const startTune = () => {
     sendTune({ type: 'ddv:tune', on: true });
+    tuningRef.current = true;
     setTuning(true);
   };
   const rewindTarget = state === 'Failed' ? cursor : Math.max(0, cursor - 1);
@@ -373,7 +378,7 @@ export function MockFrame({ target, attrs, source }: { target: string; attrs: Re
           </ul>
         </details>
       )}
-      {tuning && <TunePanel mock={target} picked={picked} send={sendTune} onEnd={() => setTuning(false)} />}
+      {tuning && <TunePanel mock={target} picked={picked} send={sendTune} onEnd={() => { tuningRef.current = false; setTuning(false); }} />}
       {detail?.issues?.map((m, i) => (
         <div key={i} className="notice warn">
           ⚠ {m}

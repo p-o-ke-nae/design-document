@@ -16,13 +16,17 @@ interface Server {
   sleep: string;
 }
 
+// Module names in variables: pg / mssql are optional and have no type declarations installed.
+const PG_MODULE = 'pg';
+const MSSQL_MODULE = 'mssql';
+
 const servers: Server[] = [
   {
     name: 'PostgreSQL',
     conn: PG,
     connector: () => new PostgresConnector(),
     exec: async (conn, sql) => {
-      const pg = (await import('pg')).default;
+      const pg = ((await import(PG_MODULE)) as any).default;
       const c = new pg.Client({ connectionString: conn });
       await c.connect();
       try {
@@ -39,7 +43,7 @@ const servers: Server[] = [
     conn: MSSQL,
     connector: () => new SqlServerConnector(),
     exec: async (conn, sql) => {
-      const mssql = ((await import('mssql')) as any).default;
+      const mssql = ((await import(MSSQL_MODULE)) as any).default;
       const pool = await new mssql.ConnectionPool(conn).connect();
       try {
         const r = await pool.request().query(sql);
