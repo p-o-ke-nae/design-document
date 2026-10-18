@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { api } from '../backend/index.ts';
 import type { CoverageClass, Matrix, MatrixCase, TestSummary } from '../api.ts';
 import { actionsHref, historyHref, traceHref, useApp } from '../state.tsx';
@@ -10,6 +10,9 @@ import { useMockHub } from '../mockHub.tsx';
 import { StatusBadge } from './StatusBadge.tsx';
 import { CommentGutter } from './Review.tsx';
 import { GateReason, useGate } from '../gate.tsx';
+import { scenarioCount, shouldOpenTargetSelect } from '../targets.ts';
+import { PlatformBadges, hasBadges } from './PlatformBadges.tsx';
+import { TargetSelect } from './TargetSelect.tsx';
 
 type Tab = 'all' | 'P' | 'T' | 'S' | 'X' | 'table';
 
@@ -17,7 +20,9 @@ const KIND_LABEL: Record<string, string> = { P: '経路', T: '遷移', S: 'Nス�
 const COVERAGE_LABEL: Record<CoverageClass, string> = { passed: '成功', failed: '失敗', skipped: 'スキップ', unexecuted: '未実行', unlinked: '未紐づけ' };
 
 export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; selected: string | null; onSelect(id: string | null): void }) {
-  const { latest, runTests, activeRun, history } = useApp();
+  const { latest, runTests, followStarted, activeRun, history, targets } = useApp();
+  const [select, setSelect] = useState<{ ids: string[]; count: number } | null>(null);
+  const platforms = targets.map((t) => t.platform);
   const actionsReady = useActionsStatus()?.state === 'ready';
   const coverage = useCoverage();
   const hub = useMockHub();
@@ -40,12 +45,16 @@ export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; se
     else n.add(id);
     setChecked(n);
   };
-  const run = (ids: string[]) => void runTests({ ids });
+  const run = (ids: string[]) => {
+    if (shouldOpenTargetSelect(ids, matrix.cases, targets.length)) setSelect({ ids, count: scenarioCount(ids, matrix.cases) });
+    else void runTests({ ids });
+  };
   const runGate = useGate('runLocal');
   const idGate = useGate('generateTestIds');
 
   return (
     <section className="matrix" data-testid="matrix" data-diagram-key={matrix.diagramKey}>
+      {select && <TargetSelect body={{ ids: select.ids }} count={select.count} onStarted={followStarted} onClose={() => setSelect(null)} />}
       <header className="matrix-head">
         <strong>テストマトリクス</strong>
         <code>{matrix.diagramKey}</code>
@@ -123,6 +132,7 @@ export function MatrixPanel({ matrix, selected, onSelect }: { matrix: Matrix; se
                   onCheck={() => toggle(c.id)}
                   onSelect={() => onSelect(selected === c.id ? null : c.id)}
                   result={latest[c.id]}
+                  badges={hasBadges(c.id, platforms, latest) ? <PlatformBadges testId={c.id} platforms={platforms} latest={latest} /> : undefined}
                   coverage={coverage?.cases[c.id]}
                   summary={history?.tests[c.id]}
                   running={running}
@@ -174,6 +184,7 @@ function MatrixRow({
   doc,
   coverage,
   summary,
+  badges,
 }: {
   c: MatrixCase;
   doc: string;
@@ -189,6 +200,7 @@ function MatrixRow({
   onTestData?: () => void;
   coverage?: CoverageClass;
   summary?: TestSummary;
+  badges?: ReactNode;
 }) {
   const runGate = useGate('runLocal');
   const executed = !!result || !!summary?.recent.some((m) => m !== 'none');
@@ -222,7 +234,7 @@ function MatrixRow({
         )}
       </td>
       <td className="nowrap">
-        {result ? <StatusBadge status={result.status} title={result.message} /> : <span className="muted">-</span>}
+        {badges ?? (result ? <StatusBadge status={result.status} title={result.message} /> : <span className="muted">-</span>)}
         {coverage && (
           <span className={`cov-chip cov-${coverage}`} data-testid="matrix-coverage" data-class={coverage} title="設計カバレッジの分類">
             {COVERAGE_LABEL[coverage]}

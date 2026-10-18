@@ -15,12 +15,15 @@ const fmtAt = (iso: string) => {
 export function TraceView({
   runId,
   testId,
+  platform,
   load,
   shotUrl,
   backHref,
 }: {
   runId: string;
   testId: string;
+  /** `?platform=` (none = web). */
+  platform?: string;
   load?: () => Promise<TraceResponse>;
   shotUrl?: (n: number) => Promise<string>;
   backHref?: string;
@@ -31,13 +34,13 @@ export function TraceView({
     const key = { runId, testId };
     dispatch({ type: 'open', key });
     let alive = true;
-    (load ? load() : api.trace(runId, testId))
+    (load ? load() : api.trace(runId, testId, platform))
       .then((trace) => alive && dispatch({ type: 'fetched', key, trace }))
       .catch((e: Error) => alive && dispatch({ type: 'fetched', key, code: e instanceof ApiError ? (e.code ?? String(e.status)) : 'error', message: e.message }));
     return () => {
       alive = false;
     };
-  }, [runId, testId, load]);
+  }, [runId, testId, platform, load]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -55,7 +58,7 @@ export function TraceView({
 
   const current = state.kind !== 'Loading' && state.kind !== 'None' ? state.trace.steps.find((s) => s.index === state.selected) : undefined;
   const shotIndex = current?.screenshot ? current.index : -1;
-  const shot = useMemo(() => (shotIndex >= 0 ? (shotUrl ? shotUrl(shotIndex) : api.traceShot(runId, testId, shotIndex)) : null), [runId, testId, shotIndex, shotUrl]);
+  const shot = useMemo(() => (shotIndex >= 0 ? (shotUrl ? shotUrl(shotIndex) : api.traceShot(runId, testId, shotIndex, platform)) : null), [runId, testId, platform, shotIndex, shotUrl]);
 
   if (state.kind === 'Loading')
     return (
@@ -80,6 +83,7 @@ export function TraceView({
   const steps = trace.steps;
   const at = steps.findIndex((s) => s.index === selected);
   const step = at >= 0 ? steps[at] : null;
+  const shownPlatform = trace.platform ?? 'web';
   return (
     <div className="tests-page trace-view" data-testid="trace-view">
       <div className="trace-head">
@@ -94,6 +98,9 @@ export function TraceView({
             {fmtAt(trace.startedAt)}
             {trace.commit ? `・${shortSha(trace.commit)}${trace.dirty ? '（未コミットの変更あり）' : ''}` : ''}・{trace.target === 'app' ? '実アプリ' : 'モック'}・{(trace.durationMs / 1000).toFixed(1)}s
           </span>
+        </span>
+        <span data-testid="trace-platform" className="badge" data-platform={shownPlatform}>
+          {shownPlatform}
         </span>
         <span data-testid="trace-status" data-status={trace.status} className={`badge st-${trace.status}`}>
           {trace.status === 'failed' ? (trace.failedStep && trace.failedStep >= 1 ? `失敗：ステップ ${trace.failedStep}` : '失敗：開始前') : '成功'}
@@ -117,7 +124,7 @@ export function TraceView({
             </button>
           </div>
         </div>
-        <div className="trace-main">{step && <TraceStepDetail step={step} shotUrl={step.screenshot ? shot : null} />}</div>
+        <div className="trace-main">{step && <TraceStepDetail step={step} shotUrl={step.screenshot ? shot : null} desktop={shownPlatform !== 'web'} />}</div>
       </div>
     </div>
   );

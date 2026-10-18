@@ -26,9 +26,24 @@ export interface CaseResult {
   test: string;
   runId?: string;
   at?: string;
+  platform?: 'web' | 'wpf' | 'winforms';
   /** `/api/results/latest`: the trace of that run is still there. */
   trace?: boolean;
 }
+
+import type { Target } from './targets.ts';
+
+export type { Target };
+
+/** `POST /api/tests/run`: `runners` = the chosen targets (platform-results.md「開始の要求」). */
+export interface RunBody {
+  ids?: string[];
+  runner?: string;
+  runners?: string[];
+}
+
+/** `?platform=` of the trace URLs: none for web. */
+export const platformQuery = (p?: string) => (p && p !== 'web' ? `?platform=${encodeURIComponent(p)}` : '');
 
 /** `GET /api/traces/{runId}/{testId}`: the trace plus the run's commit. */
 export type TraceResponse = TraceFile & { commit?: string; dirty?: boolean };
@@ -112,7 +127,7 @@ export interface RunSummary {
   startedAt: string;
   finishedAt?: string;
   status: 'running' | 'passed' | 'failed' | 'error';
-  request: { ids?: string[]; runner?: string };
+  request: RunBody;
   runners: Array<{ name: string; command: string; exitCode: number | null; error?: string }>;
   results: Record<string, CaseResult>;
   total: number;
@@ -433,13 +448,14 @@ export function createApi(ws: string) {
     latest: () => get<Record<string, CaseResult>>('/api/results/latest'),
     runs: () => get<RunSummary[]>('/api/runs'),
     run: (id: string) => get<RunSummary>(`/api/runs/${id}`),
-    startRun: (body: { ids?: string[]; runner?: string }) => post(A('/api/tests/run'), body).then((r) => json<{ id: string }>(r)),
+    targets: () => get<{ targets: Target[] }>('/api/tests/targets'),
+    startRun: (body: RunBody) => post(A('/api/tests/run'), body).then((r) => json<{ id: string }>(r)),
     rerun: (times: number) => post(A('/api/tests/rerun'), { times }).then((r) => json<{ id: string; status: 'running'; rerunOf: string; attempt: number; times: number }>(r)),
     historySummary: () => get<HistorySummary>('/api/history/summary'),
     historyTest: (id: string) => get<TestHistory>(`/api/history/tests/${encodeURIComponent(id)}`),
     flaky: () => get<FlakyEntry[]>('/api/history/flaky'),
-    trace: (runId: string, id: string) => get<TraceResponse>(`/api/traces/${encodeURIComponent(runId)}/${encodeURIComponent(id)}`),
-    traceShot: (runId: string, id: string, n: number) => A(`/api/traces/${encodeURIComponent(runId)}/${encodeURIComponent(id)}/steps/${n}.png`),
+    trace: (runId: string, id: string, platform?: string) => get<TraceResponse>(`/api/traces/${encodeURIComponent(runId)}/${encodeURIComponent(id)}${platformQuery(platform)}`),
+    traceShot: (runId: string, id: string, n: number, platform?: string) => A(`/api/traces/${encodeURIComponent(runId)}/${encodeURIComponent(id)}/steps/${n}.png${platformQuery(platform)}`),
     coverage: (path: string) => get<DocCoverage>(`/api/coverage?path=${encodeURIComponent(path)}`),
     deps: () => get<DepsStatus>('/api/deps'),
     installDeps: () => post(A('/api/deps/install')).then((r) => json<{ runId: string; deps: DepsStatus }>(r)),

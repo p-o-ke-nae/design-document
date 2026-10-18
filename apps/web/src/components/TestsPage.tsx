@@ -1,17 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../backend/index.ts';
-import type { RunSummary, TestsResponse } from '../api.ts';
+import type { RunBody, RunSummary, TestsResponse } from '../api.ts';
 import { docHref, flakyHref, historyHref, traceHref, useApp, useLocalStorage } from '../state.tsx';
 import { scenarioLinked } from '../trace-view.ts';
 import { StatusBadge } from './StatusBadge.tsx';
 import { GateReason, useGate } from '../gate.tsx';
 import { TestsTabs } from './ActionsPanel.tsx';
 import { FlakyMark, RecentDots, RerunPanel, formatCommit } from './TestHistory.tsx';
+import { desktopWarning, scenarioCount, shouldOpenTargetSelect, targetProgress } from '../targets.ts';
+import { PlatformBadges, hasBadges } from './PlatformBadges.tsx';
+import { TargetSelect } from './TargetSelect.tsx';
 
 type Filter = 'all' | 'linked' | 'unlinked' | 'failed' | 'passed' | 'never';
 
 export function TestsPage() {
-  const { version, latest, runTests, rerunTests, history, activeRun, runLog, runError } = useApp();
+  const { version, latest, runTests, followStarted, rerunTests, history, activeRun, runLog, runError, targets } = useApp();
+  const [select, setSelect] = useState<{ body: RunBody; count: number } | null>(null);
   const [data, setData] = useState<TestsResponse | null>(null);
   const [runs, setRuns] = useState<RunSummary[]>([]);
   const [q, setQ] = useState('');
@@ -75,6 +79,14 @@ export function TestsPage() {
 
   if (!data) return <div className="empty muted">読み込み中…</div>;
   const runnable = (ids: string[]) => ids.filter((id) => data.cases.find((c) => c.id === id)?.links.length);
+  // 実行の始め方 (DD-PLATRES-RUNOPEN): scenario-linked ids with 2+ targets open the target selection.
+  const startRun = (body: RunBody, ids: string[]) => {
+    if (shouldOpenTargetSelect(ids, data.cases, targets.length)) setSelect({ body, count: scenarioCount(ids, data.cases) });
+    else void runTests(body);
+  };
+  const platforms = targets.map((t) => t.platform);
+  const runTargets = activeRun?.request.runners ?? [];
+  const warning = running ? desktopWarning(targets, runTargets) : null;
   const allChecked = rows.length > 0 && rows.every((r) => checked.has(r.id));
   const rerunnable = history?.rerunnable ?? 0;
   const rerunBlocked = !runGate.enabled ? runGate.reason ?? '' : running ? 'テストの実行中は再実行できません' : !rerunnable ? '直近の実行に失敗したテストはありません' : '';
@@ -108,7 +120,7 @@ export function TestsPage() {
           <option value="integration">結合</option>
         </select>
         <span className="spacer" />
-        <button type="button" disabled={running || !runnable([...checked]).length || !runGate.enabled} title={runGate.reason} onClick={() => runTests({ ids: runnable([...checked]) })} data-testid="run-selected">
+        <button type="button" disabled={running || !runnable([...checked]).length || !runGate.enabled} title={runGate.reason} onClick={() => startRun({ ids: runnable([...checked]) }, runnable([...checked]))} data-testid="run-selected">
           選択を実行 ({runnable([...checked]).length})
         </button>
         <button type="button" disabled={rerunning} title={rerunning ? '失敗の再実行中は開けません' : undefined} onClick={() => (location.hash = flakyHref())} data-testid="flaky-open">
@@ -135,13 +147,19 @@ export function TestsPage() {
             {r.name} を全実行
           </button>
         ))}
-        <button type="button" className="primary" disabled={running || !data.runners.length || !runGate.enabled} title={runGate.reason} onClick={() => runTests({})} data-testid="run-all">
+        <button type="button" className="primary" disabled={running || !data.runners.length || !runGate.enabled} title={runGate.reason} onClick={() => startRun({}, runnable(data.cases.map((c) => c.id)))} data-testid="run-all">
           一括実行
         </button>
         <GateReason gate={runGate} />
       </section>
 
+      {select && <TargetSelect body={select.body} count={select.count} onStarted={followStarted} onClose={() => setSelect(null)} />}
       {runError && <div className="notice warn">{runError}</div>}
+      {warning && (
+        <div className="notice warn" data-testid="desktop-warning">
+          {warning}
+        </div>
+      )}
       {rerunError && (
         <div className="notice warn" data-testid="rerun-error">
           {rerunError}
@@ -230,7 +248,13 @@ export function TestsPage() {
                       )}
                     </td>
                     <td>
-                      {r ? <StatusBadge status={r.status} title={r.message} /> : <span className="muted">-</span>}
+                      {hasBadges(c.id, platforms, latest) ? (
+                        <PlatformBadges testId={c.id} platforms={platforms} latest={latest} />
+                      ) : r ? (
+                        <StatusBadge status={r.status} title={r.message} />
+                      ) : (
+                        <span className="muted">-</span>
+                      )}
                       {r?.message && r.status !== 'passed' && <div className="fail-msg">{r.message.split('\n')[0]}</div>}
                     </td>
                     <td>
@@ -238,7 +262,7 @@ export function TestsPage() {
                     </td>
                     <td className="num">{r ? `${r.durationMs}ms` : ''}</td>
                     <td>
-                      <button type="button" className="run" disabled={!c.links.length || running} onClick={() => runTests({ ids: [c.id] })}>
+                      <button type="button" className="run" disabled={!c.links.length || running} onClick={() => startRun({ ids: [c.id] }, [c.id])} data-testid="run-case">
                         ▶
                       </button>
                       {r?.runId && scenarioLinked(c.links) && (
@@ -258,6 +282,15 @@ export function TestsPage() {
           <h3>
             実行ログ {activeRun && <StatusBadge status={activeRun.status} />}
           </h3>
+          {runTargets.length > 0 && (
+            <ul className="run-targets">
+              {targetProgress(runTargets, runLog, !running).map((p) => (
+                <li key={p.name} data-testid="run-target" data-state={p.state}>
+                  {p.name} {p.state}
+                </li>
+              ))}
+            </ul>
+          )}
           <pre className="log" ref={logRef} data-testid="run-log">
             {runLog.length ? runLog.join('\n') : 'まだ実行していません'}
           </pre>

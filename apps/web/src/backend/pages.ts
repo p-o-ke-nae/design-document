@@ -8,6 +8,7 @@ import type { PrInfo } from '../api.ts';
 import { PAGES_CAPABILITIES } from './capabilities.ts';
 import { GitHubError } from '@ddv/github';
 import { toApiError } from './errors.ts';
+import { hostedTargets } from '../targets.ts';
 import { ApiError, type ActionsEvent, type Availability, type Backend, type BackendListener, type GateResult, type OperationId, type PatView, type Unsubscribe } from './types.ts';
 
 export interface OperationGateLike {
@@ -262,20 +263,21 @@ export function createPagesBackend(scope: string, getContext: () => PagesContext
     latest: () => read((s) => s.history.latest()),
     runs: async () => [],
     run: (id) => read(() => fail(404, 'not-found', `実行が見つかりません: ${id}`)),
+    targets: () => read(async (s) => { const { config } = await s.docs.config(); return { targets: hostedTargets(config.runners, config.mocksRoot) }; }),
     startRun: () => unsupported('runLocal'),
     rerun: () => unsupported('runLocal'),
     historySummary: () => read((s) => s.history.summary()),
     historyTest: (id) => read((s) => s.history.test(id)),
     flaky: () => read((s) => s.history.flaky()),
-    trace: (runId, id) =>
+    trace: (runId, id, platform) =>
       read(async (s) => {
-        const r = await s.traces.read(runId, id);
+        const r = await s.traces.read(runId, id, platform);
         return r.ok ? r.trace : fail(404, r.reason, NO_TRACE_MESSAGE[r.reason]);
       }),
-    traceShot: (runId, id, n) =>
+    traceShot: (runId, id, n, platform) =>
       read((s) =>
-        blobUrl(`trace:${runId}/${id}/${n}`, async () => {
-          const png = await s.traces.screenshot(runId, id, n);
+        blobUrl(`trace:${runId}/${id}/${n}/${platform ?? 'web'}`, async () => {
+          const png = await s.traces.screenshot(runId, id, n, platform);
           return png ? new Blob([bytes(png)], { type: 'image/png' }) : fail(404, 'not-found', 'スクリーンショットはありません');
         }),
       ),

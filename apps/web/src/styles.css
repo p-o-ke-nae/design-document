@@ -2185,3 +2185,32 @@ svg path.ddv-cov-unlinked {
 .topbar .rate.warn { color: var(--warn); background: var(--warn-bg); padding: 0 4px; border-radius: 4px; }
 .disabled-reason { margin-left: 6px; font-size: 12px; color: var(--muted, #6e7781); }
 .pages-open .form, .pages-token .form { display: grid; gap: 6px; max-width: 480px; }
+
+/* platform-results: badges per platform, target selection, skipped steps */
+.platform-badges {
+  display: inline-flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.platform-badges button.badge {
+  border: none;
+  cursor: pointer;
+}
+.platform-badges button.badge:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+.trace-timeline li.skipped {
+  opacity: 0.55;
+}
+.run-targets {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.target-select table {
+  width: 100%;
+}

@@ -225,7 +225,7 @@ export function createHttpBackend(scope: string): Backend {
     capabilities: LOCAL_CAPABILITIES,
     subscribe: (listener) => feed.add(listener),
     followRun: (id, handlers) => followRunEvents(apiPath(scope, `/api/runs/${id}/events`), handlers),
-    traceShot: async (runId, id, n) => base.traceShot(runId, id, n),
+    traceShot: async (runId, id, n, platform) => base.traceShot(runId, id, n, platform),
     rawUrl: async (p) => rawPath(scope, p),
     actionsFile: async (id, p) => base.actionsFile(id, p),
     repo: () => null,
