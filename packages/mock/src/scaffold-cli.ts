@@ -17,7 +17,7 @@ import type { PathSpec, Scenario, Step } from './types.ts';
 
 export const SCENARIO_HEADER = ' ddv mock scaffold が生成。event / click / expect.screen は再生成で更新、それ以外は保持';
 const KEY_ORDER = ['id', 'title', 'fixtures', 'start', 'steps'];
-const STEP_ORDER = ['event', 'input', 'click', 'do', 'wait', 'expect'];
+const STEP_ORDER = ['event', 'only', 'input', 'click', 'do', 'wait', 'expect'];
 const TODO_COMMENT = ` ${TODO_MARK}`;
 
 /** Scenario files (repo-relative) of a mock, excluding `_map.yaml`, `_retired/` and other `_` files. */
@@ -116,6 +116,7 @@ export function updateScenarioDocument(doc: Document, merged: Scenario, sources:
     const src = sources[i];
     const t = stepTodos(todos, i);
     const node = src.step !== null ? oldItems[src.step] : undefined;
+    if (src.aux && node) return node;
     if (!isMap(node)) return stepNode(doc, s, t);
     setScalar(node, 'event', s.event, false);
     if (s.click === undefined) node.delete('click');
@@ -125,7 +126,7 @@ export function updateScenarioDocument(doc: Document, merged: Scenario, sources:
       node.set('input', tmp.get('input', true));
     }
     const ex = node.get('expect', true);
-    if (isMap(ex)) setScalar(ex, 'screen', s.expect.screen, false);
+    if (isMap(ex)) setScalar(ex, 'screen', s.expect?.screen, false);
     else node.set('expect', stepNode(doc, s, []).get('expect', true));
     orderMap(node, STEP_ORDER);
     return node;
@@ -151,6 +152,8 @@ export interface ScaffoldCounts {
   skipped: string[];
   mocks: string[];
   warnings: string[];
+  /** Per-scenario notes such as 「<ID>: 更新（補助ステップを 1 件削除）」. */
+  notes: string[];
 }
 
 const stringify = (doc: Document) => doc.toString({ lineWidth: 0 });
@@ -186,16 +189,19 @@ async function scaffoldOne(repoRoot: string, config: DdvConfig, t: MockTarget, s
       continue;
     }
     const m = mergeScenario(parsed.scenario, generated);
-    const keptTodos = todos.filter((p) => {
-      const src = m.sources[p[1] as number];
-      return p[2] === 'click' || src.step === null || (p[2] === 'input' && src.input === 'generated');
-    });
+    const keptTodos = todos
+      .filter((p) => {
+        const src = m.sources[m.positions[p[1] as number]];
+        return p[2] === 'click' || src.step === null || (p[2] === 'input' && src.input === 'generated');
+      })
+      .map((p) => (p[0] === 'steps' && typeof p[1] === 'number' ? ['steps', m.positions[p[1]], ...p.slice(2)] : p));
     if (m.unchanged && !fromRetired) {
       counts.unchanged++;
       continue;
     }
     const doc = updateScenarioDocument(YAML.parseDocument(text), m.scenario, m.sources, keptTodos);
     await writeText(repoRoot, rel, stringify(doc));
+    if (m.auxRemoved) counts.notes.push(`${spec.id}: ${fromRetired ? '追加' : '更新'}（補助ステップを ${m.auxRemoved} 件削除）`);
     if (fromRetired) {
       await fs.rm(safeJoin(repoRoot, retiredRel));
       counts.added++;
@@ -226,7 +232,7 @@ export async function scaffoldMock(repoRoot: string, config: DdvConfig, mockName
     targets = targets.filter((t) => t.name === mockName);
     if (!targets.length) throw new Error(`モック ${mockName} を参照する文書（::mock[${mockName}/index.html]）がありません`);
   }
-  const counts: ScaffoldCounts = { added: 0, updated: 0, retired: 0, todo: 0, unchanged: 0, skipped: [], mocks: [], warnings: [] };
+  const counts: ScaffoldCounts = { added: 0, updated: 0, retired: 0, todo: 0, unchanged: 0, skipped: [], mocks: [], warnings: [], notes: [] };
   for (const t of targets) {
     const sd = targetDiagram(t);
     if (!sd) {

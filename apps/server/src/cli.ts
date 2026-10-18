@@ -111,6 +111,7 @@ async function mockCommand(argv: string[]) {
   for (const w of r.warnings) console.warn(`! ${w}`);
   for (const s of r.skipped) console.warn(`! 形式が不正なため更新しませんでした: ${s}`);
   console.log(`対象モック: ${r.mocks.join(', ') || 'なし'}`);
+  for (const n of r.notes) console.log(n);
   console.log(`追加: ${r.added}、更新: ${r.updated}、欠番: ${r.retired}、変更なし: ${r.unchanged}、要確認: ${r.todo}`);
 }
 
