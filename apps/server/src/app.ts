@@ -125,7 +125,8 @@ export async function createContext(
     let watcher: FSWatcher | null = null;
     const pending = new Set<string>();
     let timer: NodeJS.Timeout | null = null;
-    try {
+    let closed = false;
+    const startWatch = () => {
       watcher = watch(root, { recursive: true }, (_ev, file) => {
         if (!file) return;
         const rel = toPosix(file.toString());
@@ -146,10 +147,32 @@ export async function createContext(
           ctx.events.emit('change', paths);
         }, 150);
       });
+      // On Linux, Node's recursive watch emits ENOENT when a watched folder is removed (e.g. test-results):
+      // unhandled, it would end the server. Start watching again instead.
+      watcher.on('error', (e) => {
+        watcher?.close();
+        watcher = null;
+        if (closed) return;
+        console.warn('[ddv] ファイル監視を再開します:', e.message);
+        setTimeout(() => {
+          if (closed) return;
+          try {
+            startWatch();
+          } catch (err) {
+            console.warn('[ddv] ファイル監視を再開できません:', (err as Error).message);
+          }
+        }, 500).unref();
+      });
+    };
+    try {
+      startWatch();
     } catch (e) {
       console.warn('[ddv] ファイル監視を開始できません:', (e as Error).message);
     }
-    ctx.close = () => watcher?.close();
+    ctx.close = () => {
+      closed = true;
+      watcher?.close();
+    };
   }
   return ctx;
 }

@@ -91,7 +91,9 @@ jobs:
             10.0.x
       - run: npm ci
       - run: dotnet test packages/desktop/driver.Tests/FlaUiDriver.Tests.csproj
-      - run: dotnet test examples/sample-app/desktop/OrderApp.Desktop.slnx
+      # dotnet test builds only the test project and its references: build the apps too (ddv desktop run starts the exe)
+      - run: dotnet build examples/sample-app/desktop/OrderApp.Desktop.slnx
+      - run: dotnet test examples/sample-app/desktop/OrderApp.Desktop.slnx --no-build
       - run: npm run ddv -- desktop doctor --repo examples/sample-app
       - run: npm run ddv -- desktop run --runner wpf --repo examples/sample-app --junit test-results/desktop-wpf.xml
       - run: npm run ddv -- desktop run --runner winforms --repo examples/sample-app --junit test-results/desktop-winforms.xml
