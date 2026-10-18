@@ -1,26 +1,29 @@
 import { z } from 'zod';
 import YAML, { isNode, LineCounter, type Document } from 'yaml';
 import type { Scenario } from './types.ts';
+import { isOnlyValue, onlyList, ONLY_VALUES } from './platform.ts';
 
 export const TODO_MARK = '要確認';
 
 export const ValueSchema = z.union([z.string(), z.number(), z.boolean()]);
 
 export const ExpectSchema = z.strictObject({
-  screen: z.string().min(1),
+  screen: z.string().min(1).optional(),
   visible: z.array(z.string()).optional(),
   hidden: z.array(z.string()).optional(),
   text: z.record(z.string(), z.string()).optional(),
   count: z.record(z.string(), z.number().int().min(0)).optional(),
 });
 
+/** Shape only: the combination of `event` / `only` / `expect` is checked by `validateScenario`. */
 export const StepSchema = z.strictObject({
-  event: z.string().min(1),
+  event: z.string().min(1).optional(),
+  only: z.union([z.string(), z.array(z.string())]).optional(),
   input: z.record(z.string(), ValueSchema).optional(),
   click: z.string().optional(),
   do: z.string().optional(),
   wait: z.number().min(0).optional(),
-  expect: ExpectSchema,
+  expect: ExpectSchema.optional(),
 });
 
 export const ScenarioSchema = z.strictObject({
@@ -89,17 +92,58 @@ export function parseScenarioFile(text: string, path: string): ScenarioFile {
       issues: doc.errors.map((e) => ({ line: lc.linePos(e.pos[0]).line, path: '', message: `YAML が不正です: ${e.message.split('\n')[0]}` })),
     };
   }
-  const r = ScenarioSchema.safeParse(doc.toJS());
+  const raw = doc.toJS();
+  const r = ScenarioSchema.safeParse(raw);
+  const semantic = (s: Pick<Scenario, 'id' | 'steps'>, skip: string[] = []) =>
+    validateScenario(s)
+      .filter((i) => !skip.some((p) => p === i.path || p.startsWith(`${i.path}.`) || i.path.startsWith(`${p}.`)))
+      .map((i) => ({ ...i, line: lineOf(doc, lc, toKeys(i.path)) }));
   if (!r.success) {
-    return {
-      path,
-      todos,
-      issues: r.error.issues.map((i) => ({
-        line: lineOf(doc, lc, i.path),
-        path: i.path.map(String).join('.'),
-        message: `${i.path.length ? i.path.join('.') + ': ' : ''}${i.message}`,
-      })),
-    };
+    const issues: ScenarioIssue[] = r.error.issues.map((i) => ({
+      line: lineOf(doc, lc, i.path),
+      path: i.path.map(String).join('.'),
+      message: `${i.path.length ? i.path.join('.') + ': ' : ''}${i.message}`,
+    }));
+    // Best effort: also report the step-level checks of steps that have the right shape.
+    const steps: unknown = raw && typeof raw === 'object' ? (raw as { steps?: unknown }).steps : undefined;
+    if (Array.isArray(steps) && steps.every((s) => s && typeof s === 'object' && !Array.isArray(s))) {
+      issues.push(...semantic({ id: String((raw as { id?: unknown }).id ?? ''), steps: steps as Scenario['steps'] }, issues.map((i) => i.path)));
+    }
+    return { path, todos, issues };
   }
+  const invalid = semantic(r.data as Scenario);
+  if (invalid.length) return { path, todos, issues: invalid };
   return { path, scenario: r.data as Scenario, todos, issues: [] };
+}
+
+/** `steps.1.only` → ['steps', 1, 'only'] (YAML node path). */
+const toKeys = (p: string): PropertyKey[] => (p ? p.split('.').map((x) => (/^\d+$/.test(x) ? Number(x) : x)) : []);
+
+/** Path of an issue as `parseScenarioFile` reports it (`steps.1.only`). */
+const stepPath = (i: number, ...rest: string[]) => ['steps', String(i), ...rest].join('.');
+
+/**
+ * Semantic checks of a parsed scenario (detailed design: シナリオの形式の検査): `only` values, `only` on transition steps,
+ * `expect.screen` of transition steps and empty auxiliary steps. Locations are "シナリオ <ID> のステップ <n>" (1-based, auxiliary steps included).
+ */
+export function validateScenario(scenario: Pick<Scenario, 'id' | 'steps'>): ScenarioIssue[] {
+  const issues: ScenarioIssue[] = [];
+  scenario.steps.forEach((step, i) => {
+    const at = `シナリオ ${scenario.id} のステップ ${i + 1}`;
+    const add = (path: string, message: string) => issues.push({ path, message: `${at}: ${message}` });
+    if (step.only !== undefined) {
+      const values = onlyList(step.only);
+      if (!values.length) return add(stepPath(i, 'only'), 'only が空です');
+      const unknown = values.filter((v) => !isOnlyValue(v));
+      if (unknown.length) return add(stepPath(i, 'only'), `不明なプラットフォームです: ${unknown.join(', ')}（${ONLY_VALUES.join(' / ')}）`);
+    }
+    if (step.event !== undefined) {
+      if (step.only !== undefined) return add(stepPath(i, 'only'), '遷移のステップに only は付けられません（図とシナリオを分けてください）');
+      if (step.expect?.screen === undefined) return add(stepPath(i, 'expect'), '遷移のステップには expect.screen が必要です');
+      return;
+    }
+    const hasAny = step.click !== undefined || step.input !== undefined || step.do !== undefined || step.wait !== undefined || step.expect !== undefined;
+    if (!hasAny) add(stepPath(i), '補助ステップに操作も期待もありません');
+  });
+  return issues;
 }

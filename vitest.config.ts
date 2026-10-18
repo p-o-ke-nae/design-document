@@ -14,6 +14,7 @@ export default defineConfig({
       '@ddv/testid': r('./packages/testid/src/index.ts'),
       '@ddv/services': r('./packages/services/src/index.ts'),
       '@ddv/mock/step': r('./packages/mock/src/step.ts'),
+      '@ddv/mock/platform': r('./packages/mock/src/platform.ts'),
       '@ddv/mock/browser': r('./packages/mock/src/browser-safe.ts'),
       '@ddv/mock/frame-protocol': r('./packages/mock/src/frame-protocol.ts'),
       '@ddv/mock/playwright': r('./packages/mock/src/playwright.ts'),

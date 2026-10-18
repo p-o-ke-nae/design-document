@@ -396,7 +396,7 @@ function inputText(input: Step['input']): string {
 }
 
 function expectText(s: Step): string {
-  const e = s.expect;
+  const e = s.expect ?? {};
   const parts = [`画面 ${e.screen}`];
   for (const [k, v] of Object.entries(e.text ?? {})) parts.push(`${k}：${v}`);
   for (const [k, v] of Object.entries(e.count ?? {})) parts.push(`${k} 件数：${v}`);
@@ -544,7 +544,8 @@ function StepsEdit({ bundle, steps, store, errors, failure }: { bundle: TestData
         </tr>
       </thead>
       <tbody>
-        {steps.map((s, i) => {
+        {steps.map((step, i) => {
+          const s = { ...step, expect: step.expect ?? {} };
           const failed = failure?.index === i;
           const marks = new Set(failed ? failedCells(failure.failures) : []);
           const at = (...p: DraftPath): DraftPath => ['scenario', 'steps', i, ...p];
@@ -673,8 +674,8 @@ function StepsEdit({ bundle, steps, store, errors, failure }: { bundle: TestData
 
 function hasKey(s: Step, kind: KeyKind, key: string): boolean {
   if (kind === 'input') return !!s.input && key in s.input;
-  if (kind === 'visible') return !!s.expect.visible?.includes(key);
-  return !!s.expect[kind] && key in s.expect[kind]!;
+  if (kind === 'visible') return !!s.expect?.visible?.includes(key);
+  return !!s.expect?.[kind] && key in s.expect[kind]!;
 }
 
 function addKey(store: DraftStore, bundle: TestDataBundle, i: number, s: Step, kind: KeyKind, key: string) {
@@ -685,7 +686,7 @@ function addKey(store: DraftStore, bundle: TestDataBundle, i: number, s: Step, k
     store.set([...at, 'input', key], v);
   } else if (kind === 'text') store.set([...at, 'expect', 'text', key], '');
   else if (kind === 'count') store.set([...at, 'expect', 'count', key], 0);
-  else store.set([...at, 'expect', 'visible'], [...(s.expect.visible ?? []), key]);
+  else store.set([...at, 'expect', 'visible'], [...(s.expect?.visible ?? []), key]);
 }
 
 function AddKey({ bundle, step, onAdd }: { bundle: TestDataBundle; step: Step; onAdd(kind: KeyKind, key: string): void }) {

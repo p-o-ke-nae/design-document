@@ -1,5 +1,6 @@
 // Browser-safe entry (`@ddv/mock/browser`): no node:* / playwright imports.
 export * from './types.ts';
+export * from './platform.ts';
 export * from './scenario.ts';
 export * from './analyze.ts';
 export * from './paths.ts';
@@ -11,3 +12,4 @@ export * from './targets.ts';
 export * from './check-core.ts';
 export * from './map.ts';
 export * from './match.ts';
+export * from './resolve.ts';

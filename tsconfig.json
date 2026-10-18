@@ -22,6 +22,7 @@
       "@ddv/testid": ["./packages/testid/src/index.ts"],
       "@ddv/services": ["./packages/services/src/index.ts"],
       "@ddv/mock/step": ["./packages/mock/src/step.ts"],
+      "@ddv/mock/platform": ["./packages/mock/src/platform.ts"],
       "@ddv/mock/browser": ["./packages/mock/src/browser-safe.ts"],
       "@ddv/mock/frame-protocol": ["./packages/mock/src/frame-protocol.ts"],
       "@ddv/mock/playwright": ["./packages/mock/src/playwright.ts"],

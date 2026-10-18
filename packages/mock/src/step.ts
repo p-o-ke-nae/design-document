@@ -1,5 +1,5 @@
 // Browser-safe step interpreter shared by the player (DomDriver) and E2E (PlaywrightDriver). No Node imports.
-import type { FieldKind, Step, Value } from './types.ts';
+import type { Expect, FieldKind, Step, Value } from './types.ts';
 import type { ExpectObservation } from './trace-format.ts';
 
 export type { Expect, FieldKind, PathSpec, PathTransition, Scenario, Step, Value } from './types.ts';
@@ -14,7 +14,7 @@ export interface Driver {
   fieldKind(key: string): Awaitable<FieldKind | null>;
   fill(key: string, value: string | boolean): Awaitable<void>;
   /** Clicks the element. Throws `StepError('notFound')` when it does not exist. `event` excludes the guard. */
-  click(key: string, event: string): Awaitable<void>;
+  click(key: string, event?: string): Awaitable<void>;
   invoke(name: string): Awaitable<void>;
   screen(): Awaitable<string | null>;
   isVisible(key: string): Awaitable<boolean>;
@@ -76,10 +76,10 @@ function fillValue(kind: FieldKind, value: Value): string | boolean {
   return String(value);
 }
 
-export async function checkExpect(driver: Driver, expect: Step['expect']): Promise<{ screen: string | null; failures: ExpectFailure[] }> {
+export async function checkExpect(driver: Driver, expect: Expect = {}): Promise<{ screen: string | null; failures: ExpectFailure[] }> {
   const failures: ExpectFailure[] = [];
   const screen = await driver.screen();
-  if (screen !== expect.screen) failures.push({ key: 'screen', expected: expect.screen, actual: screen });
+  if (expect.screen !== undefined && screen !== expect.screen) failures.push({ key: 'screen', expected: expect.screen, actual: screen });
   for (const k of expect.visible ?? []) if (!(await driver.isVisible(k))) failures.push({ key: `visible:${k}`, expected: true, actual: false });
   for (const k of expect.hidden ?? []) if (await driver.isVisible(k)) failures.push({ key: `hidden:${k}`, expected: false, actual: true });
   for (const [k, v] of Object.entries(expect.text ?? {})) {
@@ -94,7 +94,7 @@ export async function checkExpect(driver: Driver, expect: Step['expect']): Promi
 }
 
 /** Evaluates every `expect` item once (no retry) for the trace. Items whose element cannot be resolved get `actual: null`. */
-export async function observeExpect(driver: Driver, expect: Step['expect']): Promise<ExpectObservation[]> {
+export async function observeExpect(driver: Driver, expect: Expect = {}): Promise<ExpectObservation[]> {
   const out: ExpectObservation[] = [];
   const safe = async <T>(f: () => Awaitable<T>): Promise<T | null> => {
     try {
@@ -104,7 +104,7 @@ export async function observeExpect(driver: Driver, expect: Step['expect']): Pro
     }
   };
   const screen = await safe(() => driver.screen());
-  out.push({ kind: 'screen', key: '', expected: expect.screen, actual: screen, ok: screen === expect.screen });
+  if (expect.screen !== undefined) out.push({ kind: 'screen', key: '', expected: expect.screen, actual: screen, ok: screen === expect.screen });
   for (const k of expect.visible ?? []) {
     const v = await safe(() => driver.isVisible(k));
     out.push({ kind: 'visible', key: k, expected: true, actual: v, ok: v === true });
@@ -142,7 +142,7 @@ export async function executeStep(driver: Driver, step: Step, opts: StepOptions 
     if (!opts.hasOp?.(step.do)) throw new StepError('unknownOp', `未登録の操作です: ${step.do}`, { key: step.do });
     await driver.invoke(step.do);
   }
-  if (step.click !== undefined) await driver.click(step.click, eventOf(step.event));
+  if (step.click !== undefined) await driver.click(step.click, step.event !== undefined ? eventOf(step.event) : undefined);
   if (step.wait) await sleep(step.wait);
 
   const deadline = Date.now() + timeoutMs;
