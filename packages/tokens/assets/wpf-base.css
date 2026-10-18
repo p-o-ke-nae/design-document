@@ -1,0 +1,48 @@
+/* ddv wpf-base.css（ddv tokens generate が写す生成物。編集しない）
+ * WPF の Aero2 の既定の見た目を、同じフォルダの xaml のトークン（--wpf-*）で再現する。
+ */
+body {
+  margin: 0;
+  background: var(--wpf-window-bg);
+  color: var(--wpf-window-fg);
+  font-family: var(--wpf-font-family);
+  font-size: var(--wpf-font-size);
+}
+
+button {
+  background: var(--wpf-button-bg);
+  color: var(--wpf-button-fg);
+  border: var(--wpf-control-border-width) solid var(--wpf-button-border);
+  border-width: var(--wpf-control-border-width);
+  padding: var(--wpf-control-padding);
+  font: inherit;
+}
+
+button:hover {
+  background: var(--wpf-button-hover-bg);
+}
+
+button:active {
+  background: var(--wpf-button-pressed-bg);
+}
+
+input,
+select,
+textarea {
+  background: var(--wpf-input-bg);
+  color: var(--wpf-window-fg);
+  border: var(--wpf-control-border-width) solid var(--wpf-input-border);
+  font: inherit;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--wpf-input-focus-border);
+  outline: none;
+}
+
+::selection {
+  background: var(--wpf-highlight-bg);
+  color: var(--wpf-highlight-fg);
+}

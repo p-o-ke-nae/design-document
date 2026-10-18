@@ -18,6 +18,7 @@ import { RecentFolders } from './recent.ts';
 import { formatReviewText, parseReviewArgs, ReviewCliError, reviewComments } from './review-cli.ts';
 import { parseServeArgs, ServeArgsError, type ServeArgs } from './serve-args.ts';
 import { SnapshotService } from './snapshots.ts';
+import { TOKENS_HELP, tokensCommand } from './tokens-cli.ts';
 import { cleanWorkspaces, OpenRequestError, WorkspaceManager } from './workspaces.ts';
 
 const HELP = `ddv - Design Doc Viewer
@@ -45,6 +46,7 @@ const HELP = `ddv - Design Doc Viewer
       シナリオを再生して各ステップの画面を撮影し、基準画像と比較します（--id 省略時は全シナリオ）
       --approve: 今回の撮影結果を基準として承認します（.ddv/snapshots/baseline/ へコピー）
       ブラウザは mock.browser.channel（環境変数 DDV_BROWSER_CHANNEL で上書き可）
+  ${TOKENS_HELP}
       ${CI_HELP}
 環境変数:
   DDV_HOME          キャッシュ・ワークスペースの置き場所（既定: ~/.ddv）
@@ -190,6 +192,10 @@ async function main(argv: string[]) {
   }
   if (cmd === 'review') {
     await reviewCommand(argv.slice(1));
+    return;
+  }
+  if (cmd === 'tokens') {
+    process.exitCode = await tokensCommand(argv.slice(1), { out: (l) => console.log(l), err: (l) => console.error(l), cwd: process.cwd(), help: HELP });
     return;
   }
   if (cmd === 'actions' || cmd === 'ci') {

@@ -1,0 +1,9 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+  <FontFamily x:Key="BodyFont">Yu Gothic UI, Segoe UI</FontFamily>
+  <sys:Double x:Key="BodyFontSize">14</sys:Double>
+  <sys:Double x:Key="RowHeight">28</sys:Double>
+  <Thickness x:Key="PagePadding">16,8</Thickness>
+  <CornerRadius x:Key="CardRadius">4</CornerRadius>
+</ResourceDictionary>

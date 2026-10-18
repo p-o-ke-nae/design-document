@@ -1,0 +1,38 @@
+/* ddv tokens: order-wpf（ddv tokens generate が生成。編集しない）
+ * source: desktop/OrderApp.Wpf/App.xaml sha256=bb33bd6ebaab7d5d95c730e701c1414c54959109fcf41cbbe5f88a2c89cdebb1
+ * source: desktop/OrderApp.Wpf/Themes/Colors.xaml sha256=30946e8222339b3a4ae0400d9a4020f907e4361339b3c27f6218d29a41e33dba
+ * source: desktop/OrderApp.Wpf/Themes/Typography.xaml sha256=0f1d5424c2cbc9fcbdd0d83825985c8534b96c1b7cbd193c936598ef87d564f1
+ * source: desktop/OrderApp.Theme/Styles/Shared.xaml sha256=4979ede3a81b359e2220c49921c07f7aa6ef8b6945fe55ef940b9a166de76147
+ * config: sha256=e401c064452bfb2d051c551d8ffaa015d1d43e75de2db7c0d021687ce44ecd55
+ * generated-by: ddv 0.1.0 format=1
+ */
+:root {
+  --accent-brush: var(--accent-color);
+  --accent-color: #c50f1f;
+  --border-brush: var(--border-color);
+  --border-color: #d1d1d1;
+  --overlay-brush: #00000066;
+  --text-brush: var(--text-color);
+  --text-color: #1f1f1f;
+  --window-background-brush: #f3f3f3;
+  --body-font: "Yu Gothic UI", "Segoe UI";
+  --body-font-size: 14px;
+  --page-padding: 8px 16px 8px 16px;
+  --card-radius: 4px;
+  --wpf-button-bg: #dddddd; /* WPF 標準 */
+  --wpf-button-border: #707070; /* WPF 標準 */
+  --wpf-button-fg: #000000; /* WPF 標準 */
+  --wpf-button-hover-bg: #bee6fd; /* WPF 標準 */
+  --wpf-button-pressed-bg: #c4e5f6; /* WPF 標準 */
+  --wpf-control-border-width: 1px; /* WPF 標準 */
+  --wpf-control-padding: 1px; /* WPF 標準 */
+  --wpf-font-family: "Segoe UI", "Yu Gothic UI", sans-serif; /* WPF 標準 */
+  --wpf-font-size: 13px;
+  --wpf-highlight-bg: #005a9e;
+  --wpf-highlight-fg: #ffffff; /* WPF 標準 */
+  --wpf-input-bg: var(--wpf-window-bg); /* WPF 標準 */
+  --wpf-input-border: #abadb3; /* WPF 標準 */
+  --wpf-input-focus-border: #569de5; /* WPF 標準 */
+  --wpf-window-bg: var(--window-background-brush);
+  --wpf-window-fg: #000000; /* WPF 標準 */
+}
